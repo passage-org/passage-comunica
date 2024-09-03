@@ -1,0 +1,31 @@
+{
+    "name": "@sage/actor-query-source-identify-hypermedia-sage",
+    "version": "0.0.1",
+    "description": "A query-source-identify-hypermedia actor for Sage preemptive queries",
+    "lsd:module": true,
+    "license": "MIT",
+    "sideEffects": false,
+    "main": "lib/index.js",
+    "typings": "lib/index",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "components",
+        "lib/**/*.d.ts",
+        "lib/**/*.js",
+        "lib/**/*.js.map"
+    ],
+    "scripts": {
+        "build": "yarn run build:ts && yarn run build:components",
+        "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
+        "build:components": "componentsjs-generator"
+    },
+    "dependencies": {
+        "@comunica/actor-query-source-identify-hypermedia-sparql": "^3.2.1",
+        "@comunica/bus-query-source-identify-hypermedia": "^3.2.1",
+        "@comunica/bus-merge-bindings-context": "^3.2.1",        
+        "@comunica/bindings-factory": "^3.2.1",
+        "@comunica/bus-http": "^3.2.1"
+    }
+}

@@ -1,0 +1,8 @@
+{
+  "@context": [
+    "https://linkedsoftwaredependencies.org/bundles/npm/@sage/config-query-sage/^0.0.1/components/context.jsonld"
+  ],
+  "import": [
+      "ccqs:config/config-default.json"
+  ]
+}

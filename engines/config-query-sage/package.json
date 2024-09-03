@@ -1,0 +1,25 @@
+{
+    "name": "@sage/config-query-sage",
+    "version": "0.0.1",
+    "description": "default configuration files for Comunica SPARQL + Sage",
+    "lsd:module": true,
+    "license": "MIT",
+    "sideEffects": false,
+    "main": "lib/index.js",
+    "typings": "lib/index",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "components",
+        "config",
+        "lib/**/*.d.ts",
+        "lib/**/*.js",
+        "lib/**/*.js.map"
+    ],
+    "scripts": {
+        "build": "yarn run build:ts && yarn run build:components",
+        "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
+        "build:components": "componentsjs-generator"
+    }
+}
