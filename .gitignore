@@ -1,3 +1,13 @@
 *~
+
 *node_modules/
 *package-lock.json
+*yarn.lock
+
+# javascript files are generated; if not, force git to track them individually
+*.js
+*.d.ts
+*.js.map
+*components/
+
+*engine-default.js

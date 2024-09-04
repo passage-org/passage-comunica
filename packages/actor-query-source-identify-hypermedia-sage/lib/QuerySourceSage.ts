@@ -1,5 +1,7 @@
-
-import { QuerySourceSage } from "@comunica/actor-query-source-identify-hypermedia-sparql";
+import type { BindingsFactory } from '@comunica/bindings-factory';
+import { QuerySourceSparql, BindMethod } from '@comunica/actor-query-source-identify-hypermedia-sparql';
+import type { MediatorHttp } from '@comunica/bus-http';
+import type { IActionContext } from '@comunica/types';
 
 export class QuerySourceSage extends QuerySourceSparql {
 

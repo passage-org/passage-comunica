@@ -15,6 +15,7 @@ import type {
     BindMethod,
     IActorQuerySourceIdentifyHypermediaSparqlArgs
 } from "@comunica/actor-query-source-identify-hypermedia-sparql";
+import { QuerySourceSage } from "./QuerySourceSage";
 
 // Sage is very much alike SPARQL but the endpoint is different
 // Of course, this could be factorized with `ActorQuerySourceIdentifyHypermediaSparql`
@@ -44,7 +45,7 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
 
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
         this.logInfo(action.context, `Identified ${action.url} as sparql source with service URL: ${action.metadata.sparqlService || action.url}`);
-        const source = new QuerySourceSparql(
+        const source = new QuerySourceSage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
             this.mediatorHttp,

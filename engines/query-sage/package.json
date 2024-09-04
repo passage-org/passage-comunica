@@ -49,8 +49,7 @@
         "@comunica/config-query-sparql": "^3.2.1",
         "@comunica/query-sparql": "^3.2.3",
         "@sage/actor-query-source-identify-hypermedia-sage": "^0.0.1",
-        "@sage/config-query-sage": "^0.0.1",
-        "componentjs": "^1.6.4"
+        "@sage/config-query-sage": "^0.0.1"
     },
     "browser": {
         "./lib/index.js": "./lib/index-browser.js"

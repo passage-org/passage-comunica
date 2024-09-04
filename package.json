@@ -1,5 +1,16 @@
 {
-  "dependencies": {
-    "typescript": "^5.5.4"
-  }
+    "private": true,
+    "packageManager": "yarn@1.22.22",
+    "workspaces": [
+        "engines/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "yarn run build:ts && yarn run build:components",
+        "build:ts": "tsc",
+        "build:components": "componentsjs-generator engines/* packages/*"
+    },
+    "dependencies": {
+        "typescript": "^5.5.4"
+    }
 }
