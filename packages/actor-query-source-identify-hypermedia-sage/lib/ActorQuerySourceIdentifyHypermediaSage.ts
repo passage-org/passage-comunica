@@ -2,19 +2,17 @@ import { BindingsFactory } from '@comunica/bindings-factory';
 import type { MediatorHttp } from '@comunica/bus-http';
 import type { MediatorMergeBindingsContext } from '@comunica/bus-merge-bindings-context';
 import type {
-  IActionQuerySourceIdentifyHypermedia,
-  IActorQuerySourceIdentifyHypermediaOutput,
-  IActorQuerySourceIdentifyHypermediaArgs,
-  IActorQuerySourceIdentifyHypermediaTest,
+    IActionQuerySourceIdentifyHypermedia,
+    IActorQuerySourceIdentifyHypermediaOutput,
+    IActorQuerySourceIdentifyHypermediaArgs,
+    IActorQuerySourceIdentifyHypermediaTest
 } from '@comunica/bus-query-source-identify-hypermedia';
-import {
-  ActorQuerySourceIdentifyHypermedia,
-} from '@comunica/bus-query-source-identify-hypermedia';
-
+import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-identify-hypermedia';
 import type {
     BindMethod,
     IActorQuerySourceIdentifyHypermediaSparqlArgs
 } from "@comunica/actor-query-source-identify-hypermedia-sparql";
+import type { MediatorQueryParse } from "@comunica/bus-query-parse";
 import { QuerySourceSage } from "./QuerySourceSage";
 
 // Sage is very much alike SPARQL but the endpoint is different
@@ -23,13 +21,14 @@ import { QuerySourceSage } from "./QuerySourceSage";
 export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIdentifyHypermedia {
     public readonly mediatorHttp: MediatorHttp;
     public readonly mediatorMergeBindingsContext: MediatorMergeBindingsContext;
+    public readonly mediatorQueryParse: MediatorQueryParse;
     public readonly checkUrlSuffix: boolean;
     public readonly forceHttpGet: boolean;
     public readonly cacheSize: number;
     public readonly bindMethod: BindMethod;
     public readonly countTimeout: number;
 
-    public constructor(args: IActorQuerySourceIdentifyHypermediaSparqlArgs) {
+    public constructor(args: IActorQuerySourceIdentifyHypermediaSageArgs) {
         super(args, 'sage');
     }
 
@@ -38,13 +37,13 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
     ): Promise<IActorQuerySourceIdentifyHypermediaTest> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
             !(this.checkUrlSuffix && action.url.endsWith('/sage'))) {
-            throw new Error(`Actor ${this.name} could not detect a SPARQL service description or URL ending on /sparql.`);
+            throw new Error(`Actor ${this.name} could not detect a sage service description or URL ending on /sage.`);
         }
         return { filterFactor: 1 };
     }
 
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
-        this.logInfo(action.context, `Identified ${action.url} as sparql source with service URL: ${action.metadata.sparqlService || action.url}`);
+        this.logInfo(action.context, `Identified ${action.url} as sage source with service URL: ${action.metadata.sparqlService || action.url}`);
         const source = new QuerySourceSage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
@@ -54,7 +53,16 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
             this.forceHttpGet,
             this.cacheSize,
             this.countTimeout,
+            this.mediatorQueryParse
         );
         return { source };
     }
+
+}
+
+export interface IActorQuerySourceIdentifyHypermediaSageArgs extends IActorQuerySourceIdentifyHypermediaSparqlArgs {
+    /**
+     * SPARQL queries returns by sage can be parsed again, then executed again.
+     */
+    mediatorQueryParse: MediatorQueryParse;
 }

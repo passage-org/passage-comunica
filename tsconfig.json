@@ -24,9 +24,7 @@
         "engines/*/bin/**/*",
         "engines/*/lib/**/*",
         "packages/*/bin/**/*",
-        "packages/*/lib/**/*",
-        "packages/*/benchmarks/**/*",
-        "performance/*/lib/**/*"
+        "packages/*/lib/**/*"
     ],
     "exclude": [
         "**/node_modules"

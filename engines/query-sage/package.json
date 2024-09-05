@@ -48,6 +48,7 @@
     "dependencies": {
         "@comunica/config-query-sparql": "^3.2.1",
         "@comunica/query-sparql": "^3.2.3",
+        "@comunica/runner-cli": "^3.2.1",
         "@sage/actor-query-source-identify-hypermedia-sage": "^0.0.1",
         "@sage/config-query-sage": "^0.0.1"
     },
