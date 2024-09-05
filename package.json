@@ -8,9 +8,12 @@
     "scripts": {
         "build": "yarn run build:ts && yarn run build:components",
         "build:ts": "tsc",
-        "build:components": "componentsjs-generator engines/* packages/*"
+        "build:components": "componentsjs-generator packages/* engines/*",
+        "clean": "tsc --build --clean && yarn.lock && rm -rf node_modules/"
     },
-    "dependencies": {
-        "typescript": "^5.5.4"
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "componentsjs-generator": "^4.0.1",
+        "componentsjs": "^6.0.0"
     }
 }
