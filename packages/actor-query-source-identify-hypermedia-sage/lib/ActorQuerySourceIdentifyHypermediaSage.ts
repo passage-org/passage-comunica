@@ -4,14 +4,11 @@ import type { MediatorMergeBindingsContext } from '@comunica/bus-merge-bindings-
 import type {
     IActionQuerySourceIdentifyHypermedia,
     IActorQuerySourceIdentifyHypermediaOutput,
-    IActorQuerySourceIdentifyHypermediaArgs,
-    IActorQuerySourceIdentifyHypermediaTest
+    IActorQuerySourceIdentifyHypermediaTest,
+    IActorQuerySourceIdentifyHypermediaArgs
 } from '@comunica/bus-query-source-identify-hypermedia';
 import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-identify-hypermedia';
-import type {
-    BindMethod,
-    IActorQuerySourceIdentifyHypermediaSparqlArgs
-} from "@comunica/actor-query-source-identify-hypermedia-sparql";
+import type { BindMethod } from "@comunica/actor-query-source-identify-hypermedia-sparql";
 import type { MediatorQueryParse } from "@comunica/bus-query-parse";
 import { QuerySourceSage } from "./QuerySourceSage";
 
@@ -60,9 +57,48 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
 
 }
 
-export interface IActorQuerySourceIdentifyHypermediaSageArgs extends IActorQuerySourceIdentifyHypermediaSparqlArgs {
+// Tried multiple times to extends arguments from Sparql's actor, couldnot make it…
+export interface IActorQuerySourceIdentifyHypermediaSageArgs extends IActorQuerySourceIdentifyHypermediaArgs {
     /**
      * SPARQL queries returns by sage can be parsed again, then executed again.
      */
     mediatorQueryParse: MediatorQueryParse;
+
+    /**
+     * The HTTP mediator
+     */
+    mediatorHttp: MediatorHttp;
+    /**
+     * A mediator for creating binding context merge handlers
+     */
+    mediatorMergeBindingsContext: MediatorMergeBindingsContext;
+    /**
+     * If URLs ending with '/sparql' should also be considered SPARQL endpoints.
+     * @default {true}
+     */
+    checkUrlSuffix: boolean;
+    /**
+     * If non-update queries should be sent via HTTP GET instead of POST
+     * @default {false}
+     */
+    forceHttpGet: boolean;
+    /**
+     * The cache size for COUNT queries.
+     * @range {integer}
+     * @default {1024}
+     */
+    cacheSize?: number;
+    /**
+     * The query operation for communicating bindings.
+     * @default {values}
+     */
+    bindMethod: BindMethod;
+    /**
+     * Timeout in ms of how long count queries are allowed to take.
+     * If the timeout is reached, an infinity cardinality is returned.
+     * @default {3000}
+     */
+    countTimeout: number;
+
+
 }

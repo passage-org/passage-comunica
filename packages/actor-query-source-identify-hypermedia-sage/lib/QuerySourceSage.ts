@@ -7,7 +7,7 @@ import { Bindings, BindingsStream, FragmentSelectorShape,  MetadataBindings } fr
 import type { IActionContext, IQuerySource, IQueryBindingsOptions } from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
-import { wrap, TransformIterator } from 'asynciterator';
+import { wrap, union, TransformIterator } from 'asynciterator';
 import { SparqlEndpointFetcher } from 'fetch-sparql-endpoint';
 import { LRUCache } from 'lru-cache';
 import { DataFactory } from 'rdf-data-factory';
@@ -355,23 +355,24 @@ export class QuerySourceSage implements IQuerySource {
                             ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
                     }
                     return <[RDF.Variable, RDF.Term]> [ variable, value ];
-                })
-                    .filter(([ _, v ]) => Boolean(v))));
+                }).filter(([ _, v ]) => Boolean(v))));
+
+        const nextPromise: Promise<string> = new Promise(resolve => {
+            rawStream.on('metadata', async m => { // (TODO set property should be on the wrapped thing of `it`)
+                //const parsed = await this.mediatorQueryParse.mediate({context, query: next});
+                Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
+                resolve(m.next);
+            })});
         
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
-        rawStream.on('metadata', m => {
-            it.setProperty('metadata', {
-                state: new MetadataValidationState(),
-                next: m.next
-            });
-            this.mediatorQueryParse.mediate(m.next);
-            console.log(m.next)});
+        let itbis: BindingsStream = new TransformIterator( async() => {
+            const next : string = await nextPromise;
+            return this.queryBindingsRemote(endpoint, next, variables, context, canContainUndefs);
+        }, { autoStart: false });
         
-
-        return it;
+        return it.append(itbis);
     }
-    
-    
+
     public toString(): string {
         return `QuerySourceSage(${this.url})`;
     }
