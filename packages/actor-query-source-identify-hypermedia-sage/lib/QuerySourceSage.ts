@@ -4,16 +4,16 @@ import { KeysInitQuery } from '@comunica/context-entries';
 import { Actor } from '@comunica/core';
 import { MetadataValidationState } from '@comunica/metadata';
 import { Bindings, BindingsStream, FragmentSelectorShape,  MetadataBindings } from '@comunica/types';
-import type { IActionContext, IQuerySource, IQueryBindingsOptions } from '@comunica/types';
+import type { IActionContext, IQuerySource, IQueryBindingsOptions, IQueryOperationResultBindings } from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
-import { wrap, union, TransformIterator } from 'asynciterator';
+import { wrap, TransformIterator } from 'asynciterator';
 import { SparqlEndpointFetcher } from 'fetch-sparql-endpoint';
 import { LRUCache } from 'lru-cache';
 import { DataFactory } from 'rdf-data-factory';
 import { Algebra, Factory, toSparql, Util } from 'sparqlalgebrajs';
 import type { BindMethod } from '@comunica/actor-query-source-identify-hypermedia-sparql';
-import type { MediatorQueryParse } from '@comunica/bus-query-parse';
+import type { IActorQueryProcessOutput, MediatorQueryProcess } from '@comunica/bus-query-process';
 
 const AF = new Factory();
 const DF = new DataFactory<RDF.BaseQuad>();
@@ -61,7 +61,7 @@ export class QuerySourceSage implements IQuerySource {
     private readonly countTimeout: number;
     private readonly bindingsFactory: BindingsFactory;
     
-    private readonly mediatorQueryParse: MediatorQueryParse;
+    private readonly mediatorQueryProcess: MediatorQueryProcess;
 
     private readonly endpointFetcher: SparqlEndpointFetcher;
     private readonly cache: LRUCache<string, RDF.QueryResultCardinality> | undefined;
@@ -71,8 +71,8 @@ export class QuerySourceSage implements IQuerySource {
     public constructor(url: string, context: IActionContext, mediatorHttp: MediatorHttp,
                        bindMethod: BindMethod, bindingsFactory: BindingsFactory, forceHttpGet: boolean,
                        cacheSize: number, countTimeout: number,
-                       mediatorQueryParse: MediatorQueryParse ) {
-        this.mediatorQueryParse = mediatorQueryParse;
+                       mediatorQueryProcess: MediatorQueryProcess ) {
+        this.mediatorQueryProcess = mediatorQueryProcess;
         this.referenceValue = url;
         this.url = url;
         this.context = context;
@@ -367,8 +367,16 @@ export class QuerySourceSage implements IQuerySource {
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
         let itbis: BindingsStream = new TransformIterator( async() => {
             const next : string = await nextPromise;
-            return this.queryBindingsRemote(endpoint, next, variables, context, canContainUndefs);
+            const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({context, query: next});
+            const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings; 
+            // return this.queryBindingsRemote(endpoint, next, variables, context, canContainUndefs);
+            return results.bindingsStream;
         }, { autoStart: false });
+
+        // let itbis: BindingsStream = new TransformIterator( async() => {
+        //     const next : string = await nextPromise;
+        //     return this.queryBindingsRemote(endpoint, next, variables, context, canContainUndefs);
+        // }, { autoStart: false });
         
         return it.append(itbis);
     }
