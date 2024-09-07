@@ -12,7 +12,7 @@ already implemented actors. No forks.
 
 ## Build and run
 
-```
+```shell
 # Get the dependencies
 yarn install
 # Compile and generate
