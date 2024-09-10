@@ -23,6 +23,6 @@ cd engines/query-sages
 yarn run prepare
 
 # It runs similarly to your good old Comunica
-node bin/query.js sage@localhost:3000/watdiv10M.jnl/sage \
+node bin/query.js sage@http://localhost:3000/watdiv10M.jnl/sage \
     -f path/to/query --logLevel=debug > results.dat
 ```
