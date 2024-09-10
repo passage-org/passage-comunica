@@ -12,6 +12,7 @@
         "strict": true,
         "strictFunctionTypes": true,
         "strictPropertyInitialization": false,
+        "strictBuiltinIteratorReturn": false,
         "noImplicitOverride": true,
         "declaration": true,
         "downlevelIteration": true,
