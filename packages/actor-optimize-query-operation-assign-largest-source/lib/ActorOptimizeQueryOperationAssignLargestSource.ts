@@ -45,10 +45,6 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
                             operation: ActorQueryOperation.assignOperationSource(action.operation, sourceWrapper),
                             context: action.context,
                         };
-                    } else {
-                        if (action.operation.input) {
-                            
-                        }
                     }
                 } catch {
                     // Fallback to the default case when the selector shape does not exist,
@@ -56,12 +52,11 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
                 }
             }
         }
-        return {
+        return { // XXX: Not really our issue, so might delete later idk
             operation: this.assignExhaustive(action.operation, sources),
             // We only keep queryString in the context if we only have a single source that accepts the full operation.
             // In that case, the queryString can be sent to the source as-is.
-            context: action.context
-                .delete(KeysInitQuery.queryString),
+            context: action.context.delete(KeysInitQuery.queryString),
         };
     }
 
@@ -77,6 +72,19 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
         const self = this;
         return Util.mapOperation(operation, {
             // TODO: create this list depending on shapes.
+            [Algebra.types.UNION](subOperation, factory) {
+                ActorQueryOperation.removeOperationSource(subOperation);
+                return {
+                    result: subOperation,
+                    recurse: false,
+                };
+            },
+            [Algebra.types.PROJECT](subOperation, factory) {
+                return {
+                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                    recurse: false,
+                };
+            },
             [Algebra.types.BGP](subOperation, factory) {
                 return {
                     result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),

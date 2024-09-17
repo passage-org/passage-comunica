@@ -106,7 +106,7 @@ export class QuerySourceSage implements IQuerySource {
         } else {
             operationPromise = Promise.resolve(operationIn);
         }
-        
+
         const bindings: BindingsStream = new TransformIterator(async() => {
             // Prepare queries
             const operation = await operationPromise;
@@ -114,11 +114,13 @@ export class QuerySourceSage implements IQuerySource {
             const queryString = context.get<string>(KeysInitQuery.queryString);
             const selectQuery: string = !options?.joinBindings && queryString ?
                 queryString :
-                QuerySourceSparql.operationToSelectQuery(operation, variables);
+                QuerySourceSparql.operationToQuery(operation); // instead of operationToSelectQuery that would project+++
             const canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
 
+            Actor.getContextLogger(this.context)?.info(`Asking for:\n${selectQuery}`);
+            
             return this.queryBindingsRemote(this.url, selectQuery, variables, context, canContainUndefs);
-        }, { autoStart: true });
+        }, { autoStart: false });
 
         return bindings;
     }
@@ -148,6 +150,7 @@ export class QuerySourceSage implements IQuerySource {
                                      context: IActionContext, canContainUndefs: boolean,
                                     ): Promise<BindingsStream> {
         this.lastSourceContext = this.context.merge(context);
+        console.log(query);
         const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query);
         this.lastSourceContext = undefined;
 
@@ -174,7 +177,7 @@ export class QuerySourceSage implements IQuerySource {
             const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({context, query: next});
             const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
             return results.bindingsStream;
-        }, { autoStart: true });
+        }, { autoStart: false });
 
         return it.append(itbis);
     }
