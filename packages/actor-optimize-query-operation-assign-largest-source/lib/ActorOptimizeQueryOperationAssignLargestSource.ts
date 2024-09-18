@@ -10,7 +10,7 @@ import { ActorQueryOperation } from '@comunica/bus-query-operation';
 import { getDataDestinationValue } from '@comunica/bus-rdf-update-quads';
 import { KeysInitQuery, KeysQueryOperation, KeysRdfUpdateQuads } from '@comunica/context-entries';
 import type { IActorTest } from '@comunica/core';
-import type { IDataDestination, IQuerySourceWrapper } from '@comunica/types';
+import type { IDataDestination, IQuerySourceWrapper, FragmentSelectorShape } from '@comunica/types';
 import { Algebra, Util } from 'sparqlalgebrajs';
 
 /**
@@ -19,6 +19,35 @@ import { Algebra, Util } from 'sparqlalgebrajs';
 export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimizeQueryOperation {
     public constructor(args: IActorOptimizeQueryOperationArgs) {
         super(args);
+
+        // MONKEY PATCH
+        (ActorQueryOperation as any).doesShapeAcceptOperation = function(
+            shape: FragmentSelectorShape,
+            operation: Algebra.Operation,
+            options?: {
+                joinBindings?: boolean;
+                filterBindings?: boolean;
+            },): boolean {
+            if (shape.type === 'conjunction') {
+                return shape.children.every(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
+            }
+            if (shape.type === 'disjunction') {
+                return shape.children.some(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
+            }
+            if (shape.type === 'arity') {
+                return ActorQueryOperation.doesShapeAcceptOperation(shape.child, operation, options);
+            }
+
+            if ((options?.joinBindings && !shape.joinBindings) ?? (options?.filterBindings && !shape.filterBindings)) {
+                return false;
+            }
+
+            if (shape.operation.operationType === 'type') {
+                return shape.operation.type === operation.type;
+            }
+            return shape.operation.pattern.type === operation.type;
+        }; // end MONKEY PATCH
+
     }
 
     public async test(_action: IActionOptimizeQueryOperation): Promise<IActorTest> {
@@ -30,35 +59,81 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
         if (sources.length === 0) {
             return { operation: action.operation, context: action.context };
         }
-        console.log("RUUUUUUUN => " + util.inspect(action.operation, { showHidden: false, depth: null, colors: true }));
-        if (sources.length === 1) {
-            const sourceWrapper = sources[0];
-            console.log("A");
-            const destination: IDataDestination | undefined = action.context.get(KeysRdfUpdateQuads.destination);
-            if (!destination || sourceWrapper.source.referenceValue === getDataDestinationValue(destination)) {
-                try {
-                    console.log("B");
-                    const shape = await sourceWrapper.source.getSelectorShape(action.context);
-                    if (ActorQueryOperation.doesShapeAcceptOperation(shape, action.operation)) {
-                        console.log("C");
-                        return {
-                            operation: ActorQueryOperation.assignOperationSource(action.operation, sourceWrapper),
-                            context: action.context,
-                        };
-                    }
-                } catch {
-                    // Fallback to the default case when the selector shape does not exist,
-                    // which can occur for a non-existent destination.
-                }
-            }
-        }
-        return { // XXX: Not really our issue, so might delete later idk
-            operation: this.assignExhaustive(action.operation, sources),
-            // We only keep queryString in the context if we only have a single source that accepts the full operation.
-            // In that case, the queryString can be sent to the source as-is.
-            context: action.context.delete(KeysInitQuery.queryString),
+        
+        if (sources.length > 1) {
+            throw new Error("Multiple sources not yet supported by ActorOptimizeQueryOperationAssignLargestSource.");
+        };
+        
+        const sourceWrapper = sources[0];
+        const destination: IDataDestination | undefined = action.context.get(KeysRdfUpdateQuads.destination);
+        
+        const shape = await sourceWrapper.source.getSelectorShape(action.context);
+        const largest = this.assignLargest(action.operation, sources, shape)
+        
+        return {
+            operation: largest,
+            context: action.context.delete(KeysInitQuery.queryString).set({name: "root"}, largest),
         };
     }
+
+    
+    public recursiveIsSupported (operation: Algebra.Operation, shape: FragmentSelectorShape) : boolean {
+        if (!ActorOptimizeQueryOperationAssignLargestSource.doesShapeAcceptOperation(shape, operation)) {
+            return false;
+        };
+
+        const self = this;
+        if (operation.input?.type) {
+            return this.recursiveIsSupported(operation.input, shape);
+        } else if (operation.input) {
+            return operation.input.every((i: Algebra.Operation) => self.recursiveIsSupported(i, shape));
+        }
+        
+        if (operation.patterns) {
+            return operation.patterns.every((pattern: Algebra.Operation) => self.recursiveIsSupported(pattern, shape));
+        }
+        
+        return true;
+    }
+
+
+    /**
+     * Check if the given shape accepts the given query operation.
+     * @param shape A shape to test the query operation against.
+     * @param operation A query operation to test.
+     * @param options Additional options to consider.
+     * @param options.joinBindings If additional bindings will be pushed down to the source for joining.
+     * @param options.filterBindings If additional bindings will be pushed down to the source for filtering.
+     */
+    public static doesShapeAcceptOperation(
+        shape: FragmentSelectorShape,
+        operation: Algebra.Operation,
+        options?: {
+            joinBindings?: boolean;
+            filterBindings?: boolean;
+        },
+    ): boolean {
+        if (shape.type === 'conjunction') {
+            return shape.children.every(child => ActorOptimizeQueryOperationAssignLargestSource.doesShapeAcceptOperation(child, operation, options));
+        }
+        if (shape.type === 'disjunction') {
+            return shape.children.some(child => ActorOptimizeQueryOperationAssignLargestSource.doesShapeAcceptOperation(child, operation, options));
+        }
+        if (shape.type === 'arity') {
+            return ActorOptimizeQueryOperationAssignLargestSource.doesShapeAcceptOperation(shape.child, operation, options);
+        }
+
+        if ((options?.joinBindings && !shape.joinBindings) ?? (options?.filterBindings && !shape.filterBindings)) {
+            return false;
+        }
+        
+        if (shape.operation.operationType === 'type') {
+            return shape.operation.type === operation.type;
+        }
+        return shape.operation.pattern.type === operation.type;
+    }
+
+
 
     /**
      * Assign the given sources to the leaves in the given query operation.
@@ -67,99 +142,78 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
      * @param operation The input operation.
      * @param sources The sources to assign.
      */
-    public assignExhaustive(operation: Algebra.Operation, sources: IQuerySourceWrapper[]): Algebra.Operation {
+    public assignLargest(operation: Algebra.Operation,
+                         sources: IQuerySourceWrapper[],
+                         shape: FragmentSelectorShape): Algebra.Operation {
         // eslint-disable-next-line ts/no-this-alias
         const self = this;
         return Util.mapOperation(operation, {
             // TODO: create this list depending on shapes.
             [Algebra.types.UNION](subOperation, factory) {
-                ActorQueryOperation.removeOperationSource(subOperation);
-                return {
-                    result: subOperation,
-                    recurse: false,
-                };
+                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
+                console.log("UNION = " + shouldAssign);
+                if (shouldAssign) {
+                    return {
+                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                        recurse: true,
+                    };
+                } else {
+                    return {
+                        result: subOperation,
+                        recurse: true,
+                    }
+                }
             },
             [Algebra.types.PROJECT](subOperation, factory) {
-                return {
-                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                    recurse: false,
-                };
+                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
+                console.log("PROJECT = " + shouldAssign);
+                if (shouldAssign) {
+                    return {
+                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                        recurse: true,
+                    };
+                } else {
+                    return {
+                        result: subOperation,
+                        recurse: true,
+                    }
+                }
             },
             [Algebra.types.BGP](subOperation, factory) {
-                return {
-                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                    recurse: false,
-                };
+                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
+                console.log("BGP = " + shouldAssign);
+                if (shouldAssign) {
+                    return {
+                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                        recurse: true,
+                    };
+                } else {
+                    return {
+                        result: subOperation,
+                        recurse: true,
+                    }
+                }
             },
             [Algebra.types.SLICE](subOperation, factory) {
-                return {
-                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                    recurse: false,
-                };
+                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
+                console.log("SLICE = " + shouldAssign);
+                if (shouldAssign) {
+                    return {
+                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                        recurse: true,
+                    };
+                } else {
+                    return {
+                        result: subOperation,
+                        recurse: true,
+                    }
+                }
             },
             [Algebra.types.PATTERN](subOperation, factory) {
-                console.log("SUBOP " + subOperation.type);
-                if (sources.length === 1) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: false,
-                    };
-                }
+                console.log("PATTERN always true");
                 return {
-                    result: factory.createUnion(sources
-                        .map(source => ActorQueryOperation.assignOperationSource(subOperation, source))),
-                    recurse: false,
-                };
-            },
-            [Algebra.types.LINK](subOperation, factory) {
-                if (sources.length === 1) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: false,
-                    };
-                }
-                return {
-                    result: factory.createAlt(sources
-                        .map(source => ActorQueryOperation.assignOperationSource(subOperation, source))),
-                    recurse: false,
-                };
-            },
-            [Algebra.types.NPS](subOperation, factory) {
-                if (sources.length === 1) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: false,
-                    };
-                }
-                return {
-                    result: factory.createAlt(sources
-                        .map(source => ActorQueryOperation.assignOperationSource(subOperation, source))),
-                    recurse: false,
-                };
-            },
-            [Algebra.types.SERVICE](subOperation) {
-                return {
-                    result: subOperation,
-                    recurse: false,
-                };
-            },
-            [Algebra.types.CONSTRUCT](subOperation, factory) {
-                return {
-                    result: factory.createConstruct(
-                        self.assignExhaustive(subOperation.input, sources),
-                        subOperation.template,
-                    ),
-                    recurse: false,
-                };
-            },
-            [Algebra.types.DELETE_INSERT](subOperation, factory) {
-                return {
-                    result: factory.createDeleteInsert(
-                        subOperation.delete,
-                        subOperation.insert,
-                        subOperation.where ? self.assignExhaustive(subOperation.where, sources) : undefined,
-                    ),
-                    recurse: false,
+                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
+                    recurse: true,
                 };
             },
         });

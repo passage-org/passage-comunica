@@ -1,4 +1,4 @@
-// import * as util from "util";
+import * as util from "util";
 
 import type { BindingsFactory } from '@comunica/bindings-factory';
 import type { MediatorHttp } from '@comunica/bus-http';
@@ -21,8 +21,6 @@ import { QuerySourceSparql } from '@comunica/actor-query-source-identify-hyperme
 
 const AF = new Factory();
 const DF = new DataFactory<RDF.BaseQuad>();
-const VAR_COUNT = DF.variable('count');
-const COUNT_INFINITY: RDF.QueryResultCardinality = { type: 'estimate', value: Number.POSITIVE_INFINITY };
 
 /**
  * This actor is very much alike SPARQL. The difference is that it does not support
@@ -47,10 +45,20 @@ export class QuerySourceSage implements IQuerySource {
                 type: 'operation',
                 operation: { operationType: 'type', type: Algebra.types.BGP },
             },
-            // {
-            //     type: 'operation',
-            //     operation: { operationType: 'type', type: Algebra.types.PROJECT },
-            // },
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.JOIN },
+            },
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.EXTEND },
+            },
+            // This 'project' clashes with exhaustive source optimizer that do
+            // not recursively check the possible operators of the interface.
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.PROJECT },
+            },
         ],
     };
 
@@ -96,7 +104,7 @@ export class QuerySourceSage implements IQuerySource {
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
         return QuerySourceSage.SELECTOR_SHAPE;
     }
-
+    
     public queryBindings(operationIn: Algebra.Operation, context: IActionContext,
                          options?: IQueryBindingsOptions): BindingsStream {
         // If bindings are passed, modify the operations
@@ -114,31 +122,54 @@ export class QuerySourceSage implements IQuerySource {
             const queryString = context.get<string>(KeysInitQuery.queryString);
             const selectQuery: string = !options?.joinBindings && queryString ?
                 queryString :
-                QuerySourceSparql.operationToQuery(operation); // instead of operationToSelectQuery that would project+++
+                operation.type === Algebra.types.PROJECT ?
+                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
+                QuerySourceSparql.operationToSelectQuery(operation, variables); // instead of operationToSelectQuery that would project+++
             const canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
 
+            console.log("OPERATION = " + util.inspect(operation, { showHidden: false, depth: 4, colors: true }));
             Actor.getContextLogger(this.context)?.info(`Asking for:\n${selectQuery}`);
             
             return this.queryBindingsRemote(this.url, selectQuery, variables, context, canContainUndefs);
         }, { autoStart: false });
 
+        this.attachMetadata(bindings, context, operationPromise); // actually important…
+
         return bindings;
     }
-    
-    public queryQuads(operation: Algebra.Operation, context: IActionContext): AsyncIterator<RDF.Quad> {
-        throw new Error('queryQuads is not implemented in QuerySourcePassage.');
-    }
 
-    public queryBoolean(operation: Algebra.Ask, context: IActionContext): Promise<boolean> {
-        throw new Error('queryBoolean is not implemented in QuerySourcePassage.');
-    }
-
-    public queryVoid(operation: Algebra.Update, context: IActionContext): Promise<void> {
-        throw new Error('queryVoid is not implemented in QuerySourcePassage.');
-    }
 
     /**
+     * Actually important to attach metadata to this operation. Otherwise, metadata()
+     * calls fail silently. This is mostly inspired by SPARQL Source's attach metadata.
+     */
+    protected attachMetadata(
+        target: AsyncIterator<any>,
+        context: IActionContext,
+        operationPromise: Promise<Algebra.Operation>,
+    ) : void {
+        let canContainUndefs = false;
+        let variablesCount: RDF.Variable[] = [];
+        new Promise<void>(async(resolve, reject) => {
+            const operation = await operationPromise;
+            variablesCount = Util.inScopeVariables(operation);
+            canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
+            return resolve();
+        }).then(() => {
+            target.setProperty(
+                'metadata', {
+                    state: new MetadataValidationState(),
+                    cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
+                    canContainUndefs,
+                    variables: variablesCount,
+                });
+        });
+    }
+    
+    
+    /**
      * Send a SPARQL query to a SPARQL endpoint and retrieve its bindings as a stream.
+     * In addition, it may get a `next` query if the results are not complete.
      * @param {string} endpoint A SPARQL endpoint URL.
      * @param {string} query A SPARQL query string.
      * @param {RDF.Variable[]} variables The expected variables.
@@ -150,7 +181,6 @@ export class QuerySourceSage implements IQuerySource {
                                      context: IActionContext, canContainUndefs: boolean,
                                     ): Promise<BindingsStream> {
         this.lastSourceContext = this.context.merge(context);
-        console.log(query);
         const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query);
         this.lastSourceContext = undefined;
 
@@ -182,6 +212,18 @@ export class QuerySourceSage implements IQuerySource {
         return it.append(itbis);
     }
 
+    public queryQuads(operation: Algebra.Operation, context: IActionContext): AsyncIterator<RDF.Quad> {
+        throw new Error('queryQuads is not implemented in QuerySourcePassage.');
+    }
+
+    public queryBoolean(operation: Algebra.Ask, context: IActionContext): Promise<boolean> {
+        throw new Error('queryBoolean is not implemented in QuerySourcePassage.');
+    }
+
+    public queryVoid(operation: Algebra.Update, context: IActionContext): Promise<void> {
+        throw new Error('queryVoid is not implemented in QuerySourcePassage.');
+    }
+    
     public toString(): string {
         return `QuerySourcePassage(${this.url})`;
     }

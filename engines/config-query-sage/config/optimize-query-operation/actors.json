@@ -26,11 +26,9 @@
             "@id": "urn:sage:default:optimize-query-operation/actors#assign-largest-source",
             "@type": "ActorOptimizeQueryOperationAssignLargestSource",
             "beforeActors": [
-                { "@id": "urn:comunica:default:optimize-query-operation/actors#assign-sources-exhaustive" }
+                { "@id": "urn:comunica:default:optimize-query-operation/actors#join-bgp" }
             ]
         },
-
-        
         {
             "@id": "urn:comunica:default:optimize-query-operation/actors#rewrite-copy",
             "@type": "ActorOptimizeQueryOperationRewriteCopy"
@@ -47,14 +45,7 @@
             "@id": "urn:comunica:default:optimize-query-operation/actors#describe-to-constructs-subject",
             "@type": "ActorOptimizeQueryOperationDescribeToConstructsSubject",
             "beforeActors": [
-                { "@id": "urn:comunica:default:optimize-query-operation/actors#assign-sources-exhaustive" }
-            ]
-        },
-        {
-            "@id": "urn:comunica:default:optimize-query-operation/actors#assign-sources-exhaustive",
-            "@type": "ActorOptimizeQueryOperationAssignSourcesExhaustive",
-            "beforeActors": [
-                { "@id": "urn:comunica:default:optimize-query-operation/actors#join-bgp" }
+                { "@id": "urn:sage:default:optimize-query-operation/actors#assign-largest-source" }
             ]
         },
         {
