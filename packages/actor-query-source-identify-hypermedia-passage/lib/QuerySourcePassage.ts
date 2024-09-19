@@ -28,40 +28,60 @@ const DF = new DataFactory<RDF.BaseQuad>();
  */
 export class QuerySourcePassage implements IQuerySource {
     // TODO change the selector shape
-    protected static readonly SELECTOR_SHAPE: FragmentSelectorShape = {
-        type: 'disjunction',
-        children: [
-            // TODO when comunica fixes this, remove the comments
-            // This 'project' clashes with exhaustive source optimizer that do
-            // not recursively check the possible operators of the interface.
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.PROJECT },
-            }, { // The least a server can do is being able to process a triple pattern
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.PATTERN },
-                // joinBindings: true,
-                // filterBindings: true,
-            }, { // We make heavy use of OFFSET in continuation queries
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.SLICE },
-            },
-            { // BGP are easy to handle
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.BGP },
-            }, { // Join and BGP are alike
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.JOIN },
-            }, { // Bind are used to encode the context of execution
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.EXTEND },
-            },
-            // { // TODO server must handle VALUES if they want to use binding-restricted
-            //     type: 'operation',
-            //     operation: { operationType: 'type', type: Algebra.types.VALUES },
-            // },
-        ],
-    };
+    protected static readonly SELECTOR_SHAPE: FragmentSelectorShape =
+        process.env.SHAPE && process.env.SHAPE === 'tpf' ? {
+            type: 'disjunction',
+            children: [
+                // TODO when comunica fixes this, remove the comments
+                // This 'project' clashes with exhaustive source optimizer that do
+                // not recursively check the possible operators of the interface.
+                {
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.PROJECT },
+                }, { // The least a server can do is being able to process a triple pattern
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.PATTERN },
+                    // joinBindings: true,
+                    // filterBindings: true,
+                }, { // We make heavy use of OFFSET in continuation queries
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.SLICE },
+                },]} :
+        
+        {
+            type: 'disjunction',
+            children: [
+                // TODO when comunica fixes this, remove the comments
+                // This 'project' clashes with exhaustive source optimizer that do
+                // not recursively check the possible operators of the interface.
+                {
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.PROJECT },
+                }, { // The least a server can do is being able to process a triple pattern
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.PATTERN },
+                    // joinBindings: true,
+                    // filterBindings: true,
+                }, { // We make heavy use of OFFSET in continuation queries
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.SLICE },
+                },
+                { // BGP are easy to handle
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.BGP },
+                }, { // Join and BGP are alike
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.JOIN },
+                }, { // Bind are used to encode the context of execution
+                    type: 'operation',
+                    operation: { operationType: 'type', type: Algebra.types.EXTEND },
+                },
+                // { // TODO server must handle VALUES if they want to use binding-restricted
+                //     type: 'operation',
+                //     operation: { operationType: 'type', type: Algebra.types.VALUES },
+                // },
+            ],
+        };
 
     public readonly referenceValue: string;
     private readonly url: string;
