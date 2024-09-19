@@ -20,7 +20,7 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
     public constructor(args: IActorOptimizeQueryOperationArgs) {
         super(args);
 
-        // MONKEY PATCH
+        // MONKEY PATCH, remove this when comunica handles it
         (ActorQueryOperation as any).doesShapeAcceptOperation = function(
             shape: FragmentSelectorShape,
             operation: Algebra.Operation,
@@ -145,77 +145,27 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
     public assignLargest(operation: Algebra.Operation,
                          sources: IQuerySourceWrapper[],
                          shape: FragmentSelectorShape): Algebra.Operation {
-        // eslint-disable-next-line ts/no-this-alias
-        const self = this;
-        return Util.mapOperation(operation, {
-            // TODO: create this list depending on shapes.
-            [Algebra.types.UNION](subOperation, factory) {
-                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
-                console.log("UNION = " + shouldAssign);
-                if (shouldAssign) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: true,
-                    };
-                } else {
-                    return {
-                        result: subOperation,
-                        recurse: true,
-                    }
-                }
-            },
-            [Algebra.types.PROJECT](subOperation, factory) {
-                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
-                console.log("PROJECT = " + shouldAssign);
-                if (shouldAssign) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: true,
-                    };
-                } else {
-                    return {
-                        result: subOperation,
-                        recurse: true,
-                    }
-                }
-            },
-            [Algebra.types.BGP](subOperation, factory) {
-                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
-                console.log("BGP = " + shouldAssign);
-                if (shouldAssign) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: true,
-                    };
-                } else {
-                    return {
-                        result: subOperation,
-                        recurse: true,
-                    }
-                }
-            },
-            [Algebra.types.SLICE](subOperation, factory) {
-                const shouldAssign = self.recursiveIsSupported(subOperation, shape);
-                console.log("SLICE = " + shouldAssign);
-                if (shouldAssign) {
-                    return {
-                        result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                        recurse: true,
-                    };
-                } else {
-                    return {
-                        result: subOperation,
-                        recurse: true,
-                    }
-                }
-            },
-            [Algebra.types.PATTERN](subOperation, factory) {
-                console.log("PATTERN always true");
-                return {
-                    result: ActorQueryOperation.assignOperationSource(subOperation, sources[0]),
-                    recurse: true,
-                };
-            },
-        });
+
+        const shouldAssign = this.recursiveIsSupported(operation, shape);
+
+        if (shouldAssign) {
+            operation =  ActorQueryOperation.assignOperationSource(operation, sources[0]);
+        };
+
+        if (operation.input?.type) {
+            operation.input = this.assignLargest(operation.input, sources, shape);
+        } else if (operation.input) {
+            for (let i = 0; i < operation.input.length ; ++i) {
+                operation.input[i] = this.assignLargest(operation.input[i], sources, shape);
+            };
+        };
+        
+        if (operation.patterns) {
+            for (let i = 0; i < operation.patterns.length ; ++i) {
+                operation.patterns[i] = this.assignLargest(operation.patterns[i], sources, shape);
+            };
+        };
+
+        return operation;
     }
 }

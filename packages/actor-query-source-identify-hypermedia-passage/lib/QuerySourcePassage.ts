@@ -31,34 +31,35 @@ export class QuerySourcePassage implements IQuerySource {
     protected static readonly SELECTOR_SHAPE: FragmentSelectorShape = {
         type: 'disjunction',
         children: [
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.PATTERN },
-                // joinBindings: true,
-                // filterBindings: true,
-            },
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.SLICE },
-            },
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.BGP },
-            },
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.JOIN },
-            },
-            {
-                type: 'operation',
-                operation: { operationType: 'type', type: Algebra.types.EXTEND },
-            },
+            // TODO when comunica fixes this, remove the comments
             // This 'project' clashes with exhaustive source optimizer that do
             // not recursively check the possible operators of the interface.
             {
                 type: 'operation',
                 operation: { operationType: 'type', type: Algebra.types.PROJECT },
+            }, { // The least a server can do is being able to process a triple pattern
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.PATTERN },
+                // joinBindings: true,
+                // filterBindings: true,
+            }, { // We make heavy use of OFFSET in continuation queries
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.SLICE },
             },
+            { // BGP are easy to handle
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.BGP },
+            }, { // Join and BGP are alike
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.JOIN },
+            }, { // Bind are used to encode the context of execution
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.EXTEND },
+            },
+            // { // TODO server must handle VALUES if they want to use binding-restricted
+            //     type: 'operation',
+            //     operation: { operationType: 'type', type: Algebra.types.VALUES },
+            // },
         ],
     };
 
@@ -127,8 +128,7 @@ export class QuerySourcePassage implements IQuerySource {
                 QuerySourceSparql.operationToSelectQuery(operation, variables); // instead of operationToSelectQuery that would project+++
             const canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
 
-            console.log("OPERATION = " + util.inspect(operation, { showHidden: false, depth: 4, colors: true }));
-            Actor.getContextLogger(this.context)?.info(`Asking for:\n${selectQuery}`);
+            Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
             
             return this.queryBindingsRemote(this.url, selectQuery, variables, context, canContainUndefs);
         }, { autoStart: false });
@@ -159,7 +159,9 @@ export class QuerySourcePassage implements IQuerySource {
             target.setProperty(
                 'metadata', {
                     state: new MetadataValidationState(),
-                    cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
+                    // TODO figure out why `inner hash` does not work when emulated
+                    // tpf (when infinite card)
+                    cardinality: { type: 'estimate', value: 12 }, // Number.POSITIVE_INFINITY 
                     canContainUndefs,
                     variables: variablesCount,
                 });
@@ -197,7 +199,7 @@ export class QuerySourcePassage implements IQuerySource {
 
         const nextPromise: Promise<string> = new Promise(resolve => {
             rawStream.on('metadata', async m => {
-                Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
+                Actor.getContextLogger(context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
             })});
         

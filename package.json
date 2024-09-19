@@ -9,7 +9,7 @@
         "build": "yarn run build:ts && yarn run build:components",
         "build:ts": "tsc",
         "build:components": "componentsjs-generator packages/* engines/*",
-        "clean": "tsc --build --clean && yarn.lock && rm -rf node_modules/"
+        "clean": "tsc --build --clean ; yarn.lock ; rm -rf node_modules/"
     },
     "devDependencies": {
         "componentsjs": "^6.0.0",
