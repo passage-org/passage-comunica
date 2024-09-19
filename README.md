@@ -1,4 +1,4 @@
-# sage-comunica
+# passage x comunica
 
 [Comunica](https://github.com/comunica/comunica) is a SPARQL query
 engine with an emphasis on modularity. To ensure completeness of query
@@ -19,10 +19,10 @@ yarn install
 yarn run build
 
 # Create the main executable
-cd engines/query-sages
+cd engines/query-passage
 yarn run prepare
 
 # It runs similarly to your good old Comunica
-node bin/query.js sage@http://localhost:3000/watdiv10M.jnl/sage \
+node bin/query.js http://localhost:3000/watdiv10M.jnl/passage \
     -f path/to/query --logLevel=debug > results.dat
 ```

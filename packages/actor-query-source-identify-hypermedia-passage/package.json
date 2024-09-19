@@ -1,7 +1,7 @@
 {
-    "name": "@sage/actor-query-source-identify-hypermedia-sage",
+    "name": "@passage/actor-query-source-identify-hypermedia-passage",
     "version": "0.0.1",
-    "description": "A query-source-identify-hypermedia actor for Sage preemptive queries",
+    "description": "A query-source-identify-hypermedia actor for Passage continuation queries",
     "lsd:module": true,
     "license": "MIT",
     "sideEffects": false,

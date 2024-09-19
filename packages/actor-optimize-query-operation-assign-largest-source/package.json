@@ -1,5 +1,5 @@
 {
-    "name": "@sage/actor-optimize-query-operation-assign-largest-source",
+    "name": "@passage/actor-optimize-query-operation-assign-largest-source",
     "version": "0.0.1",
     "description" :"Assign the largest fragment of operations that is handled by a source",
     "lsd:module": true,

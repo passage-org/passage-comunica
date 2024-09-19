@@ -1,7 +1,7 @@
 {
-    "name": "@sage/query-sage",
+    "name": "@passage/query-passage",
     "version": "0.0.1",
-    "description": "query-sparql + smart client of Sage for Web preemption",
+    "description": "query-sparql + Passage for continuation queries",
     "license": "MIT",
     "sideEffects": false,
     "main": "lib/index.js",
@@ -10,7 +10,7 @@
         "access": "public"
     },
     "bin": {
-        "comunica-sage": "bin/query.js"
+        "comunica-passage": "bin/query.js"
     },
     "files": [
         "bin/**/*.d.ts",
@@ -49,9 +49,9 @@
         "@comunica/config-query-sparql": "^3.2.1",
         "@comunica/query-sparql": "^3.2.3",
         "@comunica/runner-cli": "^3.2.1",
-        "@sage/actor-query-source-identify-hypermedia-sage": "^0.0.1",
-        "@sage/config-query-sage": "^0.0.1",
-        "@sage/actor-optimize-query-operation-assign-largest-source": "^0.0.1"
+        "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.1",
+        "@passage/config-query-passage": "^0.0.1",
+        "@passage/actor-optimize-query-operation-assign-largest-source": "^0.0.1"
     },
     "browser": {
         "./lib/index.js": "./lib/index-browser.js"

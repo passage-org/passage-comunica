@@ -26,7 +26,7 @@ const DF = new DataFactory<RDF.BaseQuad>();
  * This actor is very much alike SPARQL. The difference is that it does not support
  * all kinds of SPARQL operators.
  */
-export class QuerySourceSage implements IQuerySource {
+export class QuerySourcePassage implements IQuerySource {
     // TODO change the selector shape
     protected static readonly SELECTOR_SHAPE: FragmentSelectorShape = {
         type: 'disjunction',
@@ -102,7 +102,7 @@ export class QuerySourceSage implements IQuerySource {
     }
 
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
-        return QuerySourceSage.SELECTOR_SHAPE;
+        return QuerySourcePassage.SELECTOR_SHAPE;
     }
     
     public queryBindings(operationIn: Algebra.Operation, context: IActionContext,

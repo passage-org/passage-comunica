@@ -17,13 +17,13 @@
 
 
         "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-optimize-query-operation-assign-sources-exhaustive/^3.0.0/components/context.jsonld",
-        "https://linkedsoftwaredependencies.org/bundles/npm/@sage/actor-optimize-query-operation-assign-largest-source/^0.0.0/components/context.jsonld"
+        "https://linkedsoftwaredependencies.org/bundles/npm/@passage/actor-optimize-query-operation-assign-largest-source/^0.0.0/components/context.jsonld"
     ],
     "@id": "urn:comunica:default:Runner",
     "@type": "Runner",
     "actors": [
         {
-            "@id": "urn:sage:default:optimize-query-operation/actors#assign-largest-source",
+            "@id": "urn:passage:default:optimize-query-operation/actors#assign-largest-source",
             "@type": "ActorOptimizeQueryOperationAssignLargestSource",
             "beforeActors": [
                 { "@id": "urn:comunica:default:optimize-query-operation/actors#join-bgp" }
@@ -45,7 +45,7 @@
             "@id": "urn:comunica:default:optimize-query-operation/actors#describe-to-constructs-subject",
             "@type": "ActorOptimizeQueryOperationDescribeToConstructsSubject",
             "beforeActors": [
-                { "@id": "urn:sage:default:optimize-query-operation/actors#assign-largest-source" }
+                { "@id": "urn:passage:default:optimize-query-operation/actors#assign-largest-source" }
             ]
         },
         {

@@ -10,12 +10,12 @@ import type {
 import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-identify-hypermedia';
 import type { BindMethod } from "@comunica/actor-query-source-identify-hypermedia-sparql";
 import type { MediatorQueryProcess } from "@comunica/bus-query-process";
-import { QuerySourceSage } from "./QuerySourceSage";
+import { QuerySourcePassage } from "./QuerySourcePassage";
 
-// Sage is very much alike SPARQL but the endpoint is different
+// Passage is very much alike SPARQL but the endpoint is different
 // Of course, this could be factorized with `ActorQuerySourceIdentifyHypermediaSparql`
 // but for now, we don't want to touch official comunica's files.
-export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIdentifyHypermedia {
+export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceIdentifyHypermedia {
     public readonly mediatorHttp: MediatorHttp;
     public readonly mediatorMergeBindingsContext: MediatorMergeBindingsContext;
     public readonly mediatorQueryProcess: MediatorQueryProcess;
@@ -25,23 +25,23 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
     public readonly bindMethod: BindMethod;
     public readonly countTimeout: number;
 
-    public constructor(args: IActorQuerySourceIdentifyHypermediaSageArgs) {
-        super(args, 'sage');
+    public constructor(args: IActorQuerySourceIdentifyHypermediaPassageArgs) {
+        super(args, 'passage');
     }
 
     public async testMetadata(
         action: IActionQuerySourceIdentifyHypermedia,
     ): Promise<IActorQuerySourceIdentifyHypermediaTest> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
-            !(this.checkUrlSuffix && action.url.endsWith('/sage'))) {
-            throw new Error(`Actor ${this.name} could not detect a sage service description or URL ending on /sage.`);
+            !(this.checkUrlSuffix && action.url.endsWith('/passage'))) {
+            throw new Error(`Actor ${this.name} could not detect a sage service description or URL ending on /passage.`);
         }
         return { filterFactor: 1 };
     }
 
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
-        this.logInfo(action.context, `Identified ${action.url} as sage source with service URL: ${action.metadata.sparqlService || action.url}`);
-        const source = new QuerySourceSage(
+        this.logInfo(action.context, `Identified ${action.url} as passage source with service URL: ${action.metadata.sparqlService || action.url}`);
+        const source = new QuerySourcePassage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
             this.mediatorHttp,
@@ -58,9 +58,9 @@ export class ActorQuerySourceIdentifyHypermediaSage extends ActorQuerySourceIden
 }
 
 // Tried multiple times to extends arguments from Sparql's actor, couldnot make it…
-export interface IActorQuerySourceIdentifyHypermediaSageArgs extends IActorQuerySourceIdentifyHypermediaArgs {
+export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQuerySourceIdentifyHypermediaArgs {
     /**
-     * SPARQL queries returns by sage can be parsed again, then executed again.
+     * SPARQL queries returns by passage can be parsed again, then executed again.
      */
     mediatorQueryProcess: MediatorQueryProcess;
 

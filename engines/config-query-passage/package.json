@@ -1,7 +1,7 @@
 {
-    "name": "@sage/config-query-sage",
+    "name": "@passage/config-query-passage",
     "version": "0.0.1",
-    "description": "default configuration files for Comunica SPARQL + Sage",
+    "description": "Default configuration files for Comunica x Passage",
     "lsd:module": true,
     "license": "MIT",
     "sideEffects": false,
