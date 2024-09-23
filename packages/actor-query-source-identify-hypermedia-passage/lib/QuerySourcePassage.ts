@@ -18,6 +18,7 @@ import type { BindMethod } from '@comunica/actor-query-source-identify-hypermedi
 import type { IActorQueryProcessOutput, MediatorQueryProcess } from '@comunica/bus-query-process';
 import { ActorQueryOperation } from '@comunica/bus-query-operation';
 import { QuerySourceSparql } from '@comunica/actor-query-source-identify-hypermedia-sparql';
+import { Shapes } from './Shapes';
 
 const AF = new Factory();
 const DF = new DataFactory<RDF.BaseQuad>();
@@ -27,61 +28,13 @@ const DF = new DataFactory<RDF.BaseQuad>();
  * all kinds of SPARQL operators.
  */
 export class QuerySourcePassage implements IQuerySource {
-    // TODO change the selector shape
+
     protected static readonly SELECTOR_SHAPE: FragmentSelectorShape =
-        process.env.SHAPE && process.env.SHAPE === 'tpf' ? {
-            type: 'disjunction',
-            children: [
-                // TODO when comunica fixes this, remove the comments
-                // This 'project' clashes with exhaustive source optimizer that do
-                // not recursively check the possible operators of the interface.
-                {
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.PROJECT },
-                }, { // The least a server can do is being able to process a triple pattern
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.PATTERN },
-                    // joinBindings: true,
-                    // filterBindings: true,
-                }, { // We make heavy use of OFFSET in continuation queries
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.SLICE },
-                },]} :
-        
-        {
-            type: 'disjunction',
-            children: [
-                // TODO when comunica fixes this, remove the comments
-                // This 'project' clashes with exhaustive source optimizer that do
-                // not recursively check the possible operators of the interface.
-                {
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.PROJECT },
-                }, { // The least a server can do is being able to process a triple pattern
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.PATTERN },
-                    // joinBindings: true,
-                    // filterBindings: true,
-                }, { // We make heavy use of OFFSET in continuation queries
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.SLICE },
-                },
-                { // BGP are easy to handle
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.BGP },
-                }, { // Join and BGP are alike
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.JOIN },
-                }, { // Bind are used to encode the context of execution
-                    type: 'operation',
-                    operation: { operationType: 'type', type: Algebra.types.EXTEND },
-                },
-                // { // TODO server must handle VALUES if they want to use binding-restricted
-                //     type: 'operation',
-                //     operation: { operationType: 'type', type: Algebra.types.VALUES },
-                // },
-            ],
-        };
+        process.env.SHAPE && process.env.SHAPE === 'tpf' ?
+        Shapes.TPF : 
+        process.env.SHAPE && process.env.SHAPE === 'brtpf' ?
+        Shapes.BRTPF :
+        Shapes.PASSAGE; // default
 
     public readonly referenceValue: string;
     private readonly url: string;
