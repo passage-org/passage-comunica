@@ -9,7 +9,9 @@
         "build": "yarn run build:ts && yarn run build:components",
         "build:ts": "tsc",
         "build:components": "componentsjs-generator packages/* engines/*",
-        "clean": "tsc --build --clean ; yarn.lock ; rm -rf node_modules/"
+        "clean": "tsc --build --clean ; yarn.lock ; rm -rf node_modules/",
+        "postinstall": "yarn run build && yarn --cwd=./engines/query-passage run prepare",
+        "query-passage": "node --max-old-space-size=6076 ./engines/query-passage/bin/query.js"
     },
     "devDependencies": {
         "componentsjs": "^6.0.0",

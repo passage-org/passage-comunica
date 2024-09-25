@@ -13,16 +13,10 @@ already implemented actors. No forks.
 ## Build and run
 
 ```shell
-# Get the dependencies
 yarn install
-# Compile and generate
-yarn run build
-
-# Create the main executable
-cd engines/query-passage
-yarn run prepare
 
 # It runs similarly to your good old Comunica
-node bin/query.js http://localhost:3000/watdiv10M.jnl/passage \
+yarn run query-passage \
+    http://localhost:3000/watdiv10M.jnl/passage \
     -f path/to/query --logLevel=debug > results.dat
 ```
