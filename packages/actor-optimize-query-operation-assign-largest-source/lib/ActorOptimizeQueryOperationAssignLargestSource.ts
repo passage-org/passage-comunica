@@ -21,32 +21,32 @@ export class ActorOptimizeQueryOperationAssignLargestSource extends ActorOptimiz
         super(args);
 
         // MONKEY PATCH, remove this when comunica handles it
-        (ActorQueryOperation as any).doesShapeAcceptOperation = function(
-            shape: FragmentSelectorShape,
-            operation: Algebra.Operation,
-            options?: {
-                joinBindings?: boolean;
-                filterBindings?: boolean;
-            },): boolean {
-            if (shape.type === 'conjunction') {
-                return shape.children.every(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
-            }
-            if (shape.type === 'disjunction') {
-                return shape.children.some(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
-            }
-            if (shape.type === 'arity') {
-                return ActorQueryOperation.doesShapeAcceptOperation(shape.child, operation, options);
-            }
+        // (ActorQueryOperation as any).doesShapeAcceptOperation = function(
+        //     shape: FragmentSelectorShape,
+        //     operation: Algebra.Operation,
+        //     options?: {
+        //         joinBindings?: boolean;
+        //         filterBindings?: boolean;
+        //     },): boolean {
+        //     if (shape.type === 'conjunction') {
+        //         return shape.children.every(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
+        //     }
+        //     if (shape.type === 'disjunction') {
+        //         return shape.children.some(child => ActorQueryOperation.doesShapeAcceptOperation(child, operation, options));
+        //     }
+        //     if (shape.type === 'arity') {
+        //         return ActorQueryOperation.doesShapeAcceptOperation(shape.child, operation, options);
+        //     }
 
-            if ((options?.joinBindings && !shape.joinBindings) ?? (options?.filterBindings && !shape.filterBindings)) {
-                return false;
-            }
+        //     if ((options?.joinBindings && !shape.joinBindings) ?? (options?.filterBindings && !shape.filterBindings)) {
+        //         return false;
+        //     }
 
-            if (shape.operation.operationType === 'type') {
-                return shape.operation.type === operation.type;
-            }
-            return shape.operation.pattern.type === operation.type;
-        }; // end MONKEY PATCH
+        //     if (shape.operation.operationType === 'type') {
+        //         return shape.operation.type === operation.type;
+        //     }
+        //     return shape.operation.pattern.type === operation.type;
+        // }; // end MONKEY PATCH
 
     }
 

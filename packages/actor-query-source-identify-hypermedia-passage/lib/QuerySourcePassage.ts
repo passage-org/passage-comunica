@@ -34,6 +34,8 @@ export class QuerySourcePassage implements IQuerySource {
         Shapes.TPF : 
         process.env.SHAPE && process.env.SHAPE === 'brtpf' ?
         Shapes.BRTPF :
+        process.env.SHAPE && process.env.SHAPE === 'no-union' ?
+        Shapes.PASSAGE_NO_UNION : 
         Shapes.PASSAGE; // default
 
     public readonly referenceValue: string;
