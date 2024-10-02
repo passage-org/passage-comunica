@@ -1,12 +1,21 @@
 import * as util from "util";
 
-import type { BindingsFactory } from '@comunica/bindings-factory';
+import type { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type { MediatorHttp } from '@comunica/bus-http';
 import { KeysInitQuery } from '@comunica/context-entries';
 import { Actor } from '@comunica/core';
-import { MetadataValidationState } from '@comunica/metadata';
-import { Bindings, BindingsStream, FragmentSelectorShape,  MetadataBindings } from '@comunica/types';
-import type { IActionContext, IQuerySource, IQueryBindingsOptions, IQueryOperationResultBindings } from '@comunica/types';
+import { MetadataValidationState } from '@comunica/utils-metadata';
+import type { Bindings,
+              BindingsStream,
+              FragmentSelectorShape,
+              MetadataBindings,
+              MetadataVariable,
+              ComunicaDataFactory,
+              IActionContext,
+              IQuerySource,
+              IQueryBindingsOptions,
+              IQueryOperationResultBindings
+            } from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
 import { wrap, TransformIterator } from 'asynciterator';
@@ -19,9 +28,6 @@ import type { IActorQueryProcessOutput, MediatorQueryProcess } from '@comunica/b
 import { ActorQueryOperation } from '@comunica/bus-query-operation';
 import { QuerySourceSparql } from '@comunica/actor-query-source-identify-hypermedia-sparql';
 import { Shapes } from './Shapes';
-
-const AF = new Factory();
-const DF = new DataFactory<RDF.BaseQuad>();
 
 /**
  * This actor is very much alike SPARQL. The difference is that it does not support
@@ -44,6 +50,8 @@ export class QuerySourcePassage implements IQuerySource {
     private readonly mediatorHttp: MediatorHttp;
     private readonly bindMethod: BindMethod;
     private readonly countTimeout: number;
+    private readonly dataFactory: ComunicaDataFactory;
+    private readonly algebraFactory: Factory;
     private readonly bindingsFactory: BindingsFactory;
     
     private readonly mediatorQueryProcess: MediatorQueryProcess;
@@ -53,16 +61,27 @@ export class QuerySourcePassage implements IQuerySource {
 
     private lastSourceContext: IActionContext | undefined;
 
-    public constructor(url: string, context: IActionContext, mediatorHttp: MediatorHttp,
-                       bindMethod: BindMethod, bindingsFactory: BindingsFactory, forceHttpGet: boolean,
-                       cacheSize: number, countTimeout: number,
-                       mediatorQueryProcess: MediatorQueryProcess ) {
+    public constructor(
+        url: string,
+        context: IActionContext,
+        mediatorHttp: MediatorHttp,
+        bindMethod: BindMethod,
+        dataFactory: ComunicaDataFactory,
+        algebraFactory: Factory,
+        bindingsFactory: BindingsFactory,
+        forceHttpGet: boolean,
+        cacheSize: number,
+        countTimeout: number,
+        mediatorQueryProcess: MediatorQueryProcess
+    ) {
         this.mediatorQueryProcess = mediatorQueryProcess;
         this.referenceValue = url;
         this.url = url;
         this.context = context;
         this.mediatorHttp = mediatorHttp;
         this.bindMethod = bindMethod;
+        this.dataFactory = dataFactory;
+        this.algebraFactory = algebraFactory;
         this.bindingsFactory = bindingsFactory;
         this.endpointFetcher = new SparqlEndpointFetcher({
             method: forceHttpGet ? 'GET' : 'POST',
@@ -70,6 +89,7 @@ export class QuerySourcePassage implements IQuerySource {
                 { input, init, context: this.lastSourceContext! },
             ),
             prefixVariableQuestionMark: true,
+            dataFactory,
         });
         this.cache = cacheSize > 0 ?
             new LRUCache<string, RDF.QueryResultCardinality>({ max: cacheSize }) :
@@ -81,12 +101,16 @@ export class QuerySourcePassage implements IQuerySource {
         return QuerySourcePassage.SELECTOR_SHAPE;
     }
     
-    public queryBindings(operationIn: Algebra.Operation, context: IActionContext,
-                         options?: IQueryBindingsOptions): BindingsStream {
+    public queryBindings(
+        operationIn: Algebra.Operation,
+        context: IActionContext,
+        options?: IQueryBindingsOptions
+    ): BindingsStream {
         // If bindings are passed, modify the operations
         let operationPromise: Promise<Algebra.Operation>;
         if (options?.joinBindings) {
-            operationPromise = QuerySourceSparql.addBindingsToOperation(this.bindMethod, operationIn, options.joinBindings);
+            operationPromise = QuerySourceSparql.addBindingsToOperation(
+                this.algebraFactory, this.bindMethod, operationIn, options.joinBindings);
         } else {
             operationPromise = Promise.resolve(operationIn);
         }
@@ -100,12 +124,12 @@ export class QuerySourcePassage implements IQuerySource {
                 queryString :
                 operation.type === Algebra.types.PROJECT ?
                 QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
-                QuerySourceSparql.operationToSelectQuery(operation, variables); // instead of operationToSelectQuery that would project+++
-            const canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
+                QuerySourceSparql.operationToSelectQuery(this.algebraFactory, operation, variables);
+            const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
 
             Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
             
-            return this.queryBindingsRemote(this.url, selectQuery, variables, context, canContainUndefs);
+            return this.queryBindingsRemote(this.url, selectQuery, variables, context, undefVariables);
         }, { autoStart: false });
 
         this.attachMetadata(bindings, context, operationPromise); // actually important…
@@ -123,12 +147,15 @@ export class QuerySourcePassage implements IQuerySource {
         context: IActionContext,
         operationPromise: Promise<Algebra.Operation>,
     ) : void {
-        let canContainUndefs = false;
-        let variablesCount: RDF.Variable[] = [];
+        let variablesCount: MetadataVariable[] = [];
         new Promise<void>(async(resolve, reject) => {
             const operation = await operationPromise;
-            variablesCount = Util.inScopeVariables(operation);
-            canContainUndefs = QuerySourceSparql.operationCanContainUndefs(operation);
+            const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
+            const variablesScoped = Util.inScopeVariables(operation);
+            variablesCount = variablesScoped.map(variable => ({
+                variable,
+                canBeUndef: undefVariables.some(undefVariable => undefVariable.equals(variable)),
+            }));
             return resolve();
         }).then(() => {
             target.setProperty(
@@ -137,26 +164,25 @@ export class QuerySourcePassage implements IQuerySource {
                     // TODO figure out why `inner hash` does not work when emulated
                     // tpf (when infinite card)
                     cardinality: { type: 'estimate', value: 12 }, // Number.POSITIVE_INFINITY 
-                    canContainUndefs,
                     variables: variablesCount,
                 });
         });
     }
     
+
     
-    /**
-     * Send a SPARQL query to a SPARQL endpoint and retrieve its bindings as a stream.
-     * In addition, it may get a `next` query if the results are not complete.
-     * @param {string} endpoint A SPARQL endpoint URL.
-     * @param {string} query A SPARQL query string.
-     * @param {RDF.Variable[]} variables The expected variables.
-     * @param {IActionContext} context The source context.
-     * @param canContainUndefs If the operation may contain undefined variables.
-     * @return {BindingsStream} A stream of bindings.
-     */
-    public async queryBindingsRemote(endpoint: string, query: string, variables: RDF.Variable[],
-                                     context: IActionContext, canContainUndefs: boolean,
-                                    ): Promise<BindingsStream> {
+    public async queryBindingsRemote(
+        endpoint: string,
+        query: string,
+        variables: RDF.Variable[],
+        context: IActionContext,
+        undefVariables: RDF.Variable[],
+    ): Promise<BindingsStream> {
+        const undefVariablesIndex: Set<string> = new Set();
+        for (const undefVariable of undefVariables) {
+            undefVariablesIndex.add(undefVariable.value);
+        }
+        
         this.lastSourceContext = this.context.merge(context);
         const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query);
         this.lastSourceContext = undefined;
@@ -165,7 +191,7 @@ export class QuerySourcePassage implements IQuerySource {
             .map<RDF.Bindings>((rawData: Record<string, RDF.Term>) => this.bindingsFactory.bindings(
                 variables.map((variable) => {
                     const value = rawData[`?${variable.value}`];
-                    if (!canContainUndefs && !value) {
+                    if (!undefVariablesIndex.has(variable.value) && !value) {
                         Actor.getContextLogger(this.context)
                             ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
                     }

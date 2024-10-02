@@ -1,4 +1,4 @@
-import { BindingsFactory } from '@comunica/bindings-factory';
+import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type { MediatorHttp } from '@comunica/bus-http';
 import type { MediatorMergeBindingsContext } from '@comunica/bus-merge-bindings-context';
 import type {
@@ -11,6 +11,11 @@ import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-i
 import type { BindMethod } from "@comunica/actor-query-source-identify-hypermedia-sparql";
 import type { MediatorQueryProcess } from "@comunica/bus-query-process";
 import { QuerySourcePassage } from "./QuerySourcePassage";
+import { failTest, passTest } from '@comunica/core';
+import type { TestResult } from '@comunica/core';
+import type { ComunicaDataFactory } from '@comunica/types';
+import { Factory } from 'sparqlalgebrajs';
+import { KeysInitQuery } from '@comunica/context-entries';
 
 // Passage is very much alike SPARQL but the endpoint is different
 // Of course, this could be factorized with `ActorQuerySourceIdentifyHypermediaSparql`
@@ -31,22 +36,26 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
 
     public async testMetadata(
         action: IActionQuerySourceIdentifyHypermedia,
-    ): Promise<IActorQuerySourceIdentifyHypermediaTest> {
+    ): Promise<TestResult<IActorQuerySourceIdentifyHypermediaTest>> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
             !(this.checkUrlSuffix && action.url.endsWith('/passage'))) {
-            throw new Error(`Actor ${this.name} could not detect a sage service description or URL ending on /passage.`);
+            return failTest(`Actor ${this.name} could not detect a sage service description or URL ending on /passage.`);
         }
-        return { filterFactor: 1 };
+        return passTest({ filterFactor: 1 });
     }
 
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
         this.logInfo(action.context, `Identified ${action.url} as passage source with service URL: ${action.metadata.sparqlService || action.url}`);
+        const dataFactory: ComunicaDataFactory = action.context.getSafe(KeysInitQuery.dataFactory);
+        const algebraFactory = new Factory(dataFactory);
         const source = new QuerySourcePassage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
             this.mediatorHttp,
             this.bindMethod,
-            await BindingsFactory.create(this.mediatorMergeBindingsContext, action.context),
+            dataFactory,
+            algebraFactory,
+            await BindingsFactory.create(this.mediatorMergeBindingsContext, action.context, dataFactory),
             this.forceHttpGet,
             this.cacheSize,
             this.countTimeout,
