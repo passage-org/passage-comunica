@@ -1,6 +1,6 @@
 {
     "name": "@passage/actor-query-source-identify-hypermedia-passage",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "A query-source-identify-hypermedia actor for Passage continuation queries",
     "lsd:module": true,
     "license": "MIT",

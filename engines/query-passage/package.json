@@ -1,6 +1,6 @@
 {
     "name": "@passage/query-passage",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "query-sparql + Passage for continuation queries",
     "license": "MIT",
     "sideEffects": false,
@@ -32,8 +32,8 @@
         "@comunica/config-query-sparql": "^4.0.1",
         "@comunica/query-sparql": "^4.0.1",
         "@comunica/runner-cli": "^4.0.1",
-        "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.1",
-        "@passage/config-query-passage": "^0.0.1"
+        "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.2",
+        "@passage/config-query-passage": "^0.0.2"
     },
     "browser": {
         "./lib/index.js": "./lib/index-browser.js"
