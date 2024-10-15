@@ -14,8 +14,7 @@
         "query-passage": "node --max-old-space-size=10076 ./engines/query-passage/bin/query.js"
     },
     "devDependencies": {
-        "componentsjs": "^6.0.0",
-        "componentsjs-generator": "^4.0.1",
+        "componentsjs-generator": "^4.2.0",
         "typescript": "^5.3.3"
     }
 }

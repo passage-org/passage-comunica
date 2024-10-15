@@ -29,9 +29,9 @@
         "prepare": "comunica-compile-config config/config-default.json > engine-default.js"
     },
     "dependencies": {
-        "@comunica/config-query-sparql": "^3.2.1",
-        "@comunica/query-sparql": "^3.2.3",
-        "@comunica/runner-cli": "^3.2.1",
+        "@comunica/config-query-sparql": "^4.0.1",
+        "@comunica/query-sparql": "^4.0.1",
+        "@comunica/runner-cli": "^4.0.1",
         "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.1",
         "@passage/config-query-passage": "^0.0.1"
     },

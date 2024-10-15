@@ -18,7 +18,7 @@ import type { Bindings,
             } from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
 import type { AsyncIterator } from 'asynciterator';
-import { wrap, TransformIterator } from 'asynciterator';
+import { wrap, TransformIterator, EmptyIterator, ArrayIterator } from 'asynciterator';
 import { SparqlEndpointFetcher } from 'fetch-sparql-endpoint';
 import { LRUCache } from 'lru-cache';
 import { DataFactory } from 'rdf-data-factory';
@@ -161,9 +161,7 @@ export class QuerySourcePassage implements IQuerySource {
             target.setProperty(
                 'metadata', {
                     state: new MetadataValidationState(),
-                    // TODO figure out why `inner hash` does not work when emulated
-                    // tpf (when infinite card)
-                    cardinality: { type: 'estimate', value: 12 }, // Number.POSITIVE_INFINITY 
+                    cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY }, // Number.POSITIVE_INFINITY 
                     variables: variablesCount,
                 });
         });
@@ -198,15 +196,22 @@ export class QuerySourcePassage implements IQuerySource {
                     return <[RDF.Variable, RDF.Term]> [ variable, value ];
                 }).filter(([ _, v ]) => Boolean(v))));
 
-        const nextPromise: Promise<string> = new Promise(resolve => {
+        const nextPromise: Promise<string|void> = new Promise(resolve => {
             rawStream.on('metadata', async m => {
                 Actor.getContextLogger(context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
-            })});
+            });
+            rawStream.on('end', async m => { resolve(); });
+        });
         
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
         let itbis: BindingsStream = new TransformIterator( async() => {
-            const next : string = await nextPromise;
+            const next : string|void = await nextPromise;
+            if (!next) {
+                // next trigger on 'end', and not on 'metadata', therefore there are no next
+                // query. The stream should end, so we put an empty binding iterator in queue.
+                return new ArrayIterator<RDF.Bindings>([], {autoStart: false});
+            };
             const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({context, query: next});
             const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
             return results.bindingsStream;

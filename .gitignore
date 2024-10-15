@@ -13,5 +13,6 @@
 *.d.ts
 *.js.map
 *components/
+*componentsjs-error-state.json
 
 *engine-default.js
