@@ -1,0 +1,47 @@
+{
+    "queryFormats": {
+      "sparql": true,
+      "graphql": false
+    },
+    "allowNoSources": false,
+    "branding": {
+      "title": "Query the Web of Linked Data",
+      "title_href": "https://comunica.dev/",
+      "subtitle": "Live in your browser, powered by Comunica x Passage",
+      "subtitle_href": "https://comunica.dev/",
+      "page_title": "Comunica x Passage"
+    },
+    "map": {
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "attribution": "Map data &copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>"
+    },
+    "solidAuth": {
+      "settingsOnly": true,
+      "defaultIdp": "https://login.inrupt.com/"
+    },
+    "datasources": [
+      {
+        "name": "https://10-54-2-226.gcp.glicid.fr/watdiv10M.jnl/passage",
+        "url": "https://10-54-2-226.gcp.glicid.fr/watdiv10M.jnl/passage" 
+      }
+    ],
+    "prefixes": {
+      "rdf":         "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+      "rdfs":        "http://www.w3.org/2000/01/rdf-schema#",
+      "owl":         "http://www.w3.org/2002/07/owl#",
+      "skos":        "http://www.w3.org/2004/02/skos/core#",
+      "xsd":         "http://www.w3.org/2001/XMLSchema#",
+      "dc":          "http://purl.org/dc/terms/",
+      "dbpedia":     "http://dbpedia.org/resource/",
+      "dbpedia-owl": "http://dbpedia.org/ontology/",
+      "dbpprop":     "http://dbpedia.org/property/",
+      "wdprop":      "http://www.wikidata.org/prop/direct/",
+      "ruben":       "https://ruben.verborgh.org/profile/#",
+      "rubent":      "https://www.rubensworks.net/#",
+      "schema":      "http://schema.org/",
+      "bow":         "https://betweenourworlds.org/ontology/",
+      "lc":          "http://semweb.mmlab.be/ns/linkedconnections#"
+    },
+    "queries": "(Will be generated from the 'queries' folder by running the './queries-to-json' script.)"
+  }
+  

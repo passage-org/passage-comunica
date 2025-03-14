@@ -1,0 +1,39 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install rsync
+        run: sudo apt-get update && sudo apt-get install -y rsync
+        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Yarn
+        run: npm install -g yarn
+          
+      - name: Install dependencies
+        run: yarn install  # or yarn install, if using Yarn
+
+      - name: Install comunica's builder
+        run: npm install -g @comunica/web-client-generator
+          
+      - name: Build the website
+        run:  comunica-web-client-generator engines/config-query-passage/config/config-default.json -s ui-settings.json
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build  # Change this to your output folder (e.g., dist)
