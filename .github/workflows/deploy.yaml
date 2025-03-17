@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Install rsync
-        run: sudo apt-get update && sudo apt-get install -y rsync
+        run:  sudo apt-get update && sudo apt-get install -y rsync
         
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,18 +25,21 @@ jobs:
           node-version: 18
 
       - name: Install Yarn
-        run: npm install -g yarn
+        run:  npm install -g yarn
           
-      - name: Install dependencies
-        run: yarn install  # or yarn install, if using Yarn
+      - name: Build the engine Passage x Comunica
+        run:  yarn install 
 
-      - name: Install comunica's builder
-        run: npm install -g @comunica/web-client-generator
+      - name: Install comunica's web page builder
+        run:  npm install -g @comunica/web-client-generator
           
       - name: Build the website
-        run:  comunica-web-client-generator engines/config-query-passage/config/config-default.json -s ui-settings.json
+        run:  comunica-web-client-generator engines/config-query-passage/config/config-default.json -s ui-settings.json -q queries
 
+      - name: Enlarge the debug output of the website
+        run:  sed -i -e 's/6.3em/80em/g' build/styles/ldf-client.css
+        
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build  # Change this to your output folder (e.g., dist)
+          folder: build # output folder
