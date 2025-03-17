@@ -84,6 +84,10 @@ export class Shapes {
             //     type: 'operation',
             //     operation: { operationType: 'type', type: Algebra.types.VALUES },
             // },
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.FILTER },
+            },
         ],
     };
 
@@ -117,6 +121,10 @@ export class Shapes {
             //     type: 'operation',
             //     operation: { operationType: 'type', type: Algebra.types.VALUES },
             // },
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.FILTER },
+            },
         ],
     };
 
