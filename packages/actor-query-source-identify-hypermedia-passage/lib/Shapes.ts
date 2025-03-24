@@ -88,6 +88,11 @@ export class Shapes {
                 type: 'operation',
                 operation: { operationType: 'type', type: Algebra.types.FILTER },
             },
+            {
+                type: 'operation',
+                operation: { operationType: 'type', type: Algebra.types.LEFT_JOIN },
+            },
+
         ],
     };
 

@@ -21,8 +21,12 @@
     },
     "datasources": [
         {
-            "name": "https://10-54-2-226.gcp.glicid.fr/watdiv10M.jnl/passage",
-            "url": "https://10-54-2-226.gcp.glicid.fr/watdiv10M.jnl/passage" 
+            "name": "https://10-54-2-226.gcp.glicid.fr/wikidata/passage",
+            "url": "https://10-54-2-226.gcp.glicid.fr/wikidata/passage"
+        },
+        {
+            "name": "https://10-54-2-226.gcp.glicid.fr/watdiv/passage",
+            "url": "https://10-54-2-226.gcp.glicid.fr/watdiv/passage" 
         }
     ],
     "prefixes": {
