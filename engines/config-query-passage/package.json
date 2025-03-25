@@ -1,6 +1,6 @@
 {
     "name": "@passage/config-query-passage",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Default configuration files for Comunica x Passage",
     "lsd:module": true,
     "license": "MIT",
