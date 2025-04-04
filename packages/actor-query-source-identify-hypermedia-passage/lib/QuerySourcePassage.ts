@@ -1,33 +1,28 @@
-import * as util from "util";
-
-import type { BindingsFactory } from '@comunica/utils-bindings-factory';
-import type { MediatorHttp } from '@comunica/bus-http';
-import { KeysInitQuery } from '@comunica/context-entries';
-import { Actor } from '@comunica/core';
-import { MetadataValidationState } from '@comunica/utils-metadata';
-import type { Bindings,
-              BindingsStream,
-              FragmentSelectorShape,
-              MetadataBindings,
-              MetadataVariable,
-              ComunicaDataFactory,
-              IActionContext,
-              IQuerySource,
-              IQueryBindingsOptions,
-              IQueryOperationResultBindings
-            } from '@comunica/types';
+import type {BindingsFactory} from '@comunica/utils-bindings-factory';
+import type {MediatorHttp} from '@comunica/bus-http';
+import {KeysInitQuery} from '@comunica/context-entries';
+import {Actor} from '@comunica/core';
+import {MetadataValidationState} from '@comunica/utils-metadata';
+import type {
+    BindingsStream,
+    ComunicaDataFactory,
+    FragmentSelectorShape,
+    IActionContext,
+    IPhysicalQueryPlanLogger,
+    IQueryBindingsOptions,
+    IQueryOperationResultBindings,
+    IQuerySource,
+    MetadataVariable,
+} from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
-import type { AsyncIterator } from 'asynciterator';
-import { wrap, TransformIterator, EmptyIterator, ArrayIterator } from 'asynciterator';
-import { SparqlEndpointFetcher } from 'fetch-sparql-endpoint';
-import { LRUCache } from 'lru-cache';
-import { DataFactory } from 'rdf-data-factory';
-import { Algebra, Factory, toSparql, Util } from 'sparqlalgebrajs';
-import type { BindMethod } from '@comunica/actor-query-source-identify-hypermedia-sparql';
-import type { IActorQueryProcessOutput, MediatorQueryProcess } from '@comunica/bus-query-process';
-import { ActorQueryOperation } from '@comunica/bus-query-operation';
-import { QuerySourceSparql } from '@comunica/actor-query-source-identify-hypermedia-sparql';
-import { Shapes } from './Shapes';
+import {AsyncIterator, EmptyIterator, TransformIterator, wrap} from 'asynciterator';
+import {SparqlEndpointFetcher} from 'fetch-sparql-endpoint';
+import {LRUCache} from 'lru-cache';
+import {Algebra, Factory, Util} from 'sparqlalgebrajs';
+import type {BindMethod} from '@comunica/actor-query-source-identify-hypermedia-sparql';
+import {QuerySourceSparql} from '@comunica/actor-query-source-identify-hypermedia-sparql';
+import type {IActorQueryProcessOutput, MediatorQueryProcess} from '@comunica/bus-query-process';
+import {Shapes} from './Shapes';
 
 /**
  * This actor is very much alike SPARQL. The difference is that it does not support
@@ -100,12 +95,14 @@ export class QuerySourcePassage implements IQuerySource {
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
         return QuerySourcePassage.SELECTOR_SHAPE;
     }
-    
+
     public queryBindings(
         operationIn: Algebra.Operation,
         context: IActionContext,
         options?: IQueryBindingsOptions
     ): BindingsStream {
+        // called twice: once to retrieve metadata; once to actually query
+        
         // If bindings are passed, modify the operations
         let operationPromise: Promise<Algebra.Operation>;
         if (options?.joinBindings) {
@@ -128,12 +125,12 @@ export class QuerySourcePassage implements IQuerySource {
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
 
             Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
-            
+
             return this.queryBindingsRemote(this.url, selectQuery, variables, context, undefVariables);
         }, { autoStart: false });
 
         this.attachMetadata(bindings, context, operationPromise); // actually important…
-
+        
         return bindings;
     }
 
@@ -148,7 +145,7 @@ export class QuerySourcePassage implements IQuerySource {
         operationPromise: Promise<Algebra.Operation>,
     ) : void {
         let variablesCount: MetadataVariable[] = [];
-        new Promise<void>(async(resolve, reject) => {
+        new Promise<Algebra.Operation>(async(resolve, reject) => {
             const operation = await operationPromise;
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
             const variablesScoped = Util.inScopeVariables(operation);
@@ -156,14 +153,38 @@ export class QuerySourcePassage implements IQuerySource {
                 variable,
                 canBeUndef: undefVariables.some(undefVariable => undefVariable.equals(variable)),
             }));
-            return resolve();
-        }).then(() => {
-            target.setProperty(
-                'metadata', {
-                    state: new MetadataValidationState(),
-                    cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY }, // Number.POSITIVE_INFINITY 
-                    variables: variablesCount,
-                });
+            return resolve(operation);
+        }).then((operation) => {
+            // ugly, we reprocess the query that is sent.
+            const variables: RDF.Variable[] = Util.inScopeVariables(operation);
+            const queryString = context.get<string>(KeysInitQuery.queryString);
+            const selectQuery: string =
+                operation.type === Algebra.types.PROJECT ?
+                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
+                QuerySourceSparql.operationToSelectQuery(this.algebraFactory, operation, variables);
+
+            const metadata =  {
+                state: new MetadataValidationState(),
+                cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
+                variables: variablesCount,
+                query: selectQuery,
+            };
+            
+            target.setProperty('metadata', metadata);
+
+            // hence logged twice, since it's called during metadata retrieval, and actual execution
+            const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+            if (physicalQueryPlanLogger) {
+                physicalQueryPlanLogger.logOperation(
+                    Algebra.types.SERVICE, /* logical operation */
+                    undefined, /* physical operation */
+                    operation, /* node */
+                    context.get(KeysInitQuery.physicalQueryPlanNode), /* parentNode */
+                    "passage", /* actor */
+                    metadata, /* metadata */
+                );
+            };
+            context = context.set(KeysInitQuery.physicalQueryPlanNode, operation);
         });
     }
     
@@ -198,7 +219,7 @@ export class QuerySourcePassage implements IQuerySource {
 
         const nextPromise: Promise<string|void> = new Promise(resolve => {
             rawStream.on('metadata', async m => {
-                Actor.getContextLogger(context)?.info(`Next query to get complete result:\n${m.next}`);
+                Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
             });
             rawStream.on('end', async m => { resolve(); });
@@ -210,9 +231,13 @@ export class QuerySourcePassage implements IQuerySource {
             if (!next) {
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
-                return new ArrayIterator<RDF.Bindings>([], {autoStart: false});
-            };
-            const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({context, query: next});
+                return new EmptyIterator<RDF.Bindings>();
+            }
+            // we are here to execute, not to explain, so we remove the key from the context.
+            // In explain mode, only the root is allowed to explain.
+            const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({
+                context,//:  context.delete(KeysInitQuery.explain),
+                query: next});
             const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
             return results.bindingsStream;
         }, { autoStart: false });
