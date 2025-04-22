@@ -126,7 +126,7 @@ export class QuerySourcePassage implements IQuerySource {
 
             Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
 
-            return this.queryBindingsRemote(this.url, selectQuery, variables, context, undefVariables);
+            return this.queryBindingsRemote(operation, this.url, selectQuery, variables, context, undefVariables);
         }, { autoStart: false });
 
         this.attachMetadata(bindings, context, operationPromise); // actually important…
@@ -157,7 +157,7 @@ export class QuerySourcePassage implements IQuerySource {
         }).then((operation) => {
             // ugly, we reprocess the query that is sent.
             const variables: RDF.Variable[] = Util.inScopeVariables(operation);
-            const queryString = context.get<string>(KeysInitQuery.queryString);
+            // const queryString = context.get<string>(KeysInitQuery.queryString);
             const selectQuery: string =
                 operation.type === Algebra.types.PROJECT ?
                 QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
@@ -173,17 +173,7 @@ export class QuerySourcePassage implements IQuerySource {
             target.setProperty('metadata', metadata);
 
             // hence logged twice, since it's called during metadata retrieval, and actual execution
-            const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
-            if (physicalQueryPlanLogger) {
-                physicalQueryPlanLogger.logOperation(
-                    Algebra.types.SERVICE, /* logical operation */
-                    undefined, /* physical operation */
-                    operation, /* node */
-                    context.get(KeysInitQuery.physicalQueryPlanNode), /* parentNode */
-                    "passage", /* actor */
-                    metadata, /* metadata */
-                );
-            };
+            QuerySourcePassage.initializeLogger(context, operation, selectQuery);
             context = context.set(KeysInitQuery.physicalQueryPlanNode, operation);
         });
     }
@@ -191,12 +181,14 @@ export class QuerySourcePassage implements IQuerySource {
 
     
     public async queryBindingsRemote(
+        operation: Algebra.Operation,
         endpoint: string,
         query: string,
         variables: RDF.Variable[],
         context: IActionContext,
         undefVariables: RDF.Variable[],
     ): Promise<BindingsStream> {
+        QuerySourcePassage.updateStartTime(context, operation);
         const undefVariablesIndex: Set<string> = new Set();
         for (const undefVariable of undefVariables) {
             undefVariablesIndex.add(undefVariable.value);
@@ -214,6 +206,13 @@ export class QuerySourcePassage implements IQuerySource {
                         Actor.getContextLogger(this.context)
                             ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
                     }
+
+                    if (!it.getProperty("nbResults")) { // TODO fix this very ugly way to count the number of results…
+                        it.setProperty("nbResults", 0);
+                    }
+                    const nbResults : number = it.getProperty("nbResults") || 0;
+                    it.setProperty("nbResults", nbResults + 1);
+
                     return <[RDF.Variable, RDF.Term]> [ variable, value ];
                 }).filter(([ _, v ]) => Boolean(v))));
 
@@ -222,12 +221,17 @@ export class QuerySourcePassage implements IQuerySource {
                 Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
             });
-            rawStream.on('end', async m => { resolve(); });
+            rawStream.on('end', async m => {
+                resolve();
+            });
         });
         
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
-        let itbis: BindingsStream = new TransformIterator( async() => {
+        const itbis: BindingsStream = new TransformIterator( async() => {
             const next : string|void = await nextPromise;
+            QuerySourcePassage.updateDoneTime(context, operation)
+            QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
+
             if (!next) {
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
@@ -260,4 +264,77 @@ export class QuerySourcePassage implements IQuerySource {
     public toString(): string {
         return `QuerySourcePassage(${this.url})`;
     }
+
+    /* ********************* METADATA RELATED FUNCTIONS ********************** */
+
+    /**
+     * Initialize the physical plan logger with what we have.
+     * @param context The execution context.
+     * @param operation The service operation.
+     * @param query The query that is actually sent to the endpoint, in string format.
+     */
+    public static initializeLogger(context: IActionContext, operation: Algebra.Operation, query: String) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        if (!physicalQueryPlanLogger) return; // nothing to log to.
+
+        const metadata =  {
+            // cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
+            variables: Util.inScopeVariables(operation).map(v => v.value),
+            query: query,
+        };
+
+        physicalQueryPlanLogger.logOperation(
+            Algebra.types.SERVICE, /* logical operation */
+            undefined, /* physical operation */
+            operation, /* node */
+            context.get(KeysInitQuery.physicalQueryPlanNode), /* parentNode */
+            "passage", /* actor */
+            metadata, /* metadata */
+        );
+    }
+
+    /**
+     * Add the start time to the metadata to be logged.
+     * @param context The execution context of the operation.
+     * @param operation The operation to update.
+     */
+    public static updateStartTime(context: IActionContext, operation: Algebra.Operation) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        if (physicalQueryPlanLogger) {
+            operation.startAt = Date.now();
+            physicalQueryPlanLogger.appendMetadata(operation, {startAt: operation.startAt});
+        }
+    }
+
+    /**
+     * Add the done time to the metadata to be logged.
+     * @param context The execution context of the operation.
+     * @param operation The operation to update.
+     */
+    public static updateDoneTime(context: IActionContext, operation: Algebra.Operation) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        if (physicalQueryPlanLogger) {
+            operation.doneAt = Date.now();
+            operation.timeLife = operation.doneAt - operation.startAt;
+            physicalQueryPlanLogger.appendMetadata(operation, {doneAt: operation.doneAt});
+            physicalQueryPlanLogger.appendMetadata(operation, {timeLife: operation.timeLife})
+        }
+    }
+
+    /**
+     * Add the number of results to the actual cardinality of the operation.
+     * Careful: When there are multiple continuation queries. The scope of this cardinality
+     * is each continuation query, not the lot.
+     * @param context The execution context of the operation.
+     * @param operation The operation.
+     * @param nbResults The number of results retrieved by the iterator.
+     */
+    public static updateNbResults(context: IActionContext, operation: Algebra.Operation, nbResults: number) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        if (physicalQueryPlanLogger) {
+            operation.cardinalityReal = nbResults;
+            physicalQueryPlanLogger.appendMetadata(operation, {cardinalityReal: nbResults})
+        }
+    }
+
 }

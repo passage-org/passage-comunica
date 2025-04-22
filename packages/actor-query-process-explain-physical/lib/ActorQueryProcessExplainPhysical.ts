@@ -1,19 +1,16 @@
-import * as util from "util";
-
-
 import type {
   IActionQueryProcess,
-  IActorQueryProcessOutput,
   IActorQueryProcessArgs,
+  IActorQueryProcessOutput,
   IQueryProcessSequential,
 } from '@comunica/bus-query-process';
-import {
-  ActorQueryProcess,
-} from '@comunica/bus-query-process';
-import { KeysInitQuery } from '@comunica/context-entries';
-import type { IActorTest, TestResult } from '@comunica/core';
-import { failTest, passTestVoid, ActionContextKey } from '@comunica/core';
-import { MemoryPhysicalQueryPlanLogger } from './MemoryPhysicalQueryPlanLogger';
+import {ActorQueryProcess,} from '@comunica/bus-query-process';
+import {KeysInitQuery} from '@comunica/context-entries';
+import type {IActorTest, TestResult} from '@comunica/core';
+import {ActionContextKey, failTest, passTestVoid} from '@comunica/core';
+import {MemoryPhysicalQueryPlanLogger} from './MemoryPhysicalQueryPlanLogger';
+import {EmitterPhysicalQueryPlanLogger} from "./EmitterPhysicalQueryPlanLogger";
+import {IPhysicalQueryPlanLogger} from "@comunica/types";
 
 /**
  * A comunica Explain Physical Query Process Actor.
@@ -39,16 +36,16 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
     let { operation, context } = await this.queryProcessor.parse(action.query, action.context);
     ({ operation, context } = await this.queryProcessor.optimize(operation, context));
 
-      // If we need a physical query plan, store a physical query plan logger in the context, and collect it after exec
-      console.log("Change in ActorQueryProcessExplainPhysical");
-      let physicalQueryPlanLogger = <MemoryPhysicalQueryPlanLogger> context.get(KeysInitQuery.physicalQueryPlanLogger);
-      if (!physicalQueryPlanLogger) {
-          physicalQueryPlanLogger = new MemoryPhysicalQueryPlanLogger();
-          context = context.set(KeysInitQuery.physicalQueryPlanLogger, physicalQueryPlanLogger);
-      } else {
-        // only the root, i.e. the initializer is allowed to explain
-        context = context.delete(KeysInitQuery.explain);
-      }
+    // If we need a physical query plan, store a physical query plan logger in the context, and collect it after exec
+    console.log("Change in ActorQueryProcessExplainPhysical");
+    let physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+    if (!physicalQueryPlanLogger) {
+      physicalQueryPlanLogger = new EmitterPhysicalQueryPlanLogger(new MemoryPhysicalQueryPlanLogger());
+      context = context.set(KeysInitQuery.physicalQueryPlanLogger, physicalQueryPlanLogger);
+    } else {
+      // only the root, i.e. the initializer is allowed to explain
+      context = context.delete(KeysInitQuery.explain);
+    }
 
 
     const output = await this.queryProcessor.evaluate(operation, context);
@@ -56,8 +53,8 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
 
     // Make sure the whole result is produced
     switch (output.type) {
-        case 'bindings':
-            await output.bindingsStream.toArray();
+      case 'bindings':
+        await output.bindingsStream.toArray();
         break;
       case 'quads':
         await output.quadStream.toArray();
@@ -73,7 +70,7 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
     const mode: 'parsed' | 'logical' | 'physical' | 'physical-json' = (action.context.get(KeysInitQuery.explain) ??
         action.context.getSafe(new ActionContextKey('explain')));
       
-      // console.log(util.inspect(physicalQueryPlanLogger.toJson(), { depth: null }));
+    // console.log(util.inspect(physicalQueryPlanLogger.toJson(), { depth: null }));
     return {
       result: {
         explain: true,
