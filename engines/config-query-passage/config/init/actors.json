@@ -1,0 +1,24 @@
+{
+    "@context": [
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/runner/^4.0.0/components/context.jsonld",
+
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-init-query/^4.0.0/components/context.jsonld",
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/config-query-sparql/^4.0.0/components/context.jsonld",
+
+        "https://linkedsoftwaredependencies.org/bundles/npm/@passage/actor-init-query-and-explain/^0.0.0/components/context.jsonld"
+
+    ],
+    "@id": "urn:comunica:default:Runner",
+    "@type": "Runner",
+    "actors": [
+        {
+            "@id": "urn:comunica:default:init/actors#query",
+            "@type": "ActorInitQueryAndExplain",
+            "mediatorQueryProcess": { "@id": "urn:comunica:default:query-process/mediators#main" },
+            "mediatorQueryResultSerialize": { "@id": "urn:comunica:default:query-result-serialize/mediators#serialize" },
+            "mediatorQueryResultSerializeMediaTypeCombiner": { "@id": "urn:comunica:default:query-result-serialize/mediators#mediaType" },
+            "mediatorQueryResultSerializeMediaTypeFormatCombiner": { "@id": "urn:comunica:default:query-result-serialize/mediators#mediaTypeFormat" },
+            "mediatorHttpInvalidate": { "@id": "urn:comunica:default:http-invalidate/mediators#main" }
+        }
+    ]
+}

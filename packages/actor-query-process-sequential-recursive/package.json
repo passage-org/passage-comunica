@@ -1,0 +1,27 @@
+{
+    "name": "@passage/actor-query-process-sequential-recursive",
+    "version": "0.0.3",
+    "description": "A sequential query-process actor that allows recursive calls",
+    "lsd:module": true,
+    "license": "MIT",    
+    "sideEffects": false,
+    "main": "lib/index.js",
+    "typings": "lib/index",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "components",
+        "lib/**/*.d.ts",
+        "lib/**/*.js",
+        "lib/**/*.js.map"
+    ],
+    "scripts": {
+        "build": "yarn run build:ts && yarn run build:components",
+        "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
+        "build:components": "componentsjs-generator"
+    },
+    "dependencies": {
+        "@comunica/actor-query-process-sequential": "^4.1.0"
+    }
+}

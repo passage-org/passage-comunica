@@ -33,7 +33,9 @@
         "@comunica/query-sparql": "^4.1.0",
         "@comunica/runner-cli": "^4.1.0",
         "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.3",
-        "@passage/config-query-passage": "^0.0.3"
+        "@passage/config-query-passage": "^0.0.3",
+        "@passage/actor-init-query-and-explain": "^0.0.3",
+        "@passage/actor-query-process-sequential-recursive": "^0.0.3"
     },
     "browser": {
         "./lib/index.js": "./lib/index-browser.js"

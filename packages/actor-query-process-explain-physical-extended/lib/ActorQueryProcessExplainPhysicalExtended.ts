@@ -1,21 +1,16 @@
-import type {
-  IActionQueryProcess,
-  IActorQueryProcessArgs,
-  IActorQueryProcessOutput,
-  IQueryProcessSequential,
-} from '@comunica/bus-query-process';
+import type {IActionQueryProcess, IActorQueryProcessArgs, IQueryProcessSequential,} from '@comunica/bus-query-process';
 import {ActorQueryProcess,} from '@comunica/bus-query-process';
 import {KeysInitQuery} from '@comunica/context-entries';
 import type {IActorTest, TestResult} from '@comunica/core';
 import {ActionContextKey, failTest, passTestVoid} from '@comunica/core';
-import {MemoryPhysicalQueryPlanLogger} from './MemoryPhysicalQueryPlanLogger';
+import {MemoryPhysicalQueryPlanLogger} from '@comunica/actor-query-process-explain-physical';
 import {EmitterPhysicalQueryPlanLogger} from "./EmitterPhysicalQueryPlanLogger";
-import {IPhysicalQueryPlanLogger} from "@comunica/types";
+import {BindingsStream} from "@comunica/types";
 
 /**
  * A comunica Explain Physical Query Process Actor.
  */
-export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
+export class ActorQueryProcessExplainPhysicalExtended extends ActorQueryProcess {
   public readonly queryProcessor: IQueryProcessSequential;
 
   public constructor(args: IActorQueryProcessExplainPhysicalArgs) {
@@ -30,15 +25,16 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
     return passTestVoid();
   }
 
-  public async run(action: IActionQueryProcess): Promise<IActorQueryProcessOutput> {
+  public async run(action: IActionQueryProcess): Promise<any> { // TODO go back to IActorQueryProcessOutput when it authorizes both explain and results
     // Run all query processing steps in sequence
 
     let { operation, context } = await this.queryProcessor.parse(action.query, action.context);
     ({ operation, context } = await this.queryProcessor.optimize(operation, context));
 
     // If we need a physical query plan, store a physical query plan logger in the context, and collect it after exec
-    console.log("Change in ActorQueryProcessExplainPhysical");
-    let physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+    // TODO should return an IPhysicalPlanLogger stuff, but since it does not comprise toCompactString, we
+    //      keep casting until changes
+    let physicalQueryPlanLogger: EmitterPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger) as EmitterPhysicalQueryPlanLogger;
     if (!physicalQueryPlanLogger) {
       physicalQueryPlanLogger = new EmitterPhysicalQueryPlanLogger(new MemoryPhysicalQueryPlanLogger());
       context = context.set(KeysInitQuery.physicalQueryPlanLogger, physicalQueryPlanLogger);
@@ -47,14 +43,15 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
       context = context.delete(KeysInitQuery.explain);
     }
 
-
     const output = await this.queryProcessor.evaluate(operation, context);
+    // if we don't have to explain, we return the output directly
     if (!context.get(KeysInitQuery.explain)) { return { result: output };}
 
     // Make sure the whole result is produced
+    let bindings : BindingsStream | undefined = undefined;
     switch (output.type) {
       case 'bindings':
-        await output.bindingsStream.toArray();
+        bindings = output.bindingsStream;
         break;
       case 'quads':
         await output.quadStream.toArray();
@@ -67,15 +64,23 @@ export class ActorQueryProcessExplainPhysical extends ActorQueryProcess {
         break;
     }
 
-    const mode: 'parsed' | 'logical' | 'physical' | 'physical-json' = (action.context.get(KeysInitQuery.explain) ??
-        action.context.getSafe(new ActionContextKey('explain')));
-      
-    // console.log(util.inspect(physicalQueryPlanLogger.toJson(), { depth: null }));
+    const mode: 'parsed' | 'logical' | 'physical' | 'physical-json' = action.context.get(KeysInitQuery.explain) ??
+        action.context.getSafe(KeysInitQuery.explain);
+
+    let resultDone = new Promise<String>((resolve, reject) =>
+        bindings?.on("end",  () => {
+          console.log("done");
+          resolve(mode.includes('physical-json') ? physicalQueryPlanLogger.toJson() :
+              mode.includes('physical') ? physicalQueryPlanLogger.toCompactString() : undefined);
+        })
+    );
+
     return {
       result: {
+        bindingsStream: bindings,
         explain: true,
         type: mode,
-        data: mode === 'physical' ? physicalQueryPlanLogger.toCompactString() : physicalQueryPlanLogger.toJson(),
+        data: resultDone,
       },
     };
   }

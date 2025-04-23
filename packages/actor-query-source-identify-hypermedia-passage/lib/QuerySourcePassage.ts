@@ -240,10 +240,10 @@ export class QuerySourcePassage implements IQuerySource {
             // we are here to execute, not to explain, so we remove the key from the context.
             // In explain mode, only the root is allowed to explain.
             const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({
-                context,//:  context.delete(KeysInitQuery.explain),
+                context,
                 query: next});
             const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
-            return results.bindingsStream;
+            return results.bindingsStream; // subqueries must create binding streams for now.
         }, { autoStart: false });
 
         return it.append(itbis);

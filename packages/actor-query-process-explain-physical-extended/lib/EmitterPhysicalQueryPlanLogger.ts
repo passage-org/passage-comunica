@@ -1,5 +1,6 @@
 import {EventEmitter} from 'events';
-import {IPhysicalQueryPlanLogger, IPlanNode} from "@comunica/types";
+import {IPhysicalQueryPlanLogger, IPlanNode} from '@comunica/types';
+import {MemoryPhysicalQueryPlanLogger} from '@comunica/actor-query-process-explain-physical';
 
 /**
  * A physical plan logger that also emits when calling the functions. This is important
@@ -48,7 +49,9 @@ export class EmitterPhysicalQueryPlanLogger extends EventEmitter implements IPhy
     }
 
     public toCompactString(): string {
-        return this.wrapped.toCompactString();
+        // TODO should probably be part of IPhysicalQueryPlanLogger
+        const logger: MemoryPhysicalQueryPlanLogger = this.wrapped as MemoryPhysicalQueryPlanLogger;
+        return logger.toCompactString();
     }
 
 }

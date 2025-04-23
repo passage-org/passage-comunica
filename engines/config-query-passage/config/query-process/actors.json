@@ -1,0 +1,13 @@
+{
+  "@context": [
+    "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/config-query-sparql/^4.0.0/components/context.jsonld",
+    "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/runner/^4.0.0/components/context.jsonld",
+    "https://linkedsoftwaredependencies.org/bundles/npm/@passage/config-query-passage/^0.0.0/components/context.jsonld"
+  ],
+  "import": [
+    "pcqp:config/query-process/sequential.json",
+    "ccqs:config/query-process/actors/explain-parsed.json",
+    "ccqs:config/query-process/actors/explain-logical.json",
+    "pcqp:config/query-process/physical.json"
+  ]
+}
