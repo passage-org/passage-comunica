@@ -1,10 +1,8 @@
 import type {IActionQueryProcess, IActorQueryProcessArgs, IQueryProcessSequential,} from '@comunica/bus-query-process';
 import {ActorQueryProcess,} from '@comunica/bus-query-process';
 import {KeysInitQuery} from '@comunica/context-entries';
-import type {IActorTest, TestResult} from '@comunica/core';
-import {ActionContextKey, failTest, passTestVoid} from '@comunica/core';
+import {ActionContextKey, failTest, IActorTest, passTestVoid, TestResult} from '@comunica/core';
 import {MemoryPhysicalQueryPlanLogger} from '@comunica/actor-query-process-explain-physical';
-import {EmitterPhysicalQueryPlanLogger} from "./EmitterPhysicalQueryPlanLogger";
 import {BindingsStream} from "@comunica/types";
 
 /**
@@ -19,9 +17,11 @@ export class ActorQueryProcessExplainPhysicalExtended extends ActorQueryProcess 
 
   public async test(action: IActionQueryProcess): Promise<TestResult<IActorTest>> {
     const mode = (action.context.get(KeysInitQuery.explain) ?? action.context.get(new ActionContextKey('explain')));
+
     if (mode !== 'physical' && mode !== 'physical-json') {
       return failTest(`${this.name} can only explain in 'physical' or 'physical-json' mode.`);
     }
+
     return passTestVoid();
   }
 
@@ -34,9 +34,12 @@ export class ActorQueryProcessExplainPhysicalExtended extends ActorQueryProcess 
     // If we need a physical query plan, store a physical query plan logger in the context, and collect it after exec
     // TODO should return an IPhysicalPlanLogger stuff, but since it does not comprise toCompactString, we
     //      keep casting until changes
-    let physicalQueryPlanLogger: EmitterPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger) as EmitterPhysicalQueryPlanLogger;
+    //let physicalQueryPlanLogger: EmitterPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger) as EmitterPhysicalQueryPlanLogger;
+    let physicalQueryPlanLogger: MemoryPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger) as MemoryPhysicalQueryPlanLogger;
+
     if (!physicalQueryPlanLogger) {
-      physicalQueryPlanLogger = new EmitterPhysicalQueryPlanLogger(new MemoryPhysicalQueryPlanLogger());
+      // physicalQueryPlanLogger = new EmitterPhysicalQueryPlanLogger(new MemoryPhysicalQueryPlanLogger());
+      physicalQueryPlanLogger = new MemoryPhysicalQueryPlanLogger();
       context = context.set(KeysInitQuery.physicalQueryPlanLogger, physicalQueryPlanLogger);
     } else {
       // only the root, i.e. the initializer is allowed to explain
@@ -67,20 +70,21 @@ export class ActorQueryProcessExplainPhysicalExtended extends ActorQueryProcess 
     const mode: 'parsed' | 'logical' | 'physical' | 'physical-json' = action.context.get(KeysInitQuery.explain) ??
         action.context.getSafe(KeysInitQuery.explain);
 
-    let resultDone = new Promise<String>((resolve, reject) =>
+    /*let resultDone = new Promise<String>((resolve, reject) =>
         bindings?.on("end",  () => {
           console.log("done");
           resolve(mode.includes('physical-json') ? physicalQueryPlanLogger.toJson() :
               mode.includes('physical') ? physicalQueryPlanLogger.toCompactString() : undefined);
         })
-    );
+    );*/
 
     return {
       result: {
         bindingsStream: bindings,
         explain: true,
         type: mode,
-        data: resultDone,
+        data: physicalQueryPlanLogger.toCompactString()
+        // resultDone,
       },
     };
   }

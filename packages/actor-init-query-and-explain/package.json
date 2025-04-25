@@ -22,6 +22,7 @@
         "build:components": "componentsjs-generator"
     },
     "dependencies": {
-        "@comunica/actor-init-query": "^4.1.0"
+        "@comunica/actor-init-query": "^4.1.0",
+        "readable-stream": "^4.5.2"
     }
 }

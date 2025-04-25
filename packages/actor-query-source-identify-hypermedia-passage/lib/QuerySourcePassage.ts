@@ -1,7 +1,7 @@
 import type {BindingsFactory} from '@comunica/utils-bindings-factory';
 import type {MediatorHttp} from '@comunica/bus-http';
 import {KeysInitQuery} from '@comunica/context-entries';
-import {Actor} from '@comunica/core';
+import {ActionContextKey, Actor} from '@comunica/core';
 import {MetadataValidationState} from '@comunica/utils-metadata';
 import type {
     BindingsStream,
@@ -299,7 +299,8 @@ export class QuerySourcePassage implements IQuerySource {
      * @param operation The operation to update.
      */
     public static updateStartTime(context: IActionContext, operation: Algebra.Operation) {
-        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
+            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
         if (physicalQueryPlanLogger) {
             operation.startAt = Date.now();
             physicalQueryPlanLogger.appendMetadata(operation, {startAt: operation.startAt});
@@ -312,7 +313,8 @@ export class QuerySourcePassage implements IQuerySource {
      * @param operation The operation to update.
      */
     public static updateDoneTime(context: IActionContext, operation: Algebra.Operation) {
-        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
+            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
         if (physicalQueryPlanLogger) {
             operation.doneAt = Date.now();
             operation.timeLife = operation.doneAt - operation.startAt;
@@ -330,7 +332,8 @@ export class QuerySourcePassage implements IQuerySource {
      * @param nbResults The number of results retrieved by the iterator.
      */
     public static updateNbResults(context: IActionContext, operation: Algebra.Operation, nbResults: number) {
-        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger);
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
+            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
         if (physicalQueryPlanLogger) {
             operation.cardinalityReal = nbResults;
             physicalQueryPlanLogger.appendMetadata(operation, {cardinalityReal: nbResults})

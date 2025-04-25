@@ -1,6 +1,6 @@
 import type {IQueryProcessSequentialOutput,} from '@comunica/bus-query-process';
 import {ActionContextKey} from '@comunica/core';
-import type {ComunicaDataFactory, IActionContext, QueryFormatType,} from '@comunica/types';
+import type {ComunicaDataFactory, IActionContext, IPhysicalQueryPlanLogger, QueryFormatType,} from '@comunica/types';
 import {ActorQueryProcessSequential, IActorQueryProcessSequentialArgs} from '@comunica/actor-query-process-sequential';
 import {Algebra, Factory} from "sparqlalgebrajs";
 import {KeysInitQuery} from "@comunica/context-entries";
@@ -23,6 +23,10 @@ export class ActorQueryProcessSequentialRecursive extends ActorQueryProcessSeque
     // TODO initialized should be in the global dictionary of context keys
     //      Among others, the sources are skolemized multiple times without it.
     if (!context.get(new ActionContextKey("initialized"))) {
+      if (context.get(new ActionContextKey("physicalQueryPlanLogger"))) {
+        const factory: () => IPhysicalQueryPlanLogger = context.getSafe(new ActionContextKey("physicalQueryPlanLogger"));
+        context = context.set(KeysInitQuery.physicalQueryPlanLogger, factory());
+      }
       context = context.set(new ActionContextKey("initialized"), true);
       context = (await this.mediatorContextPreprocess.mediate({context, initialize: true})).context;
     }
