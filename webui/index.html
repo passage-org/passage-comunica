@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link href="./node_modules/@triply/yasgui/build/yasgui.min.css" rel="stylesheet" type="text/css" />
+    <link href="./css/style.css" rel="stylesheet" />
+    <script src="./node_modules/@triply/yasgui/build/yasgui.min.js"></script>
+    <!--<script src="./node_modules/d3/dist/d3.min.js"></script>-->
+    <!-- <script type="module" src="./node_modules/chart.js/dist/chart.umd.js"></script>-->
+    <!-- <script type="module" src="./js/PAYGQuery.js"></script>-->
+    <!-- <script type="module" src="./js/RAWPlugin.js"></script> -->
+    <!-- <script type="module" src="./js/PlanPlugin.js"></script> -->
+    <!-- <script type="module" src="./js/PlanView.js"></script> -->
+    <script type="module" src="./js/QueryExamples.js"></script>
+    <script type="module" src="./js/FedShopQueryExamples.js"></script>
+    <!--<script type="module" src="./js/CardinalityGraph.js"></script>-->
+    <script type="module" src="./passage-comunica-engine.js"></script><!-- generated -->
+  </head>
+  
+  <body>
+    <div class="global_container">
+    <div class="header">
+      <span class="logo">P</span>
+      <button id="header_button" title="examples" class="header_button" onclick="">WDBench</button>
+      <button id="header_fedshop" title="examples" class="header_button" onclick="">FedShop</button>
+      <span class="github">
+        <a href="https://github.com/passage-org/passage-comunica" title="GitHub of Passage x Comunica">
+          <img src="./res/github-mark.svg"
+               alt="GitHub of Passage x Comunica"
+               height="30px"
+               width="30px"/>
+        </a>
+      </span>
+      <!--<button class="header_button github" title="github">Github</button>
+      <button class="header_button github" title="about">About</button>-->
+    </div>
+    
+    <dialog id="examples_dialog" class="examples_dialog">
+    </dialog>
+
+    <dialog id="fedshop_dialog" class="fedshop_dialog">
+    </dialog>
+
+    
+    <div id="yasgui"></div>
+
+    <footer class="footer">
+      <p class="text-center">
+        Ⓒ 2017–2025
+        <a href="https://sites.google.com/site/gddlina/">GDD Team</a>,
+        <a href="https://www.ls2n.fr?lang=en">LS2N</a>,
+        <a href="http://www.univ-nantes.fr/">University of Nantes</a>
+      </p>
+    </footer>
+    </div>
+    
+    <script type="module">
+
+      const button = document.getElementById("header_button");
+      const dialog = document.getElementById("examples_dialog");
+      button.addEventListener("click", () => {
+          dialog.showModal();
+      });
+
+      dialog.addEventListener('click', (event) => {
+          if (event.target.id !== 'examples_dialog_content') {
+              dialog.close();
+          }
+      });
+      
+      const buttonFedShop = document.getElementById("header_fedshop");
+      const fedShopDialog = document.getElementById("fedshop_dialog");
+      buttonFedShop.addEventListener("click", () => {
+          fedShopDialog.showModal();
+      });
+
+      fedShopDialog.addEventListener('click', (event) => {
+          if (event.target.id !== 'examples_dialog_content') {
+              fedShopDialog.close();
+          }
+      });
+      
+      //////////////////////////////////////////////////////////////////////////
+
+      import Passage from './passage-comunica-engine.js';
+      const RdfString = Passage.RdfString;
+      
+      //////////////////////////////////////////////////////////////////////////
+
+      // import {RAWPlugin} from "./js/RAWPlugin.js";
+      // Yasr.registerPlugin("RAW", RAWPlugin); // registering of plugins must be done before Yasgui() ofc.
+      Yasr.defaults.persistencyExpire = 0;
+      
+      // import {PlanPlugin} from "./js/PlanPlugin.js";
+      // Yasr.registerPlugin("Plan", PlanPlugin); // registering of plugins must be done before Yasgui() ofc.
+      
+      const yasgui = new Yasgui(document.getElementById("yasgui"), {
+          requestConfig: {
+              endpoint: "https://10-54-2-226.gcp.glicid.fr/wikidata/passage",
+              args: [{name:"limit", value:"10000"},
+                     {name:"timeout", value:"60000"}],
+          },
+          copyEndpointOnNewTab: false
+      });
+
+      const yasqe = yasgui.getTab().yasqe;
+      const yasr  = yasgui.getTab().yasr;
+      yasr.results = null; // remove last known value
+
+      // we change the behavior of the execute button to execute with passage x comunica
+      import MergedParsedResults from './js/merged-parsed-results.js';
+      yasqe.queryBtn.onclick = function () {
+          const mergedResults = new MergedParsedResults();
+          const engine = Passage.PassageFactory();
+          const query = yasqe.getDoc().getValue();
+          const requestConfig = yasqe.config.requestConfig(); // headers and all.
+          const endpoint = requestConfig.endpoint;
+          console.log("Executing the following SPARQL query on " + endpoint + ": \n" + query);
+          engine.query(query,
+                       {sources: [endpoint]}
+                      ).then(async function (result) {
+                          let resultsIterator = null;
+                          switch (result.resultType) {
+                          case 'bindings':
+                              resultsIterator = await result.execute();
+                              break;
+                          };
+
+                          resultsIterator.on('error', function(e) {
+                              console.log('Error');
+                          });
+
+                          resultsIterator.on('end', function() {
+                              mergedResults.stop();
+                              yasr.draw();
+                              console.log('We are done with the query!');
+                          });
+
+                          resultsIterator.on('data', function (result) {
+                              // put back the data as if it was the result of one standard call to
+                              // a SPARQL enpdoint…
+                              const jsonBindings = Object.fromEntries([...result].map(([key, value]) => {
+                                  let type = null;
+                                  switch (value.termType) {
+                                  case "NamedNode": type = 'uri'; break;
+                                  case "Literal": type = 'literal'; break;
+                                  case "BlankNode" : type = 'bnode'; break;
+                                  default: console.log("Unhandled type: " + value.termType); 
+                                  };
+                                  let datatype = value && value.datatype && value.datatype.value;
+                                  
+                                  const jsonValue = {
+                                      value: value.value,
+                                      type: type,
+                                      datatype: datatype,
+                                  };
+                                  
+                                  return [key.value, jsonValue];
+                              }));
+
+                              const vars = Object.keys(jsonBindings);
+
+                              const response = {vars: vars, bindings: jsonBindings};
+                              mergedResults.appendResponse(response);
+
+                              yasr.results = mergedResults;
+                              if (mergedResults.isMoreCalm()) {
+                                  // TODO it would be better to change the table plugin
+                                  //      so it appends the new data instead of destroying
+                                  //      then printing anew.
+                                  yasr.plugins['table'].draw();
+                              };
+                              yasr.updateResponseInfo();
+                              // not emitting to avoid all calls to stringify 
+                              // yasqe.emit("queryResponse", mergedResults);
+                          });
+                      });
+      };
+      
+      import {QueryExamples} from "./js/QueryExamples.js";
+      new QueryExamples(dialog, yasqe);
+      import {FedShopQueryExamples} from "./js/FedShopQueryExamples.js";
+      new FedShopQueryExamples(fedShopDialog, yasqe);
+
+      // yasqe.on("queryResponse", (instance, mergedResults) => {
+          /* if (resp.status === 200) {
+              var data = JSON.parse(resp.text);
+
+              if (!data.RAWOutput && !data.RAWOutputAggregated) {
+                  return;
+              }
+              
+              // update the plugin data structure
+              let raw = yasr.plugins["RAW"];
+              raw.payg.update(duration, data.results.bindings, data.RAWOutput, data.RAWOutputAggregated);
+
+              // update response to include previous results. Ugly but works ok for now.
+              resp.body.results.bindings = raw.payg.bindings;
+              yasr.setResponse(resp, raw.payg.totalDuration); */
+          // yasr.setResponse(mergedQueryResults.getResponse(), mergedQueryResults.getElapsed());
+          // yasr.results = mergedResults;
+          // console.log(yasr.plugins['table']);
+      // });
+
+      // monkey-patch the response informations label
+      // const updateResponseInfo = yasr.updateResponseInfo;
+      // yasr.updateResponseInfo = function() {
+          /* if (!yasr || !yasr.results || !yasr.results.bindings) {
+              updateResponseInfo.call(yasr);
+          } else {
+              yasr.results.bindings = yasr.plugins["RAW"].payg.bindings;
+              updateResponseInfo.call(yasr);
+          }
+
+          if (yasr.plugins["RAW"].payg.nbTimes > 1) { // only when multiple round-trips
+              yasr.dataElement.innerText += " (" + yasr.plugins["RAW"].payg.nbTimes + (yasr.plugins["RAW"].payg.nbTimes > 1 ? " iterations)" : " iteration)");
+          }*/
+      // };
+
+    </script>
+  </body>
+
+</html>

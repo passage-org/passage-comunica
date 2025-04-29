@@ -1,0 +1,20 @@
+1745827294324: {"type":"physical","subtype":"init","lo":"distinct","pn":0,"n":1,"m":{}}
+1745827294324: {"type":"physical","subtype":"init","lo":"project","pn":1,"n":2,"m":{}}
+1745827294326: {"type":"physical","subtype":"init","lo":"service","pn":2,"n":3,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label.\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827294326: {"type":"physical","subtype":"init","lo":"service","pn":2,"n":3,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label.\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827294327: {"type":"physical","subtype":"append","n":3,"m":{"startAt":1745827294327}}
+1745827354469: {"type":"physical","subtype":"append","n":3,"m":{"doneAt":1745827354467}}
+1745827354471: {"type":"physical","subtype":"append","n":3,"m":{"timeLife":60140}}
+1745827354471: {"type":"physical","subtype":"append","n":3,"m":{"cardinalityReal":142}}
+1745827354475: {"type":"physical","subtype":"init","lo":"project","pn":2,"n":4,"m":{}}
+1745827354475: {"type":"physical","subtype":"init","lo":"service","pn":4,"n":5,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    {\n      SELECT ?item ?label WHERE { ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label. }\n      OFFSET 11720044\n    }\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827354476: {"type":"physical","subtype":"init","lo":"service","pn":4,"n":5,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    {\n      SELECT ?item ?label WHERE { ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label. }\n      OFFSET 11720044\n    }\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827354477: {"type":"physical","subtype":"append","n":5,"m":{"startAt":1745827354476}}
+1745827414565: {"type":"physical","subtype":"append","n":5,"m":{"doneAt":1745827414560}}
+1745827414566: {"type":"physical","subtype":"append","n":5,"m":{"timeLife":60084}}
+1745827414566: {"type":"physical","subtype":"append","n":5,"m":{"cardinalityReal":64}}
+1745827414570: {"type":"physical","subtype":"init","lo":"project","pn":4,"n":6,"m":{}}
+1745827414571: {"type":"physical","subtype":"init","lo":"service","pn":6,"n":7,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    {\n      SELECT ?item ?label WHERE { ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label. }\n      OFFSET 22709673\n    }\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827414572: {"type":"physical","subtype":"init","lo":"service","pn":6,"n":7,"m":{"variables":["item","itemLabel"],"query":"SELECT ?item (STR(?label) AS ?itemLabel) WHERE {\n  {\n    {\n      SELECT ?item ?label WHERE { ?item <http://www.w3.org/2000/01/rdf-schema#label> ?label. }\n      OFFSET 22709673\n    }\n    FILTER((((LANG(?label)) = \"en\") || ((LANG(?label)) = \"mul\")) || ((LANG(?label)) = \"fr\"))\n  }\n  ?item <http://www.wikidata.org/prop/direct/P31> <http://www.wikidata.org/entity/Q146>.\n}"}}
+1745827414572: {"type":"physical","subtype":"append","n":7,"m":{"startAt":1745827414572}}
+

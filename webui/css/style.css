@@ -1,0 +1,199 @@
+
+:root {
+    --polar-night-1: #2e3440;
+    --polar-night-2: #3b4252;
+    --polar-night-3: #434c5e;
+    --polar-night-4: #4c566a;
+
+    --snow-storm-1: #d8dee9;
+    --snow-storm-2: #e5e9f0;
+    --snow-storm-3: #eceff4;
+
+    --frost-1: #8fbcbb;
+    --frost-2: #88c0d0;
+    --frost-3: #81a1c1;
+    --frost-4: #5e81ac;
+
+    --aurora-1: #bf616a;
+    --aurora-2: #d08770;
+    --aurora-3: #ebcb8b;
+    --aurora-4: #a3be8c;
+    --aurora-5: #b48ead;
+
+    --base-font-family: "Helvetica Neue";
+}
+
+
+
+.header {
+    border-bottom: 1px solid var(--snow-storm-1);
+    background: var(--snow-storm-3);
+    font-family: var(--base-font-family);
+}
+
+.logo {
+    background: var(--polar-night-4);
+    color: var(--snow-storm-3);
+    font-size: 40px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.header_button {
+    background-color: var(--frost-3);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    font-family: var(--base-font-family);
+}
+
+.header_button:hover {
+    background-color: var(--frost-1);
+}
+
+#examples_dialog {
+    width:25%;
+}
+
+.examples_dialog_content,
+.examples_dialog_content table,
+.examples_dialog_content tbody,
+.examples_dialog_content tr,
+.examples_dialog_content td,
+.examples_dialog_content button {
+    display: block;
+    width:100%;
+}
+
+.examples_dialog_button {
+    background-color: var(--frost-3);
+    width:100%;
+    border: none;
+    color: white;
+    padding: 5px;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    font-size: 16px;
+    font-family: var(--base-font-family);
+}
+
+.examples_dialog_button:hover {
+    background-color: var(--frost-1);
+}
+
+.github {
+    float: right;
+    transform: translateY(12px);
+    margin-right: 15px;
+}
+
+
+
+html, body {
+    color: var(--polar-night-4);
+    margin-left : 0px;
+    margin-right : 0px;
+    margin-top : 0px;
+    margin-bottom : 0px;
+    height: 100%;
+}
+
+.global_container {
+    width:100%;
+    height:100%;
+    margin: 0 auto;
+    border-left: solid 1px var(--snow-storm-1);
+    border-right: solid 1px var(--snow-storm-1);
+}
+
+
+.tabsList {
+    display: none !important;
+}
+
+.tableGraph {
+    table-layout: fixed;
+    width: 100%;
+    height: 400px;
+}
+
+.raw_graph {
+    border: solid 1px var(--frost-4);
+    height: 100%;
+    min-height: 300px;
+}
+
+
+.footer {
+    position: sticky;
+    top: 100%;
+    font-family: var(--base-font-family);
+}
+
+.text-center {
+    text-align: center;
+}
+
+svg {
+    font-family: var(--base-font-family);
+    stroke: var(--frost-4);
+}
+
+#plan {
+    width:100%;
+    height:500px;
+}
+
+.desc_plan {
+    stroke:  var(--frost-4);
+    fill: var(--frost-4);
+}
+
+.type_plan {
+    text-anchor: end;
+    stroke:  var(--aurora-2);
+    fill: var(--aurora-2);
+}
+
+.card_plan {
+    stroke: var(--frost-2);
+    fill: var(--frost-2);
+}
+
+.number_plan {
+    stroke: var(--aurora-5);
+    fill: var(--aurora-5);
+}
+
+
+
+/* Modification of yasgui's style */
+
+[class^="yasr_"] {
+    font-family: var(--base-font-family);
+}
+
+.yasqe .yasqe_buttons {
+    top: auto;
+    bottom: 10px;
+    left: 5px;
+    right: auto;
+}
+
+table.dataTable thead {
+    background-color: var(--snow-storm-3);
+}
+
+table.dataTable tbody .even {
+    background-color: var(--snow-storm-3);
+}
+
+
+.yasr .yasr_btnGroup li {
+    background-color: var(--snow-storm-3);
+}
