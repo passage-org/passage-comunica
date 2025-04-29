@@ -11,10 +11,21 @@
         "build:components": "componentsjs-generator packages/* engines/*",
         "clean": "tsc --build --clean ; rm yarn.lock ; rm -rf node_modules/",
         "postinstall": "yarn run build && yarn --cwd=./engines/query-passage run prepare",
-        "query-passage": "node --max-old-space-size=10076 ./engines/query-passage/bin/query.js"
+        "query-passage": "node --max-old-space-size=10076 ./engines/query-passage/bin/query.js",
+        "build:browser": "yarn build && comunica-compile-config ./engines/config-query-passage/config/config-default.json > ./src/passage-comunica-engine.js && echo '=============\\nExported the engine to ./src/passage-comunica-engine.js' && webpack-cli"
+    },
+    "dependencies": {
+        "@comunica/actor-init-query": "^4.1.0",
+        "rdf-string": "^2.0.1"
     },
     "devDependencies": {
+        "@babel/preset-env": "^7.26.9",
+        "@babel/core": "^7.26.9",
+        "babel-loader": "^10.0.0",
         "componentsjs-generator": "^4.2.0",
-        "typescript": "^5.3.3"
-    }
+        "typescript": "^5.3.3",
+        "webpack": "^5.99.7",
+        "webpack-cli": "^6.0.1"
+    },
+    "browser": {}
 }
