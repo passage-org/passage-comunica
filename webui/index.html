@@ -97,11 +97,24 @@
 
       const yasqe = yasgui.getTab().yasqe;
       const yasr  = yasgui.getTab().yasr;
-      yasr.results = null; // remove last known value
-
+      console.log(yasqe);
       // we change the behavior of the execute button to execute with passage x comunica
       import MergedParsedResults from './js/merged-parsed-results.js';
-      yasqe.on('query', function () {
+
+      yasqe.queryBtn.onclick = function() {
+          if (yasqe.req) {
+              // stop query execution
+              yasqe.req._end(); // ugly but w/e
+              yasqe.req = undefined;
+              yasqe.updateQueryButton();
+              yasqe.queryBtn.title = "run query";
+              return;
+          }
+          yasqe.req = true;
+          yasqe.queryStatus = "valid";
+          yasqe.updateQueryButton("valid");
+          yasqe.queryBtn.title = "stop query";
+          
           const mergedResults = new MergedParsedResults();
           const engine = Passage.PassageFactory();
           const query = yasqe.getDoc().getValue();
@@ -118,13 +131,21 @@
                               break;
                           };
 
+                          yasqe.req = resultsIterator;
+                          
                           resultsIterator.on('error', function(e) {
-                              console.log('Error');
+                              yasqe.req = undefined;
+                              yasqe.queryBtn.title = "run query";
+                              yasqe.updateQueryButton("error");
                           });
 
                           resultsIterator.on('end', function() {
+                              // TODO better handling of query button
                               mergedResults.stop();
                               yasr.draw();
+                              yasqe.req = undefined;
+                              yasqe.queryBtn.title = "run query";
+                              yasqe.updateQueryButton();
                               console.log('We are done with the query!');
                           });
 
@@ -167,7 +188,7 @@
                               // yasqe.emit("queryResponse", mergedResults);
                           });
                       });
-      });
+      };
       
       import {QueryExamples} from "./js/QueryExamples.js";
       new QueryExamples(dialog, yasqe);

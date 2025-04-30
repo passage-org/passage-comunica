@@ -213,3 +213,11 @@ table.dataTable tbody .even {
     font-style: italic;
 }
 
+.yasqe_queryButton > div > svg path:hover {
+    fill: var(--aurora-4);
+}
+
+.busy > div > svg path:hover {
+    fill: var(--aurora-1);
+}
+

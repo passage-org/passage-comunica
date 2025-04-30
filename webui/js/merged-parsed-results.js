@@ -58,7 +58,7 @@ export default class MergedParsedResults {
     }
 
     isMoreCalm() {
-        return Date.now() - this.lastAppend > 1000;
+        return this.bindings.length < 50 || Date.now() - this.lastAppend > 1000;
     }
     
 }
