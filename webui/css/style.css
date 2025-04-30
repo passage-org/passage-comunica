@@ -197,3 +197,19 @@ table.dataTable tbody .even {
 .yasr .yasr_btnGroup li {
     background-color: var(--snow-storm-3);
 }
+
+.yasqe_endpoint_container {
+    display: block;
+    width:100%;
+}
+
+.yasqe_endpoint_name {
+    float: left;
+    color: var(--frost-4);
+}
+
+.yasqe_endpoint_uri {
+    float: right;
+    font-style: italic;
+}
+
