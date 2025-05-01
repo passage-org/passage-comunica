@@ -1,3 +1,4 @@
+import {MemoryPhysicalQueryPlanLogger} from '@comunica/actor-query-process-explain-physical';
 
 /// Displays the physical plan created by comunica, that
 /// dynamically gets updated over query execution.
@@ -6,13 +7,42 @@ export class PhysicalPlanPlugin {
     priority = 10;
     hideFromSelection = false;
     history = [];
+    container = null;
     
-    constructor(yasr) { }
+    constructor(yasr) { this.yasr = yasr; }
     
+    getLogger() {
+        this.history = []; // reset
+        this.container = null;
+        const loggerFactory = () => {
+            const logger = new MemoryPhysicalQueryPlanLogger();
+            logger.logOperation = (lo, po, n, pn, a, m) => {
+                const message = lo;
+                // TODO 
+                this.history.push(message);
+                if (this.container) {
+                    this.container.innerHTML += message + '\n';
+                };
+            };
+            logger.appendMetadata = (n, m) => {
+                const message = JSON.stringify(m);
+                // TODO
+                this.history.push(message);
+                if (this.container) {
+                    this.container.innerHTML += message + '\n';
+                };
+            };
+            return logger;
+        };
+        return loggerFactory;
+    }
+
     canHandleResults() { return this.history.length > 0; }
 
     draw () {
-        // TODO TODO TODO 
+        this.container = document.createElement('pre');
+        this.container.innerHTML = this.history.join('\n');
+        this.yasr.resultsEl.appendChild(this.container);
     }
 
     getIcon() {

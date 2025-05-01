@@ -81,6 +81,13 @@
       });
       
       //////////////////////////////////////////////////////////////////////////
+
+      // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
+      // Yasqe.forkAutocompleter('class', TPBasedCompleter);
+      // Yasqe.defaults.autocompleters = ['tp-based-completer', 'variables'];
+      Yasqe.defaults.autocompleters = ['variables'];
+      
+      //////////////////////////////////////////////////////////////////////////
       
       // registering of plugins must be done before Yasgui() ofc.
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
@@ -93,10 +100,8 @@
 
       const yasqe = yasgui.getTab().yasqe;
       const yasr  = yasgui.getTab().yasr;
-      console.log(yasqe);
       // we change the behavior of the execute button to execute with passage x comunica
       import Passage from './passage-comunica-engine.js';
-      const RdfString = Passage.RdfString;
       import MergedParsedResults from './js/merged-parsed-results.js';
 
       yasqe.queryBtn.onclick = function() {
@@ -122,6 +127,7 @@
           const configEngine = {
               sources: [endpoint],
               log: yasr.plugins['Console'].getLogger(),
+              physicalQueryPlanLogger: yasr.plugins['Plan'].getLogger(),
           };
           engine.query(query, configEngine).then(async function (result) {
                           let resultsIterator = null;

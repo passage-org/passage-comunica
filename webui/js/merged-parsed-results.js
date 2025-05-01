@@ -34,7 +34,6 @@ export default class MergedParsedResults {
     }
 
     getOriginalResponseAsString() {
-        console.log("stringify");
         return JSON.stringify({
             head: {vars: this.vars},
             results: {bindings: this.bindings}
