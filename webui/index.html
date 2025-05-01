@@ -81,17 +81,13 @@
       });
       
       //////////////////////////////////////////////////////////////////////////
-
-      import Passage from './passage-comunica-engine.js';
-      const RdfString = Passage.RdfString;
       
-      //////////////////////////////////////////////////////////////////////////
-
-      // import {RAWPlugin} from "./js/RAWPlugin.js";
-      // Yasr.registerPlugin("RAW", RAWPlugin); // registering of plugins must be done before Yasgui() ofc.
-      // import {PlanPlugin} from "./js/PlanPlugin.js";
-      // Yasr.registerPlugin("Plan", PlanPlugin); // registering of plugins must be done before Yasgui() ofc.
-
+      // registering of plugins must be done before Yasgui() ofc.
+      import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
+      Yasr.registerPlugin("Console", ComunicaConsolePlugin);
+      import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
+      Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
+      
       import {YasguiConfig} from "./js/yasgui-config";
       const yasgui = new Yasgui(document.getElementById("yasgui"), YasguiConfig);
 
@@ -99,6 +95,8 @@
       const yasr  = yasgui.getTab().yasr;
       console.log(yasqe);
       // we change the behavior of the execute button to execute with passage x comunica
+      import Passage from './passage-comunica-engine.js';
+      const RdfString = Passage.RdfString;
       import MergedParsedResults from './js/merged-parsed-results.js';
 
       yasqe.queryBtn.onclick = function() {
@@ -114,16 +112,18 @@
           yasqe.queryStatus = "valid";
           yasqe.updateQueryButton("valid");
           yasqe.queryBtn.title = "stop query";
-          
+
           const mergedResults = new MergedParsedResults();
           const engine = Passage.PassageFactory();
           const query = yasqe.getDoc().getValue();
           const requestConfig = yasqe.config.requestConfig(); // headers and all.
           const endpoint = requestConfig.endpoint;
           console.log("Executing the following SPARQL query on " + endpoint + ": \n" + query);
-          engine.query(query,
-                       {sources: [endpoint]}
-                      ).then(async function (result) {
+          const configEngine = {
+              sources: [endpoint],
+              log: yasr.plugins['Console'].getLogger(),
+          };
+          engine.query(query, configEngine).then(async function (result) {
                           let resultsIterator = null;
                           switch (result.resultType) {
                           case 'bindings':

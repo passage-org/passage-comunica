@@ -11,7 +11,9 @@ dist/
 *yarn.lock
 
 # javascript files are generated; if not, force git to track them individually
-*.js
+*passage-comunica-engine.js
+packages/**/*.js
+engines/**/*.js
 *.d.ts
 *.js.map
 *components/
