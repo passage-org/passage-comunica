@@ -189,10 +189,13 @@ table.dataTable thead {
     background-color: var(--snow-storm-3);
 }
 
-table.dataTable tbody .even {
+table.dataTable tbody tr:nth-child(2n) {
     background-color: var(--snow-storm-3);
 }
 
+.yasr .dataTables_wrapper .dataTable td pre {
+    margin: 0px;
+}
 
 .yasr .yasr_btnGroup li {
     background-color: var(--snow-storm-3);
@@ -221,3 +224,12 @@ table.dataTable tbody .even {
     fill: var(--aurora-1);
 }
 
+.warn {
+    color: var(--aurora-3);
+    text-align: center;
+}
+
+.info {
+    color: var(--aurora-4);
+    text-align: center;
+}

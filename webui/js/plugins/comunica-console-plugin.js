@@ -2,6 +2,7 @@ import {LoggerPretty} from '@comunica/logger-pretty';
 
 /// A plugin that draws the standard console output from
 /// Comunica. Should only be text based, nothing too fancy.
+/// oooor, a table that can be sorted by time, or log level.
 export class ComunicaConsolePlugin {
 
     priority = 10;
@@ -14,22 +15,67 @@ export class ComunicaConsolePlugin {
     getLogger() {
         this.history = []; // reset
         this.container = null;
-        const logger = new LoggerPretty({ level: 'info' });
+        const logger = new LoggerPretty({ level: 'debug' });
         logger.log = (level, color, message, data) => {
-            this.history.push(message);
-            if (this.container) {
-                this.container.innerHTML += message + '\n';
-            };
+            const entry = {level: level, message: message, date:Date.now()};
+            this.history.push(entry);
+            this.concatNewRow(entry);
         };
         return logger;
     }
-    
-    canHandleResults() { return this.history.length > 0; }
 
+    canHandleResults() { return this.history.length > 0; }
+    
     draw() {
-        this.container = document.createElement('pre');
-        this.container.innerHTML = this.history.join('\n');
+        this.container = document.createElement('div');
+        this.container.classList.add('dataTables_wrapper');
+        const table = document.createElement('table');
+        table.classList.add('dataTable');
+        const headers = document.createElement('thead');
+        const row = document.createElement('tr');
+        const dateHeader = document.createElement('th');
+        dateHeader.innerHTML = 'timestamp';
+        row.appendChild(dateHeader);
+        const levelHeader = document.createElement('th');
+        levelHeader.innerHTML = 'level';
+        row.appendChild(levelHeader);
+        const messageHeader = document.createElement('th');
+        messageHeader.innerHTML = 'message';
+        row.appendChild(messageHeader);
+        headers.appendChild(row);
+        table.appendChild(headers);
+        this.container.appendChild(table);
+        this.tbody = document.createElement('tbody');
+        table.appendChild(this.tbody);
+        
+        this.history.forEach(entry => {
+            this.concatNewRow(entry);
+        });
+        
         this.yasr.resultsEl.appendChild(this.container);
+    }
+
+    /// Concatenate a new row of data to the table
+    concatNewRow(entry) {
+        if (this.container) {
+            // append a new line to the table
+            const row = document.createElement('tr');
+            const dateContainer = document.createElement('td');
+            const hoursOnly = new Date(entry.date).toLocaleString().split(' ')[1];
+            const millisOnly = new Date(entry.date).getMilliseconds();
+            dateContainer.innerHTML = hoursOnly+"."+String(millisOnly).padStart(3, '0');
+            const levelContainer = document.createElement('td');
+            levelContainer.innerHTML = entry.level;
+            levelContainer.classList.add(entry.level);
+            const messageContainer = document.createElement('td');
+            const messageFormat = document.createElement('pre');
+            messageFormat.textContent = entry.message;
+            messageContainer.appendChild(messageFormat);
+            row.appendChild(dateContainer);
+            row.appendChild(levelContainer);
+            row.appendChild(messageContainer);
+            this.tbody.appendChild(row);
+        };
     }
     
     getIcon() {

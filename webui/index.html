@@ -91,7 +91,7 @@
       
       // registering of plugins must be done before Yasgui() ofc.
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
-      Yasr.registerPlugin("Console", ComunicaConsolePlugin);
+      Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
       Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
       
@@ -126,7 +126,7 @@
           console.log("Executing the following SPARQL query on " + endpoint + ": \n" + query);
           const configEngine = {
               sources: [endpoint],
-              log: yasr.plugins['Console'].getLogger(),
+              log: yasr.plugins['Log'].getLogger(),
               physicalQueryPlanLogger: yasr.plugins['Plan'].getLogger(),
           };
           engine.query(query, configEngine).then(async function (result) {
