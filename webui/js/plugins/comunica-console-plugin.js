@@ -9,13 +9,23 @@ export class ComunicaConsolePlugin {
     hideFromSelection = false;
     history = [];
     container = null;
+    tbody = null; // the body of the table displaying rows of log
     
     constructor(yasr) { this.yasr = yasr; }
 
-    getLogger() {
-        this.history = []; // reset
+    /// make sure to reset the data and view
+    /// so it does not impair performance forever.
+    resetDOM() {
+        this.tbody && this.tbody.remove();
+        this.tbody = null;
+        this.container && this.container.remove();
         this.container = null;
-        const logger = new LoggerPretty({ level: 'debug' });
+    }
+    
+    getLogger() {
+        this.resetDOM();
+        this.history = []; // reset history
+        const logger = new LoggerPretty({ level: 'info' });
         logger.log = (level, color, message, data) => {
             const entry = {level: level, message: message, date:Date.now()};
             this.history.push(entry);
@@ -23,10 +33,11 @@ export class ComunicaConsolePlugin {
         };
         return logger;
     }
-
+    
     canHandleResults() { return this.history.length > 0; }
     
     draw() {
+        this.resetDOM();
         this.container = document.createElement('div');
         this.container.classList.add('dataTables_wrapper');
         const table = document.createElement('table');
@@ -35,24 +46,24 @@ export class ComunicaConsolePlugin {
         const row = document.createElement('tr');
         const dateHeader = document.createElement('th');
         dateHeader.innerHTML = 'timestamp';
-        row.appendChild(dateHeader);
+        row.append(dateHeader);
         const levelHeader = document.createElement('th');
         levelHeader.innerHTML = 'level';
-        row.appendChild(levelHeader);
+        row.append(levelHeader);
         const messageHeader = document.createElement('th');
         messageHeader.innerHTML = 'message';
-        row.appendChild(messageHeader);
-        headers.appendChild(row);
-        table.appendChild(headers);
-        this.container.appendChild(table);
+        row.append(messageHeader);
+        headers.append(row);
+        table.append(headers);
+        this.container.append(table);
         this.tbody = document.createElement('tbody');
-        table.appendChild(this.tbody);
+        table.append(this.tbody);
         
         this.history.forEach(entry => {
             this.concatNewRow(entry);
         });
         
-        this.yasr.resultsEl.appendChild(this.container);
+        this.yasr.resultsEl.append(this.container);
     }
 
     /// Concatenate a new row of data to the table
@@ -70,11 +81,11 @@ export class ComunicaConsolePlugin {
             const messageContainer = document.createElement('td');
             const messageFormat = document.createElement('pre');
             messageFormat.textContent = entry.message;
-            messageContainer.appendChild(messageFormat);
-            row.appendChild(dateContainer);
-            row.appendChild(levelContainer);
-            row.appendChild(messageContainer);
-            this.tbody.appendChild(row);
+            messageContainer.append(messageFormat);
+            row.append(dateContainer);
+            row.append(levelContainer);
+            row.append(messageContainer);
+            this.tbody.prepend(row);
         };
     }
     

@@ -104,7 +104,7 @@ html, body {
 }
 
 .global_container {
-    width:100%;
+    width:parent;
     height:100%;
     margin: 0 auto;
     border-left: solid 1px var(--snow-storm-1);
