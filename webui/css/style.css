@@ -121,8 +121,8 @@ html, body {
 }
 
 .global_container {
-    width:parent;
-    height:100%;
+    width: parent;
+    height: 100%;
     margin: 0 auto;
     border-left: solid 1px var(--snow-storm-1);
     border-right: solid 1px var(--snow-storm-1);
