@@ -19,21 +19,23 @@
   
   <body>
     <div class="global_container">
-    <div class="header">
-      <span class="logo">P</span>
-      <button id="header_button" title="examples" class="header_button" onclick="">WDBench</button>
-      <button id="header_fedshop" title="examples" class="header_button" onclick="">FedShop</button>
-      <span class="github">
-        <a href="https://github.com/passage-org/passage-comunica" title="GitHub of Passage x Comunica">
-          <img src="./res/github-mark.svg"
-               alt="GitHub of Passage x Comunica"
-               height="30px"
-               width="30px"/>
-        </a>
-      </span>
-      <!--<button class="header_button github" title="github">Github</button>
-      <button class="header_button github" title="about">About</button>-->
-    </div>
+      <div class="header">
+        <ul class='navigation-bar'>
+          <li><button class="logo"><img src="./res/lettrine_P.svg" title="passage" alt="passage" width="40px"/></button></li>
+          <li><button id="header_button" title="examples" class="header_button" onclick="">WDBench</button></li>
+          <li><button id="header_fedshop" title="examples" class="header_button" onclick="">FedShop</button></li>
+          <li style='float:right'><span class="github">
+              <a href="https://github.com/passage-org/passage-comunica" title="GitHub of Passage x Comunica">
+                <img src="./res/github-mark.svg"
+                     alt="GitHub of Passage x Comunica"
+                     height="30px"
+                     width="30px"/>
+              </a>
+          </span></li>
+          <!--<button class="header_button github" title="github">Github</button>
+              <button class="header_button github" title="about">About</button>-->
+        </ul>
+      </div>
     
     <dialog id="examples_dialog" class="examples_dialog">
     </dialog>

@@ -29,14 +29,30 @@
     border-bottom: 1px solid var(--snow-storm-1);
     background: var(--snow-storm-3);
     font-family: var(--base-font-family);
+    height: 50px;
+}
+
+.navigation-bar {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height:100%;
+}
+
+.navigation-bar li {
+    float: left;
+    height:100%;
 }
 
 .logo {
-    background: var(--polar-night-4);
-    color: var(--snow-storm-3);
-    font-size: 40px;
-    padding-left: 8px;
-    padding-right: 8px;
+    background: var(--frost-1);
+    border: none;
+    padding-left: 4px;
+    padding-right: 4px;
+    text-decoration: none;
+    display: inline-block;
+    height:100%;
 }
 
 .header_button {
@@ -48,6 +64,7 @@
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
+    height:100%;
     font-family: var(--base-font-family);
 }
 
@@ -88,8 +105,8 @@
 
 .github {
     float: right;
-    transform: translateY(12px);
-    margin-right: 15px;
+    transform: translateY(11px);
+    margin-right: 11px;
 }
 
 
