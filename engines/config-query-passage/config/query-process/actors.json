@@ -8,6 +8,6 @@
     "pcqp:config/query-process/sequential.json",
     "ccqs:config/query-process/actors/explain-parsed.json",
     "ccqs:config/query-process/actors/explain-logical.json",
-    "pcqp:config/query-process/physical.json"
+    "ccqs:config/query-process/actors/explain-physical.json"
   ]
 }

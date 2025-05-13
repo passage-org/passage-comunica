@@ -1,7 +1,6 @@
-import * as passage from './passage-comunica-engine.js';
 import {QueryEngineBase} from '@comunica/actor-init-query';
-import RdfString from 'rdf-string';
-import {MemoryPhysicalQueryPlanLogger} from '@comunica/actor-query-process-explain-physical';
+import * as RdfString from 'rdf-string';
+import * as passage from './passage-comunica-engine.js';
 
 const PassageFactory = function() {
     return new QueryEngineBase(passage());

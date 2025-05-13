@@ -22,6 +22,6 @@
         "build:components": "componentsjs-generator"
     },
     "dependencies": {
-        "@comunica/actor-query-process-sequential": "^4.1.0"
+        "@comunica/actor-query-process-sequential": "^4.2.0"
     }
 }
