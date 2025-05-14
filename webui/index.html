@@ -87,14 +87,14 @@
           }
       });
       
-      //////////////////////////////////////////////////////////////////////////
+
 
       // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
       // Yasqe.forkAutocompleter('class', TPBasedCompleter);
       // Yasqe.defaults.autocompleters = ['tp-based-completer', 'variables'];
       Yasqe.defaults.autocompleters = ['variables'];
       
-      //////////////////////////////////////////////////////////////////////////
+
       
       // registering of plugins must be done before Yasgui() ofc.
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
@@ -114,19 +114,23 @@
       yasqe.queryBtn.onclick = function() {
           if (yasqe.req) {
               // stop query execution
-              yasqe.req._end(); // ugly but w/e
+              // yasqe.req._end(); // ugly but w/e
               yasqe.req = undefined;
               yasqe.updateQueryButton();
               yasqe.queryBtn.title = "run query";
+              yasqe.passageConfig.abort.value = true;
               return;
           }
+      
           yasqe.req = true;
           yasqe.queryStatus = "valid";
           yasqe.updateQueryButton("valid");
           yasqe.queryBtn.title = "stop query";
 
           const mergedResults = new MergedParsedResults();
-          const engine = Passage.PassageFactory();
+          yasr.results = mergedResults;
+          yasr.draw();
+
           const query = yasqe.getDoc().getValue();
           const requestConfig = yasqe.config.requestConfig(); // headers and all.
           const endpoint = requestConfig.endpoint;
@@ -135,7 +139,10 @@
               sources: [endpoint],
               log: yasr.plugins['Log'].getLogger(),
               physicalQueryPlanLogger: yasr.plugins['Plan'].getLogger(),
+              abort: {value: false},
           };
+          const engine = Passage.PassageFactory();
+          yasqe.passageConfig = configEngine;
           engine.query(query, configEngine).then(async function (result) {
                           let resultsIterator = null;
                           switch (result.resultType) {

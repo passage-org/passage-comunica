@@ -199,22 +199,21 @@ export class QuerySourcePassage implements IQuerySource {
         this.lastSourceContext = undefined;
 
         const it = wrap<any>(rawStream, { autoStart: false, maxBufferSize: Number.POSITIVE_INFINITY })
-            .map<RDF.Bindings>((rawData: Record<string, RDF.Term>) => this.bindingsFactory.bindings(
-                variables.map((variable) => {
-                    const value = rawData[`?${variable.value}`];
-                    if (!undefVariablesIndex.has(variable.value) && !value) {
-                        Actor.getContextLogger(this.context)
-                            ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
-                    }
+            .map<RDF.Bindings>((rawData: Record<string, RDF.Term>) => {
+                // TODO fix this very ugly way to count the number of results…
+                const nbResults : number = it.getProperty("nbResults") || 0;
+                it.setProperty("nbResults", nbResults + 1);
 
-                    if (!it.getProperty("nbResults")) { // TODO fix this very ugly way to count the number of results…
-                        it.setProperty("nbResults", 0);
-                    }
-                    const nbResults : number = it.getProperty("nbResults") || 0;
-                    it.setProperty("nbResults", nbResults + 1);
-
-                    return <[RDF.Variable, RDF.Term]> [ variable, value ];
-                }).filter(([ _, v ]) => Boolean(v))));
+                return this.bindingsFactory.bindings(
+                    variables.map((variable) => {
+                        const value = rawData[`?${variable.value}`];
+                        if (!undefVariablesIndex.has(variable.value) && !value) {
+                            Actor.getContextLogger(this.context)
+                                ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
+                        }
+                        return <[RDF.Variable, RDF.Term]> [ variable, value ];
+                    }).filter(([ _, v ]) => Boolean(v)))
+            });
 
         const nextPromise: Promise<string|void> = new Promise(resolve => {
             rawStream.on('metadata', async m => {
@@ -225,14 +224,17 @@ export class QuerySourcePassage implements IQuerySource {
                 resolve();
             });
         });
+
+        it.getProperty("abort", ()=> {console.log("abort mission");});
         
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
         const itbis: BindingsStream = new TransformIterator( async() => {
             const next : string|void = await nextPromise;
             QuerySourcePassage.updateDoneTime(context, operation)
             QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
-
-            if (!next) {
+            const shouldStopShared : any = context.get(new ActionContextKey("abort"));
+            const shouldStop : boolean = shouldStopShared && shouldStopShared.value ;
+            if (!next || shouldStop) {
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
                 return new EmptyIterator<RDF.Bindings>();

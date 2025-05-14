@@ -15,7 +15,7 @@
         "build:browser": "yarn build && comunica-compile-config ./engines/config-query-passage/config/config-default.json > ./src/passage-comunica-engine.js && echo '=============\\nExported the engine to ./src/passage-comunica-engine.js' && webpack-cli"
     },
     "dependencies": {
-        "@comunica/actor-init-query": "^4.1.0",
+        "@comunica/actor-init-query": "^4.2.0",
         "rdf-string": "^2.0.1"
     },
     "devDependencies": {
