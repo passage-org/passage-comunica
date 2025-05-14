@@ -1,10 +1,11 @@
 
-export class FedShopQueryExamples {
-
-    queries = [
-        { name: "q01g",
-          description: "A consumer is looking for a product and has a general idea about what she wants.",
-          query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+/// Queries from the federated benchmark FedShop that
+/// emulates a federated e-commerce application. The queries
+/// come from the Izmir workshop that first introduced FedShop.
+export const FedShopQueries = [
+    { name: "q01g",
+      description: "A consumer is looking for a product and has a general idea about what she wants.",
+      query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX bsbm-inst: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -33,9 +34,9 @@ SELECT DISTINCT ?product ?label WHERE {
 ORDER BY ?product ?label
 LIMIT 10
 `},
-        { name: "q02b",
-          description: "The consumer wants to view basic information about products found by Query 1.",
-          query: `PREFIX bsbm-inst: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/>
+    { name: "q02b",
+      description: "The consumer wants to view basic information about products found by Query 1.",
+      query: `PREFIX bsbm-inst: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
@@ -61,9 +62,9 @@ SELECT ?label ?comment ?producer ?ProductFeatureLabel ?propertyTextual1 ?propert
     OPTIONAL { ?localProduct bsbm:productPropertyTextual5 ?propertyTextual5 }
     OPTIONAL { ?localProduct bsbm:productPropertyNumeric4 ?propertyNumeric4 }
 }`},
-        { name: 'q03j',
-          description: 'After looking at information about some products, the consumer has a more specific idea what she wants.<br/>Therefore, she asks for products having several features but not having a specific other feature.',
-          query:`PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    { name: 'q03j',
+      description: 'After looking at information about some products, the consumer has a more specific idea what she wants.<br/>Therefore, she asks for products having several features but not having a specific other feature.',
+      query:`PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -97,9 +98,9 @@ SELECT ?product ?label WHERE {
 ORDER BY ?product ?label
 LIMIT 10
 `},
-        { name: 'q04c',
-          description: 'After looking at information about some products, the consumer has a more specific idea what we wants.<br/>Therefore, she asks for products matching either one set of features or another set.',
-          query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    { name: 'q04c',
+      description: 'After looking at information about some products, the consumer has a more specific idea what we wants.<br/>Therefore, she asks for products matching either one set of features or another set.',
+      query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -141,9 +142,9 @@ SELECT DISTINCT ?product ?label ?propertyTextual WHERE {
 ORDER BY ?product ?label ?propertyTextual
 LIMIT 10
 `},
-        { name: 'q05j',
-          description: 'The consumer has found a product that fulfills his requirements.<br/>She now wants to find products with similar features.',
-          query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    { name: 'q05j',
+      description: 'The consumer has found a product that fulfills his requirements.<br/>She now wants to find products with similar features.',
+      query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -174,9 +175,9 @@ SELECT DISTINCT ?product ?localProductLabel WHERE {
 ORDER BY ?product ?localProductLabel
 LIMIT 5
 `},
-        {name: 'q06d',
-         description: 'The consumer remembers parts of a product name from former searches.<br/>She wants to find the product again by searching for the parts of the name that she remembers.',
-         query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    {name: 'q06d',
+     description: 'The consumer remembers parts of a product name from former searches.<br/>She wants to find the product again by searching for the parts of the name that she remembers.',
+     query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -187,9 +188,9 @@ SELECT ?localProduct ?label WHERE {
     # const "pyrenees" in ?label 
     FILTER regex(lcase(str(?label)), "pyrenees")
 }`},
-        {name: 'q07f',
-         description: 'The consumer has found a product which fulfills his requirements.<br/>Now she wants in-depth information about this product.<br/>It includes offers from German vendors and product reviews if existent.',
-         query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    {name: 'q07f',
+     description: 'The consumer has found a product which fulfills his requirements.<br/>Now she wants in-depth information about this product.<br/>It includes offers from German vendors and product reviews if existent.',
+     query: `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rev: <http://purl.org/stuff/rev#>
@@ -225,9 +226,9 @@ SELECT ?productLabel ?offer ?price ?vendor ?vendorTitle ?review ?revTitle ?revie
         OPTIONAL { ?review bsbm:rating2 ?rating2 . }
     }
 }`},
-        {name: 'q08f',
-         description: 'The consumer wants to read the 20 most recent English language reviews about a specific product.',
-         query: `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
+    {name: 'q08f',
+     description: 'The consumer wants to read the 20 most recent English language reviews about a specific product.',
+     query: `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
 PREFIX rev: <http://purl.org/stuff/rev#>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -251,18 +252,18 @@ SELECT ?title ?text ?reviewDate ?reviewer ?reviewerName ?rating1 ?rating2 ?ratin
 ORDER BY ?title ?text ?reviewDate ?reviewer ?reviewerName ?rating1 ?rating2 ?rating3 ?rating4
 LIMIT 20
 `},
-        { name: 'q09c',
-          description: 'In order to decide whether to trust a review, the consumer asks for any kind of information that is available about the reviewer.',
-          query: `
+    { name: 'q09c',
+      description: 'In order to decide whether to trust a review, the consumer asks for any kind of information that is available about the reviewer.',
+      query: `
 PREFIX rev: <http://purl.org/stuff/rev#>
 
 SELECT ?x WHERE { 
     # const <http://www.ratingsite3.fr/Review1276>
     <http://www.ratingsite3.fr/Review1276> rev:reviewer ?x 
 }`},
-          { name: 'q10e',
-            description: 'The consumer wants to buy from a vendor in the United States that can deliver within 3 days.<br/>She also looks for the cheapest offer that fulfills these requirements.',
-            query: `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
+    { name: 'q10e',
+      description: 'The consumer wants to buy from a vendor in the United States that can deliver within 3 days.<br/>She also looks for the cheapest offer that fulfills these requirements.',
+      query: `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -284,9 +285,9 @@ SELECT DISTINCT ?offer ?price WHERE {
 ORDER BY ?offer ?price
 LIMIT 10
 `},
-          { name: 'q11a',
-            description: 'After deciding on a specific offer, the consumer wants to get all information that is directly related to this offer.',
-            query : `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
+    { name: 'q11a',
+      description: 'After deciding on a specific offer, the consumer wants to get all information that is directly related to this offer.',
+      query : `PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
 
 SELECT ?property ?hasValue ?isValueOf WHERE {
     # const <http://www.vendor6.fr/Offer886>
@@ -295,9 +296,9 @@ SELECT ?property ?hasValue ?isValueOf WHERE {
     UNION
     { ?isValueOf ?property <http://www.vendor6.fr/Offer886> }
 }`},
-        { name: 'q12b',
-          description: 'After deciding on a specific offer, the consumer wants to save information about this offer on her machine.',
-          query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    { name: 'q12b',
+      description: 'After deciding on a specific offer, the consumer wants to save information about this offer on her machine.',
+      query: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rev: <http://purl.org/stuff/rev#>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
@@ -318,37 +319,4 @@ SELECT * WHERE {
     <http://www.vendor6.fr/Offer846> bsbm:deliveryDays ?deliveryDays .
     <http://www.vendor6.fr/Offer846> bsbm:validTo ?validTo 
 }`}
-    ]
-    
-    constructor(dialog, yasqe) {
-        const container = document.createElement("span");
-        container.setAttribute("class", "examples_dialog_content");
-        
-        const table = document.createElement("table");
-        const tbody = document.createElement("tbody");
-        
-        this.queries.forEach(q => {
-            if (q.query === "") { return; }
-            
-            const tr = document.createElement("tr");
-            const td = document.createElement("td");
-            const button = document.createElement("button");
-            button.setAttribute("class", "examples_dialog_button")
-            button.innerHTML = q.description;
-            button.addEventListener("click", () => {
-                yasqe.setValue(q.query);
-            });
-            button.setAttribute("title", q.name + ":\n\n" + q.query);
-            
-            td.appendChild(button);
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-        });
-        
-        table.appendChild(tbody);
-        container.appendChild(table);
-        dialog.appendChild(container);
-    }
-    
-    
-}
+];

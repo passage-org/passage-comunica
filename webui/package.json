@@ -1,20 +1,17 @@
 {
     "name": "passage-comunica-webui",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "description": "WebUI of Passage x Comunica.",
     "main": "index.js",
     "scripts": {
-        "server": "vite",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "server": "vite"
     },
     "author": "chat-wane <grumpy.chat.wane@gmail.com>",
     "license": "Apache-2.0",
     "dependencies": {
         "@triply/yasgui": "^4.2.28",
         "bootstrap-table": "^1.22.0",
-        "chart.js": "^4.3.0",
         "color-hash": "^2.0.2",
-        "d3": "^7.8.5",
         "sparqlalgebrajs": "^4.3.1"
     },
     "devDependencies": {

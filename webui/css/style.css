@@ -68,6 +68,11 @@
     font-family: var(--base-font-family);
 }
 
+.header_button .underlined {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+}
+
 .header_button:hover {
     background-color: var(--frost-1);
     color: var(--snow-storm-3);
@@ -105,7 +110,6 @@
 
 .dropdown:hover .dropdown_content {display: block;}
 
-#examples_dialog { width:25%; }
 .examples_dialog_content,
 .examples_dialog_content table,
 .examples_dialog_content tbody,

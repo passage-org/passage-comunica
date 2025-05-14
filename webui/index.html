@@ -4,16 +4,8 @@
     <meta charset="utf-8">
     <link href="./node_modules/@triply/yasgui/build/yasgui.min.css" rel="stylesheet" type="text/css" />
     <link href="./css/style.css" rel="stylesheet" />
+    <link href="./css/editor.css" rel="stylesheet" />
     <script src="./node_modules/@triply/yasgui/build/yasgui.min.js"></script>
-    <!--<script src="./node_modules/d3/dist/d3.min.js"></script>-->
-    <!-- <script type="module" src="./node_modules/chart.js/dist/chart.umd.js"></script>-->
-    <!-- <script type="module" src="./js/PAYGQuery.js"></script>-->
-    <!-- <script type="module" src="./js/RAWPlugin.js"></script> -->
-    <!-- <script type="module" src="./js/PlanPlugin.js"></script> -->
-    <!-- <script type="module" src="./js/PlanView.js"></script> -->
-    <script type="module" src="./js/QueryExamples.js"></script>
-    <script type="module" src="./js/FedShopQueryExamples.js"></script>
-    <!--<script type="module" src="./js/CardinalityGraph.js"></script>-->
     <script type="module" src="./passage-comunica-engine.js"></script><!-- generated -->
   </head>
   
@@ -23,10 +15,11 @@
         <ul class='navigation-bar'>
           <li><button class="logo"><img src="./res/lettrine_P.svg" title="passage" alt="passage" width="40px"/></button></li>
           <li class="dropdown">
-            <button class="header_button" title="examples">Examples</button>
+            <button class="header_button" title="examples"><span class='underlined'>Examples</span></button>
             <ul class="dropdown_content">
-              <li><button id="header_button" title="examples" class="header_button" onclick="">WDBench</button></li>
-              <li><button id="header_fedshop" title="examples" class="header_button" onclick="">FedShop</button></li>
+              <li><button id="header_wikidata" title="wikidata examples" class="header_button">Wikidata</button></li>
+              <li><button id="header_wdbench" title="wdbench queries" class="header_button">WDBench</button></li>
+              <li><button id="header_fedshop" title="fedshop queries" class="header_button">FedShop</button></li>
             </ul>
           </li>
           <li style='float:right'><span class="github">
@@ -41,62 +34,32 @@
               <button class="header_button github" title="about">About</button>-->
         </ul>
       </div>
-    
-    <dialog id="examples_dialog" class="examples_dialog">
-    </dialog>
-
-    <dialog id="fedshop_dialog" class="fedshop_dialog">
-    </dialog>
-
-    
-    <div id="yasgui"></div>
-
-    <footer class="footer">
-      <p class="text-center">
-        Ⓒ 2017–2025
-        <a href="https://sites.google.com/site/gddlina/">GDD Team</a>,
-        <a href="https://www.ls2n.fr?lang=en">LS2N</a>,
-        <a href="http://www.univ-nantes.fr/">University of Nantes</a>
-      </p>
-    </footer>
+      
+      <dialog id="wikidata_dialog" class="examples_dialog"></dialog>
+      <dialog id="wdbench_dialog" class="examples_dialog"></dialog>
+      <dialog id="fedshop_dialog" class="examples_dialog"></dialog>
+      
+      <div id="yasgui"></div>
+      
+      <footer class="footer">
+        <p class="text-center">
+          Ⓒ 2017–2025
+          <a href="https://sites.google.com/site/gddlina/">GDD Team</a>,
+          <a href="https://www.ls2n.fr?lang=en">LS2N</a>,
+          <a href="http://www.univ-nantes.fr/">University of Nantes</a>
+        </p>
+      </footer>
     </div>
     
     <script type="module">
 
-      const button = document.getElementById("header_button");
-      const dialog = document.getElementById("examples_dialog");
-      button.addEventListener("click", () => {
-          dialog.showModal();
-      });
-
-      dialog.addEventListener('click', (event) => {
-          if (event.target.id !== 'examples_dialog_content') {
-              dialog.close();
-          }
-      });
-      
-      const buttonFedShop = document.getElementById("header_fedshop");
-      const fedShopDialog = document.getElementById("fedshop_dialog");
-      buttonFedShop.addEventListener("click", () => {
-          fedShopDialog.showModal();
-      });
-
-      fedShopDialog.addEventListener('click', (event) => {
-          if (event.target.id !== 'examples_dialog_content') {
-              fedShopDialog.close();
-          }
-      });
-      
-
-
+      // registering the autocompleters plugins (must be done before Yasgui() ofc).
       // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
       // Yasqe.forkAutocompleter('class', TPBasedCompleter);
       // Yasqe.defaults.autocompleters = ['tp-based-completer', 'variables'];
       Yasqe.defaults.autocompleters = ['variables'];
       
-
-      
-      // registering of plugins must be done before Yasgui() ofc.
+      // registering of plugins (must be done before Yasgui() ofc).
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
       Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
@@ -115,6 +78,7 @@
           if (yasqe.req) {
               // stop query execution
               // yasqe.req._end(); // ugly but w/e
+              // yasqe.req.close();
               yasqe.req = undefined;
               yasqe.updateQueryButton();
               yasqe.queryBtn.title = "run query";
@@ -209,11 +173,29 @@
                           });
                       });
       };
+
+      import {QueriesDialog} from './js/views/queries-dialog.js';
+      import {WDBenchQueries} from './queries/wdbench-queries.js';
+      import {FedShopQueries} from './queries/fedshop-queries.js';
+      import {WikidataQueries} from './queries/wikidata-queries.js';
       
-      import {QueryExamples} from "./js/QueryExamples.js";
-      new QueryExamples(dialog, yasqe);
-      import {FedShopQueryExamples} from "./js/FedShopQueryExamples.js";
-      new FedShopQueryExamples(fedShopDialog, yasqe);
+      new QueriesDialog(
+          document.getElementById("header_wikidata"),
+          document.getElementById("wikidata_dialog"),
+          WikidataQueries,
+          yasqe);
+      
+      new QueriesDialog(
+          document.getElementById("header_wdbench"),
+          document.getElementById("wdbench_dialog"),
+          WDBenchQueries,
+          yasqe);
+      
+      new QueriesDialog(
+          document.getElementById("header_fedshop"),
+          document.getElementById("fedshop_dialog"),
+          FedShopQueries,
+          yasqe);
 
       // yasqe.on("queryResponse", (instance, mergedResults) => {
           /* if (resp.status === 200) {

@@ -16,8 +16,25 @@ export class PhysicalPlanPlugin {
         this.container = null;
         const loggerFactory = () => {
             const logger = new MemoryPhysicalQueryPlanLogger();
+            // overload the logger with an identifier allocator for
+            // logical nodes, to remove the recursive issue.
+            logger.n2id = new Map();
+            logger.getId = (n) => {
+                if (!logger.n2id.has(n)) {
+                    logger.n2id.set(n, logger.n2id.size);
+                }
+                return logger.n2id.get(n);
+            };
+            
             logger.logOperation = (lo, po, n, pn, a, m) => {
-                const message = lo;
+                const message = Date.now() +": " + JSON.stringify({
+                    type:'physical',
+                    subtype:'init',
+                    lo:lo,
+                    pn:logger.getId(pn),
+                    n: logger.getId(n),
+                    m: m,
+                });
                 // TODO 
                 this.history.push(message);
                 if (this.container) {
@@ -25,7 +42,12 @@ export class PhysicalPlanPlugin {
                 };
             };
             logger.appendMetadata = (n, m) => {
-                const message = JSON.stringify(m);
+                const message = Date.now() + ": " + JSON.stringify({
+                    type:'physical',
+                    subtype:'append',
+                    n:logger.getId(n),
+                    m:m,
+                });
                 // TODO
                 this.history.push(message);
                 if (this.container) {
