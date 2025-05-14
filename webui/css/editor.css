@@ -4,6 +4,20 @@
   we simply need to modify the style of cm.
 */
 
+.CodeMirror {
+    background-color: var(--background-color) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.CodeMirror-gutters {
+    background-color: var(--background-color) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.CodeMirror-cursor {
+  border-left: 1px solid var(--text-color) !important;
+}
+
 .cm-keyword { /* SELECT, GROUP, BY … */
     color: var(--aurora-5) !important;
 }
@@ -21,7 +35,7 @@
 }
 
 .cm-punc { /* (*) ( a */ 
-    color: var(--polar-night-4) !important;
+    color: var(--text-color) !important;
 }
 
 .cm-error { /* mistake */
@@ -41,5 +55,5 @@
 }
 
 .cm-overlay { /* text highlighter because cursor is on */
-    background-color: var(--snow-storm-3) !important;
+    background-color: var(--header-background-color) !important;
 }

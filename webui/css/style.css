@@ -7,7 +7,8 @@
     --aurora-1: #bf616a; --aurora-2: #d08770; --aurora-3: #ebcb8b; --aurora-4: #a3be8c; --aurora-5: #b48ead;
 
     color-scheme: light dark; /* need this to be enabled for light dark */
-    &:has(input[name="dark-light-toggle"]:checked) { color-scheme: dark; };
+    &:has(input[name="dark-light-toggle"]:checked) { color-scheme: dark; }; /* TODO toggle between 3 states */
+    &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; /* Force dark mode */ }
     
     --logo-color              : light-dark(var(--frost-1), var(--aurora-3));
     --background-color        : light-dark(white, var(--polar-night-1)); 
@@ -17,6 +18,7 @@
     --border-color            : light-dark(var(--snow-storm-1), var(--polar-night-4));
     --selected-text-color     : var(--frost-3);
     --underlight-text-color   : light-dark(var(--polar-night-4), var(--snow-storm-3));
+    --button-color            : light-dark(var(--polar-night-1), var(--snow-storm-1));
 
     --base-font-family: 'Helvetica Neue';
 }
@@ -146,10 +148,21 @@
     margin-right: 15px;
 }
 
+.logo_about > g > path, .logo_github > path {
+    fill: var(--button-color);
+    stroke : var(--button-color);
+}
+
+.logo_about:hover > g > path, .logo_github:hover > path {
+    fill: var(--logo-color);
+    stroke : var(--logo-color);
+}
+
 
 
 html, body {
-    color: var(--polar-night-4);
+    color: var(--text-color);
+    background-color: var(--background-color);
     margin-left : 0px;
     margin-right : 0px;
     margin-top : 0px;
@@ -161,8 +174,8 @@ p {
     font-family: var(--base-font-family);
 }
 
-a { color: var(--frost-3); }
-a:visited { color: var(--aurora-5); }
+a, .yasr a, .yasr a.iri { color: var(--frost-3) !important; }
+a:visited, .yasr a:visited, .yasr a.iri:visited { color: var(--aurora-5) !important; }
 
 .global_container {
     background-color: var(--background-color);
@@ -170,27 +183,13 @@ a:visited { color: var(--aurora-5); }
     width: auto;
     height: 100%;
     margin: 0 auto;
-    border-left: solid 1px var(--snow-storm-1);
-    border-right: solid 1px var(--snow-storm-1);
+    border-left: solid 1px var(--border-color);
+    border-right: solid 1px var(--border-color);
 }
 
-
-.tabsList {
+.tabsList { /* Hide the different tabulations */
     display: none !important;
 }
-
-.tableGraph {
-    table-layout: fixed;
-    width: 100%;
-    height: 400px;
-}
-
-.raw_graph {
-    border: solid 1px var(--frost-4);
-    height: 100%;
-    min-height: 300px;
-}
-
 
 .footer {
     background-color: var(--background-color);
@@ -212,9 +211,10 @@ svg {
 
 /* Modification of yasgui's style */
 
-.yasgui .controlbar {
+.yasgui .controlbar, .yasgui .tabMenu.open > div {
     background-color: var(--background-color);
 }
+
 
 [class^="yasr_"] {
     font-family: var(--base-font-family);
@@ -241,15 +241,22 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     margin: 0px;
 }
 
-.yasr .yasr_btnGroup li {
-    background-color: var(--header-background-color);
-}
+.yasr .yasr_btnGroup li {       background-color: var(--header-background-color); }
+.yasr .yasr_btnGroup li:hover { background-color: var(--border-color); }
 
 .yasr .dataTables_info { color: var(--text-color); }
 .yasr .dataTables_wrapper div.dataTables_paginate.paging_simple_numbers a.paginate_button.current { color: var(--text-color) !important; }
 .yasr .dataTables_wrapper div.dataTables_paginate.paging_simple_numbers a.paginate_button.current:hover { color: var(--frost-4) !important; }
-.yasr .dataTables_wrapper .dataTables_paginate .paginate_button { color: var(--underlight-text-color) !important; }
-.yasr .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: var(--frost-4) !important; }
+.yasr .dataTables_wrapper .dataTables_paginate a.paginate_button { color: var(--underlight-text-color) !important; }
+.yasr .dataTables_wrapper .dataTables_paginate a.paginate_button:hover { color: var(--frost-4) !important; }
+
+.yasr table.dataTable tbody tr:hover { background-color: var(--border-color) !important; }
+.yasr .dataTables_wrapper .dataTable thead tr th:hover { background-color: var(--border-color) !important; }
+
+.yasr .yasr_btnGroup .plugin_icon > svg > g > path { /* svg icons in plugins */
+    fill: var(--text-color) !important;
+    stroke: var(--text-color) !important;
+}
 
 .yasqe_endpoint_container {
     display: block;
@@ -266,9 +273,18 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     font-style: italic;
 }
 
+/* cog button for settings */
+.controlbar > button > div > svg > path {
+    fill: var(--button-color);
+    stroke: var(--button-color);
+}
+
 /* triangular button that allows users to start executing the query */
-.yasqe_queryButton > div > svg path:hover { fill: var(--aurora-4); }
-.busy > div > svg path:hover { fill: var(--aurora-1); }
+.yasqe_share > div > svg path { fill: var(--button-color); }
+.yasqe_queryButton > div > svg path { fill: var(--button-color); }
+.yasqe_queryButton:hover > div > svg path { fill: var(--aurora-4); }
+.busy:hover > div > svg path { fill: var(--aurora-1); }
+
 
 .warn {
     color: var(--aurora-3);
