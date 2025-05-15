@@ -80,12 +80,12 @@
     </div>
     
     <script type="module">
-
+      
       // registering the autocompleters plugins (must be done before Yasgui() ofc).
-      // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
-      // Yasqe.forkAutocompleter('class', TPBasedCompleter);
+      import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
+      Yasqe.forkAutocompleter('variables', KeywordsCompleter);
       // Yasqe.defaults.autocompleters = ['tp-based-completer', 'variables'];
-      Yasqe.defaults.autocompleters = ['variables'];
+      Yasqe.defaults.autocompleters = ['keywords-completer', 'variables'];
       
       // registering of plugins (must be done before Yasgui() ofc).
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
@@ -95,9 +95,9 @@
       
       import {YasguiConfig} from "./js/yasgui-config";
       const yasgui = new Yasgui(document.getElementById("yasgui"), YasguiConfig);
-
       const yasqe = yasgui.getTab().yasqe;
       const yasr  = yasgui.getTab().yasr;
+
       // we change the behavior of the execute button to execute with passage x comunica
       import Passage from './passage-comunica-engine.js';
       import MergedParsedResults from './js/merged-parsed-results.js';
