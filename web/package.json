@@ -1,7 +1,7 @@
 {
-    "name": "passage-comunica-webui",
+    "name": "passage-comunica-web",
     "version": "0.0.3",
-    "description": "WebUI of Passage x Comunica.",
+    "description": "Web interface of Passage x Comunica.",
     "main": "index.js",
     "scripts": {
         "server": "vite"
