@@ -281,8 +281,8 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
 
 /* triangular button that allows users to start executing the query */
 .yasqe_share > div > svg path { fill: var(--button-color); }
-.yasqe_queryButton > div > svg path { fill: var(--button-color); }
-.yasqe_queryButton:hover > div > svg path { fill: var(--aurora-4); }
+.yasqe_queryButton > div.queryIcon > svg path { fill: var(--button-color); }
+.yasqe_queryButton:hover > div.queryIcon > svg path { fill: var(--aurora-4); }
 .busy:hover > div > svg path { fill: var(--aurora-1); }
 
 
