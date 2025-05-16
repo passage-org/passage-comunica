@@ -13,6 +13,16 @@ export class ComunicaConsolePlugin {
     
     constructor(yasr) { this.yasr = yasr; }
 
+    download(filename) {
+        filename = (filename !== 'Query' && filename) || 'log';
+        return {
+            getData: () => JSON.stringify(this.history) || "",
+            contentType: 'json',
+            title: 'Download physical plan',
+            filename: `${filename}.json`,
+        };
+    }
+    
     /// make sure to reset the data and view
     /// so it does not impair performance forever.
     resetDOM() {

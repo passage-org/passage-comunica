@@ -10,6 +10,16 @@ export class PhysicalPlanPlugin {
     container = null;
     
     constructor(yasr) { this.yasr = yasr; }
+
+    download(filename) {
+        filename = (filename !== 'Query' && filename) || 'physicalPlan';
+        return {
+            getData: () => JSON.stringify(this.history) || "",
+            contentType: 'json',
+            title: 'Download physical plan',
+            filename: `${filename}.json`,
+        };
+    }
     
     getLogger() {
         this.history = []; // reset
