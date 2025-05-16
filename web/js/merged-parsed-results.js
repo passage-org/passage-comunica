@@ -11,6 +11,7 @@ export default class MergedParsedResults {
         this.vars = [];
         this.bindings = [];
         this.lastAppend = Date.now();
+        this.refresh = null;
     }
 
     appendResponse(response) {
@@ -58,6 +59,23 @@ export default class MergedParsedResults {
 
     isMoreCalm() {
         return this.bindings.length < 50 || Date.now() - this.lastAppend > 1000;
+    }
+
+    whenMoreCalm(callback) {
+        if (this.bindings.length < 50) {
+            callback();
+        } else {
+            if (Date.now() - this.lastAppend < 1000) {
+                if (this.refresh) {
+                    clearTimeout(this.refresh);
+                }
+                this.refresh = setTimeout(callback, 1000);
+            } else {
+                this.refresh = null;
+                callback();
+            }
+        }
+        // this.bindings.length < 50 || Date.now() - this.lastAppend > 1000;
     }
     
 }

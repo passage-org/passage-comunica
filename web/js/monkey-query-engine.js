@@ -73,6 +73,7 @@ export class MonkeyQueryEngine {
         this.yasqe.queryBtn.title = "run query";
         this.yasqe.updateQueryButton();
         this.responseChip.stop();
+        this.stop(); // becomes startable
         console.log('We are done with the query!');
     }
     
@@ -127,17 +128,12 @@ export class MonkeyQueryEngine {
                     
                     this.yasr.results.appendResponse({vars: Object.keys(jsonBindings), bindings: jsonBindings});
                     
-                    if (this.yasr.results.isMoreCalm()) {
-                        // TODO it would be better to change the table plugin
-                        //      so it appends the new data instead of destroying
-                        //      then printing anew.
-                        this.yasr.plugins['table'].draw();
-                    };
+                    this.yasr.results.whenMoreCalm(()=>{this.yasr.plugins['table'].draw();});
                     // not emitting to avoid all calls to stringify 
                     // yasqe.emit("queryResponse", mergedResults);
                 });
             }).catch((err) => {
-                console.log('TODO: handle error properly');
+                console.log('TODO: handle error properly : ', err);
             });
            
         };
