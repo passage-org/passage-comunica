@@ -25,6 +25,7 @@ export class ComunicaConsolePlugin {
     getLogger() {
         this.resetDOM();
         this.history = []; // reset history
+        const id = ++this.currentId;
         const logger = new LoggerPretty({ level: 'info' });
         logger.log = (level, color, message, data) => {
             const entry = {level: level, message: message, date:Date.now()};

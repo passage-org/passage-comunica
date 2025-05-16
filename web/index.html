@@ -92,7 +92,6 @@
 
       // registering of plugins (must be done before Yasgui() ofc).
       Yasqe.forkAutocompleter('variables', KeywordsCompleter);
-      // Yasqe.defaults.autocompleters = ['tp-based-completer', 'variables'];
       Yasqe.defaults.autocompleters = ['keywords-completer', 'variables'];
       Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       Yasr.registerPlugin("Plan", PhysicalPlanPlugin);

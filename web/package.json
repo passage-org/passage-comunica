@@ -10,8 +10,6 @@
     "license": "Apache-2.0",
     "dependencies": {
         "@triply/yasgui": "^4.2.28",
-        "bootstrap-table": "^1.22.0",
-        "color-hash": "^2.0.2",
         "sparqlalgebrajs": "^4.3.1"
     },
     "devDependencies": {
