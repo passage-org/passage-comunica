@@ -28,6 +28,13 @@ export class MonkeyQueryEngine {
         };
     }
 
+    // clean the underlying structure to allow yasgui to restart
+    // a SPARQL query.
+    clean () {
+        if (this.resultIterator) {
+            this.resultIterator.removeAllListeners();
+        }
+    }
 
     // stop the query execution. The query button
     // becomes startable.
@@ -59,6 +66,7 @@ export class MonkeyQueryEngine {
 
             const self = this;
             engine.query(query, configEngine).then(async function (result) {
+                self.clean();
                 let resultsIterator = null;
                 switch (result.resultType) {
                 case 'bindings':
@@ -67,6 +75,7 @@ export class MonkeyQueryEngine {
                 };
 
                 self.yasqe.req = resultsIterator;
+                self.resultIterator = resultsIterator;
                 
                 resultsIterator.on('error', function(e) {
                     self.yasqe.req = undefined;
@@ -120,7 +129,6 @@ export class MonkeyQueryEngine {
                         //      then printing anew.
                         self.yasr.plugins['table'].draw();
                     };
-                    // yasr.updateResponseInfo();
                     // not emitting to avoid all calls to stringify 
                     // yasqe.emit("queryResponse", mergedResults);
                 });
