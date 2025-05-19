@@ -11,6 +11,7 @@
         "build:components": "componentsjs-generator packages/* engines/*",
         "clean": "tsc --build --clean ; rm yarn.lock ; rm -rf node_modules/",
         "postinstall": "yarn run build && yarn --cwd=./engines/query-passage run prepare",
+        "help": "node ./engines/query-passage/bin/query.js",
         "query-passage": "node --max-old-space-size=10076 ./engines/query-passage/bin/query.js",
         "build:browser": "yarn build && comunica-compile-config ./engines/config-query-passage/config/config-default.json > ./src/passage-comunica-engine.js && echo '=============\\nExported the engine to ./src/passage-comunica-engine.js' && webpack-cli",
         "build:web": "yarn run build:browser && cp ./dist/passage-comunica-engine.js ./web/ && npm --prefix ./web/ install",

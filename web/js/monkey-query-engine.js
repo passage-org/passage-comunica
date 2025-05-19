@@ -55,7 +55,7 @@ export class MonkeyQueryEngine {
     }
     
     forceErrorButton(err) {
-        console.log(err);
+        console.log('Error: ', err);
         this.reset(); // reset the results as well
         this.yasqe.queryBtn.title = "run query";
         this.yasqe.updateQueryButton("error");
@@ -91,9 +91,14 @@ export class MonkeyQueryEngine {
 
             const query = this.yasqe.getDoc().getValue();
             const requestConfig = this.yasqe.config.requestConfig(); // headers and all.
+            const headers = new Headers();
+            requestConfig.args.forEach(e => {headers.set(e.name, e.value);});
+            
             console.log("Executing the following SPARQL query on " + requestConfig.endpoint + ": \n" + query);
+            // list of available key/value: https://comunica.dev/docs/query/advanced/context/
             this.configEngine = {
                 sources: [requestConfig.endpoint], // always only one endpoint
+                headers: headers,
                 log: this.yasr.plugins['Log'].getLogger(), // allows retrieving the logging from comunica
                 physicalQueryPlanLogger: this.yasr.plugins['Plan'].getLogger(), // create the physical plan
                 abort: {value: false}, // allows stopping the query execution when needed
@@ -103,7 +108,7 @@ export class MonkeyQueryEngine {
                 this.start(); // becomes stopable
                 switch (result.resultType) {
                 case 'bindings': this.resultIterator = await result.execute(); break;
-                default: throw new Exception();
+                default: throw new Exception('Should get an iterator of bindings but gets something else: ' + result.resultType);
                 };
                 this.resultIterator.on('error', () => this.forceErrorButton());
                 this.resultIterator.on('end', ()  => this.forceDoneButton());

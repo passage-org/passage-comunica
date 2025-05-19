@@ -38,8 +38,8 @@ export const YasguiConfig = {
     // #B default values for yasqe query
     requestConfig: {
         endpoint: "https://10-54-2-226.gcp.glicid.fr/wikidata/passage",
-        // args: [{name:"limit", value:"10000"},
-        //       {name:"timeout", value:"60000"}],
+        args: [{name:"limit", value:"100000"},
+               {name:"timeout", value:"60000"}],
     },
 
     yasqe: {

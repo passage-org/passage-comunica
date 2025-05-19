@@ -83,6 +83,7 @@ export class QuerySourcePassage implements IQuerySource {
             fetch: (input: Request | string, init?: RequestInit) => this.mediatorHttp.mediate(
                 { input, init, context: this.lastSourceContext! },
             ),
+            defaultHeaders: this.context.get(new ActionContextKey('headers')),
             prefixVariableQuestionMark: true,
             dataFactory,
         });
@@ -224,8 +225,6 @@ export class QuerySourcePassage implements IQuerySource {
                 resolve();
             });
         });
-
-        it.getProperty("abort", ()=> {console.log("abort mission");});
         
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
         const itbis: BindingsStream = new TransformIterator( async() => {
