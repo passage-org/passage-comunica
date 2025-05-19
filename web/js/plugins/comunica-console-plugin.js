@@ -18,7 +18,7 @@ export class ComunicaConsolePlugin {
         return {
             getData: () => JSON.stringify(this.history) || "",
             contentType: 'json',
-            title: 'Download physical plan',
+            title: 'Download Comunica\'s log',
             filename: `${filename}.json`,
         };
     }

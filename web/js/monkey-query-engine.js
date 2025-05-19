@@ -14,6 +14,7 @@ export class MonkeyQueryEngine {
         this.yasr  = yasr;
         this.responseChip = new MonkeyResponseChip(this.yasr);
         this.reset();
+        this.yasr.results.stop();
         this.stop(); // start stopped
     }
 
