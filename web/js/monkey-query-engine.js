@@ -49,17 +49,19 @@ export class MonkeyQueryEngine {
 
     forceStartedButton() {
         this.yasqe.req = true;
-        this.yasqe.queryStatus = "valid";
-        this.yasqe.updateQueryButton("valid");
+        this.yasqe.queryStatus = 'valid';
+        this.yasqe.updateQueryButton('valid');
         this.yasqe.queryBtn.title = "stop query";
     }
     
     forceErrorButton(err) {
         console.log('Error: ', err);
         this.reset(); // reset the results as well
-        this.yasqe.queryBtn.title = "run query";
-        this.yasqe.updateQueryButton("error");
+        this.yasr.results.stop();
+        this.yasqe.queryBtn.title = 'run query';
+        this.yasqe.updateQueryButton('error');
         this.responseChip.stop();
+        this.stop();
     }
 
     forceDoneButton() {
@@ -71,8 +73,8 @@ export class MonkeyQueryEngine {
         }
         this.yasr.draw();
         this.yasqe.req = false;
-        this.yasqe.queryBtn.title = "run query";
-        this.yasqe.updateQueryButton();
+        this.yasqe.queryBtn.title = 'run query';
+        this.yasqe.updateQueryButton('valid');
         this.responseChip.stop();
         this.stop(); // becomes startable
         console.log('We are done with the query!');
@@ -103,14 +105,14 @@ export class MonkeyQueryEngine {
                 physicalQueryPlanLogger: this.yasr.plugins['Plan'].getLogger(), // create the physical plan
                 abort: {value: false}, // allows stopping the query execution when needed
             };
-
+            
             Passage.PassageFactory().query(query, this.configEngine).then(async (result) => {
                 this.start(); // becomes stopable
                 switch (result.resultType) {
                 case 'bindings': this.resultIterator = await result.execute(); break;
                 default: throw new Exception('Should get an iterator of bindings but gets something else: ' + result.resultType);
                 };
-                this.resultIterator.on('error', () => this.forceErrorButton());
+                this.resultIterator.on('error', (e) => this.forceErrorButton(e));
                 this.resultIterator.on('end', ()  => this.forceDoneButton());
                 this.resultIterator.on('data', (result) => {
                     // put back the data as if it was the result of one standard call to
@@ -138,8 +140,8 @@ export class MonkeyQueryEngine {
                     // not emitting to avoid all calls to stringify 
                     // yasqe.emit("queryResponse", mergedResults);
                 });
-            }).catch((err) => {
-                console.log('TODO: handle error properly : ', err);
+            }).catch((e) => {
+                this.forceErrorButton(e)
             });
            
         };
