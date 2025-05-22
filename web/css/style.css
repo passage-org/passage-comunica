@@ -220,6 +220,10 @@ svg {
     font-family: var(--base-font-family);
 }
 
+.yasr_fallback_info {
+    background: var(--header-background-color) !important;
+}
+
 .yasr .yasr_btn div, .yasr .yasr_btn span { color: var(--underlight-text-color); }
 .yasr .yasr_btn.selected { color: var(--selected-text-color); }
 

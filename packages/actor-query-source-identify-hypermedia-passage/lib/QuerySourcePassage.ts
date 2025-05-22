@@ -179,8 +179,6 @@ export class QuerySourcePassage implements IQuerySource {
         });
     }
     
-
-    
     public async queryBindingsRemote(
         operation: Algebra.Operation,
         endpoint: string,
@@ -194,10 +192,15 @@ export class QuerySourcePassage implements IQuerySource {
         for (const undefVariable of undefVariables) {
             undefVariablesIndex.add(undefVariable.value);
         }
-        
+
         this.lastSourceContext = this.context.merge(context);
-        const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query);
+        const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query)
+            .then((rs) => {
+                QuerySourcePassage.updateFirstResultTime(context, operation);
+                return Promise.resolve(rs); })
+            .catch((e) => { QuerySourcePassage.logError(context, operation, e.message); });
         this.lastSourceContext = undefined;
+        if (!rawStream) {return Promise.resolve(new EmptyIterator());} // <= continuation failed, we stop
 
         const it = wrap<any>(rawStream, { autoStart: false, maxBufferSize: Number.POSITIVE_INFINITY })
             .map<RDF.Bindings>((rawData: Record<string, RDF.Term>) => {
@@ -217,6 +220,10 @@ export class QuerySourcePassage implements IQuerySource {
             });
 
         const nextPromise: Promise<string|void> = new Promise(resolve => {
+            rawStream.on('error', async e => {
+                QuerySourcePassage.logError(context, operation, e.message); // error during the streaming itself, logged then done
+                resolve();
+            });
             rawStream.on('metadata', async m => {
                 Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
@@ -308,6 +315,19 @@ export class QuerySourcePassage implements IQuerySource {
         }
     }
 
+    public static updateFirstResultTime(context:  IActionContext, operation: Algebra.Operation) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
+            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (physicalQueryPlanLogger) {
+            operation.firstResultAt = Date.now();
+            operation.timeFirstResult = operation.firstResultAt - operation.startAt;
+            physicalQueryPlanLogger.appendMetadata(operation, {firstResultAt: operation.firstResultAt});
+            physicalQueryPlanLogger.appendMetadata(operation, {timeFirstResult: operation.timeFirstResult})
+        }
+    }
+
+
+
     /**
      * Add the done time to the metadata to be logged.
      * @param context The execution context of the operation.
@@ -338,6 +358,14 @@ export class QuerySourcePassage implements IQuerySource {
         if (physicalQueryPlanLogger) {
             operation.cardinalityReal = nbResults;
             physicalQueryPlanLogger.appendMetadata(operation, {cardinalityReal: nbResults})
+        }
+    }
+
+    public static logError(context: IActionContext, operation: Algebra.Operation, message: string) {
+        const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
+            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (physicalQueryPlanLogger) {
+            physicalQueryPlanLogger.appendMetadata(operation, {status: 'error', message})
         }
     }
 
