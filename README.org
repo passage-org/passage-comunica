@@ -1,0 +1,52 @@
+* Passage x Comunica
+
+[[https://github.com/comunica/comunica][Comunica]] is a SPARQL query engine with an emphasis on modularity. To
+ensure completeness of query results, it already includes actors such
+as quad pattern fragments (qpf), or brqpf. We provide one for SPARQL
+*continuation* queries [1].
+
+** Principle
+
+Comunica decomposes the query: Comunica is in charge of everything but
+the operators handled by [[https://github.com/passage-org/passage][Passage]] (defined by the use of ~Shapes~). Our
+actor sends the query to a Passage server and concatenates the results
+with that of a SPARQL continuation query if it exists (sent by the
+server in a ~metadata.next~ field like for the qpf actor), via
+recursive calls to Comunica's engine.
+
+/Passage does not handle full SPARQL 1.1. The recursive calls to
+Comunica's engine allows returning continuation queries with operators
+that are not handled yet: Comunica will handle them while sending the
+rest to Passage./
+
+** Build and Run
+
+#+BEGIN_SRC shell :session build :async
+  yarn install && yarn build
+#+END_SRC
+
+#+BEGIN_SRC shell :session execution :async
+  # It runs similarly to your good old Comunica:
+  yarn run query-passage \
+       http://localhost:8080/watdiv/passage \
+       -q 'SELECT * WHERE {?s ?p ?o FILTER (contains(str(?s),"Product10000")) }' \
+       -t 'text/csv' 2> /dev/null
+#+END_SRC
+
+** Web Server
+
+#+BEGIN_SRC shell :session build_server :async
+  yarn install && yarn build:web
+#+END_SRC
+
+#+BEGIN_SRC shell :session server :async
+  ## Typically starts a server on http://localhost:5173
+  yarn server
+#+END_SRC
+
+** References
+
+[1] Thi Hoang Thi Pham, Gabriela Montoya, Brice Nédelec, Hala
+Skaf-Molli, and Pascal Molli. [[https://dl.acm.org/doi/pdf/10.1145/3696410.3714757][Passage: Ensuring Completeness and
+Responsiveness of Public SPARQL Endpoints with SPARQL Continuation
+Queries]]. In Proceedings of the ACM on Web Conference 2025 (WWW'25).
