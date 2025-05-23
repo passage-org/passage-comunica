@@ -12,7 +12,6 @@ export const TPBasedCompleter = {
     cache: new Object(),
     get: function(yasqe, token) {
         const url = "http://localhost:3332/fedshop200.jnl/raw"
-        const tripleToSend = this.getTriplePattern(token)
         const previousNonWsToken = yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, token)
         const previousPreviousNonWsToken = previousNonWsToken && yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, previousNonWsToken)
         const nextNonWsToken = yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, yasqe.getDoc().getCursor().ch + 1)
@@ -28,59 +27,27 @@ export const TPBasedCompleter = {
         console.log("o ", this.isObject(previousNonWsToken, token))
         console.log("g ", this.isGraph(previousNonWsToken)) */
 
-        let subject, predicate, object;
+        const acq = this.getAutocompletionQuery(yasqe, token)
 
-        if(this.isSubject(token)){
-            subject = this.suggestion_variable;
-            predicate = (nextNonWsToken && nextNonWsToken.string) || "?predicate_placeholder";
-            object = (nextNextNonWsToken && nextNextNonWsToken.string) || "?object_placeholder";
-        }
-
-        if(this.isPredicate(token)){
-            subject = (previousNonWsToken && previousNonWsToken.string) || "?subject_placeholder";
-            predicate = this.suggestion_variable;
-            object = (nextNonWsToken && nextNonWsToken.string) || "?object_placeholder";
-        }
-
-        if(this.isObject(previousNonWsToken, token)){
-            subject = previousPreviousNonWsToken && previousPreviousNonWsToken.string || "?subject_placeholder";
-            predicate = (previousNonWsToken && previousNonWsToken.string) || "?predicate_placeholder";
-            object = this.suggestion_variable;
-        }
-
-        const query = `SELECT * WHERE { ${subject} ${predicate} ${object}. }`
-
-        console.log("sending query", query)
+        console.log("sending query", acq)
 
         const currentString = token.string
 
-        /* if(this.cache[query]){
-            if(this.cache[query].lastString === currentString){
-                const res = Promise.resolve(this.query(url, query, currentString))
-                this.cache[query].results = this.cache[query].results.concat(res)
-            }
-        } else {
-            const res = Promise.resolve(this.query(url, query, currentString))
-            this.cache[query] = new Object()
-            this.cache[query].results = res
-        }
-        this.cache[query].lastString = currentString */
-
-        const res = Promise.resolve(this.queryWithCache(url, query, currentString))
+        const res = Promise.resolve(this.queryWithCache(url, acq, currentString))
 
         return res
     },
     isValidCompletionPosition: function (yasqe) {
         const token = yasqe.getCompleteToken();
-        /* const previousNonWsToken = yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, token)
+        const previousNonWsToken = yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, token)
+        const previousPreviousNonWsToken = previousNonWsToken && yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, previousNonWsToken)
         const nextNonWsToken = yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, yasqe.getDoc().getCursor().ch + 1)
         const nextNextNonWsToken = nextNonWsToken && yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, nextNonWsToken.end + 1)
+        console.log("previous previous token", previousPreviousNonWsToken);
         console.log("previous token", previousNonWsToken);
         console.log("current token", token);
         console.log("next token", nextNonWsToken);
-        console.log("next next token", nextNextNonWsToken); */
-
-        // console.log("current token", token);
+        console.log("next next token", nextNextNonWsToken);
 
         // if (token.string.length == 0) return false; //we want -something- to autocomplete
         if (token.string[0] === "?" || token.string[0] === "$") return false; // we are typing a var
@@ -167,6 +134,40 @@ export const TPBasedCompleter = {
     },
     isGraph: function(previousToken) {
         return "GRAPH" === previousToken.string;
+    },
+    getAutocompletionQuery: function(yasqe, currentToken) {
+        let subject, predicate, object;
+
+        const previousNonWsToken = yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, currentToken)
+        const previousPreviousNonWsToken = previousNonWsToken && yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, previousNonWsToken)
+        const nextNonWsToken = yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, yasqe.getDoc().getCursor().ch + 1)
+        const nextNextNonWsToken = nextNonWsToken && yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, nextNonWsToken.end + 1)
+
+        if(this.isGraph(previousNonWsToken)) {
+            return "SELECT * WHERE { GRAPH ?suggestion_variable { ?s ?p ?o. } }"
+        }
+
+        if(this.isSubject(currentToken)){
+            subject = this.suggestion_variable;
+            predicate = (nextNonWsToken && nextNonWsToken.string) || "?predicate_placeholder";
+            object = (nextNextNonWsToken && nextNextNonWsToken.string) || "?object_placeholder";
+        }
+
+        if(this.isPredicate(currentToken)){
+            subject = (previousNonWsToken && previousNonWsToken.string) || "?subject_placeholder";
+            predicate = this.suggestion_variable;
+            object = (nextNonWsToken && nextNonWsToken.string) || "?object_placeholder";
+        }
+
+        if(this.isObject(previousNonWsToken, currentToken)){
+            subject = previousPreviousNonWsToken && previousPreviousNonWsToken.string || "?subject_placeholder";
+            predicate = (previousNonWsToken && previousNonWsToken.string) || "?predicate_placeholder";
+            object = this.suggestion_variable;
+        }
+
+        const query = `SELECT * WHERE { ${subject} ${predicate} ${object}. }`
+
+        return query
     },
     typedStringify: function(entity, type) {
         switch(type) {
