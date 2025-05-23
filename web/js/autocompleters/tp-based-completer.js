@@ -27,15 +27,13 @@ export const TPBasedCompleter = {
         console.log("o ", this.isObject(previousNonWsToken, token))
         console.log("g ", this.isGraph(previousNonWsToken)) */
 
-        const acq = this.getAutocompletionQuery(yasqe, token)
+        const acq = this.getAutocompletionQuery(yasqe, token, yasqe.getDoc().getCursor().line)
 
         console.log("sending query", acq)
 
         const currentString = token.string
 
-        const res = Promise.resolve(this.queryWithCache(url, acq, currentString))
-
-        return res
+        return Promise.resolve(this.queryWithCache(url, acq, currentString))
     },
     isValidCompletionPosition: function (yasqe) {
         const token = yasqe.getCompleteToken();
@@ -43,11 +41,14 @@ export const TPBasedCompleter = {
         const previousPreviousNonWsToken = previousNonWsToken && yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, previousNonWsToken)
         const nextNonWsToken = yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, yasqe.getDoc().getCursor().ch + 1)
         const nextNextNonWsToken = nextNonWsToken && yasqe.getNextNonWsToken(yasqe.getDoc().getCursor().line, nextNonWsToken.end + 1)
-        console.log("previous previous token", previousPreviousNonWsToken);
+        /* console.log("previous previous token", previousPreviousNonWsToken);
         console.log("previous token", previousNonWsToken);
         console.log("current token", token);
         console.log("next token", nextNonWsToken);
-        console.log("next next token", nextNextNonWsToken);
+        console.log("next next token", nextNextNonWsToken); */
+
+        // console.log(this.getCurrentGraph(yasqe, token, yasqe.getDoc().getCursor().line))
+        
 
         // if (token.string.length == 0) return false; //we want -something- to autocomplete
         if (token.string[0] === "?" || token.string[0] === "$") return false; // we are typing a var
@@ -129,13 +130,12 @@ export const TPBasedCompleter = {
         return token.state.possibleNext.includes("a");
     },
     isObject: function(previousToken, token) {
-        console.log("previous token ", previousToken)
         return previousToken.state.possibleCurrent.includes("a") && !token.state.possibleNext.includes("BIND");
     },
     isGraph: function(previousToken) {
         return "GRAPH" === previousToken.string;
     },
-    getAutocompletionQuery: function(yasqe, currentToken) {
+    getAutocompletionQuery: function(yasqe, currentToken, line) {
         let subject, predicate, object;
 
         const previousNonWsToken = yasqe.getPreviousNonWsToken(yasqe.getDoc().getCursor().line, currentToken)
@@ -146,6 +146,8 @@ export const TPBasedCompleter = {
         if(this.isGraph(previousNonWsToken)) {
             return "SELECT * WHERE { GRAPH ?suggestion_variable { ?s ?p ?o. } }"
         }
+
+        const graph = this.getPreviousGraphToken(yasqe, currentToken, line).string
 
         if(this.isSubject(currentToken)){
             subject = this.suggestion_variable;
@@ -165,9 +167,44 @@ export const TPBasedCompleter = {
             object = this.suggestion_variable;
         }
 
-        const query = `SELECT * WHERE { ${subject} ${predicate} ${object}. }`
+        const query = graph ? 
+        `SELECT * WHERE { GRAPH ${graph} { ${subject} ${predicate} ${object}. } }`
+        : `SELECT * WHERE { ${subject} ${predicate} ${object}. }`
 
         return query
+    },
+    getPreviousGraphToken: function(yasqe, currentToken, startingLine) {
+        let line = startingLine;
+        let curr = currentToken;
+
+        let previousAndPreviousLine = this.getPreviousNonWsTokenMultiLine(yasqe, curr, line);
+
+        let prev = previousAndPreviousLine.previous;
+        line = previousAndPreviousLine.previousLine;
+
+        let count = 0;
+        let graph = null;
+
+        const shouldStop = function(previousToken){
+            previousToken.state.stack.length === 1 && previousToken.state.stack[0] === "sparql11"
+        };
+        
+        while(!shouldStop(prev)){
+            if(curr.string === "{") count++;
+            if(curr.string === "}") count--;
+            if(prev.string.toLowerCase() === "graph") {
+                graph = count > 0 ? curr : null;
+                break;
+            }
+
+            curr = prev;
+            previousAndPreviousLine = this.getPreviousNonWsTokenMultiLine(yasqe, curr, line);
+
+            prev = previousAndPreviousLine.previous;
+            line = previousAndPreviousLine.previousLine;
+        }
+        
+        return graph;
     },
     typedStringify: function(entity, type) {
         switch(type) {
@@ -181,4 +218,23 @@ export const TPBasedCompleter = {
               return "UNKNOWN TYPE : " + entity
         }
     },
+    getPreviousNonWsTokenMultiLine: function(yasqe, currentToken, line){
+        let previous = yasqe.getPreviousNonWsToken(line, currentToken);
+        
+        if(!previous.type && previous.start === 0 && line > 0) {
+            // beginning of line and not first line = we need to look at the end of previous line 
+            previous.start = Number.MAX_SAFE_INTEGER 
+            /* Looks really bad, but needed because of how previous token are retrieved example :  
+            1    token1
+            2  token2
+            3           token3
+            4
+            yasqe.getPreviousNonWsToken(2, token3) = token2
+            yasqe.getPreviousNonWsToken(1, token2) = <empty token>
+            */
+            return this.getPreviousNonWsTokenMultiLine(yasqe, previous, line - 1)
+        }
+
+        return {previous: previous, previousLine: line}
+    }
 };
