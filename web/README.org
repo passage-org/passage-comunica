@@ -1,0 +1,10 @@
+* Passage x Comunica: the Web User Interface
+
+This project provides the code for the web interface deployed at
+https://passage-org.github.io/passage-comunica.  Its objective is to
+provide an easy way to edit SPARQL queries, execute them using the
+~passage-comunica~ engine to get complete results, and understand the
+underlying functioning of this engine.
+
+/To build the interface, please take a look at the [[https://github.com/passage-org/passage-comunica][root of this
+repository]]./
