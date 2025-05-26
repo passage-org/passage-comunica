@@ -10,6 +10,39 @@ export const TPBasedCompleter = {
     suggestion_variable_name: "suggestion_variable",
     suggestion_variable: "?suggestion_variable",
     cache: new Object(),
+    postprocessHints: function (_yasqe, hints) {
+        
+        return hints.map(hint => {
+            hint.render = function(el, self, data){
+                console.log(data)
+                const binding = data.displayText.binding
+                const proba = data.displayText.proba
+                // We store an object in the displayTextField. Definitely not as intented, but works (...?)
+
+                const suggestionDiv = document.createElement("div");
+
+                const suggestionValue = document.createElement("span");
+                suggestionValue.textContent = binding || "";
+
+                const suggestionProba = document.createElement("span");
+                suggestionProba.textContent = "  " + (proba || "");
+                // This added space feels out of place, but it works. Used to prevent texts from suggestion and proba being directly next to each other.
+                suggestionProba.style.cssFloat = "right";
+
+                suggestionDiv.appendChild(suggestionValue);
+                suggestionDiv.appendChild(suggestionProba);
+                
+                el.appendChild(suggestionDiv);
+
+                data.text = binding
+                // We have to set the text field back to the suggestion only, since that's what's getting written on the editor. 
+                // Again, kinda hacky, but works, somehow
+
+                console.log(el)
+            }
+            return hint
+        });
+    },
     get: function(yasqe, token) {
         const url = "http://localhost:3332/fedshop200.jnl/raw"
 
@@ -26,11 +59,11 @@ export const TPBasedCompleter = {
         const line = yasqe.getDoc().getCursor().line
 
         const previousNonWsToken = this.getPreviousNonWsTokenMultiLine(yasqe, line, token); 
-        const previousLine = previousNonWsToken.line
+        /* const previousLine = previousNonWsToken.line
         const previousPreviousNonWsToken = previousNonWsToken && this.getPreviousNonWsTokenMultiLine(yasqe, previousLine, previousNonWsToken); 
         const nextNonWsToken = this.getNextNonWsTokenMultiLine(yasqe, line, yasqe.getDoc().getCursor().ch + 1)
         const nextLine = nextNonWsToken.line
-        const nextNextNonWsToken = nextNonWsToken && this.getNextNonWsTokenMultiLine(yasqe, nextLine, nextNonWsToken.end + 1)
+        const nextNextNonWsToken = nextNonWsToken && this.getNextNonWsTokenMultiLine(yasqe, nextLine, nextNonWsToken.end + 1) */
 
         /* console.log("previous previous token", previousPreviousNonWsToken);
         console.log("previous token", previousNonWsToken);
@@ -70,10 +103,10 @@ export const TPBasedCompleter = {
         const temp =  this.cache[query].results
             .filter(result => result.sugg.includes(currentString) || result.sugg.includes(currentString.substring(1))) // filter results by currently typed string
             .sort((a, b) => b.proba - a.proba) // sort by lower proba first (lower proba = higher cardinality)
-            .map(result => {return {elt: this.typedStringify(result.sugg, result.type), proba: result.proba}}) // show only the entity, properly written based on its type, not its probability (though it may be interesting to have both, even for the user!!)
-            .filter((value, index, array) => array.indexOf(value) === index) // distinct elements
+            .map(result => {return {binding: this.typedStringify(result.sugg, result.type), proba: result.proba}}) // show only the entity, properly written based on its type, not its probability (though it may be interesting to have both, even for the user!!)
+            .filter((bindingAndProba, index, array) => array.findIndex(elt =>elt.binding === bindingAndProba.binding) === index) // distinct elements
             //.map(value => value.elt + " // " + (1 / value.proba))
-            .map(value => value.elt)
+            // .map(value => value.binding)
 
         return temp
     },
@@ -113,6 +146,9 @@ export const TPBasedCompleter = {
             console.error(error.message);
         }
     },
+    isGraph: function(previousToken) {
+        return "GRAPH" === previousToken.string;
+    },
     canWriteSubject: function(token) {
         return token.state.possibleCurrent.includes("BIND");
     },
@@ -122,9 +158,6 @@ export const TPBasedCompleter = {
     },
     canWriteObject: function(token) {
         return !token.state.possibleCurrent.includes("a") && token.state.lastProperty !== "";
-    },
-    isGraph: function(previousToken) {
-        return "GRAPH" === previousToken.string;
     },
     getAutocompletionQuery: function(yasqe, currentToken, line) {
         let subject, predicate, object;
@@ -145,19 +178,19 @@ export const TPBasedCompleter = {
 
         if(this.canWriteSubject(currentToken)){
             subject = this.suggestion_variable;
-            predicate = (nextNonWsToken && nextNonWsToken.string) || "?predicate_placeholder";
-            object = (nextNextNonWsToken && nextNextNonWsToken.string) || "?object_placeholder";
+            predicate = (nextNonWsToken && this.canWritePredicate(nextNonWsToken) && nextNonWsToken.string) || "?predicate_placeholder";
+            object = (nextNextNonWsToken && this.canWriteObject(nextNextNonWsToken) && nextNextNonWsToken.string) || "?object_placeholder";
         } else 
 
         if(this.canWritePredicate(currentToken)){
-            subject = (previousNonWsToken && previousNonWsToken.string) || "?subject_placeholder";
+            subject = (previousNonWsToken && this.canWriteSubject(previousNonWsToken) && previousNonWsToken.string) || "?subject_placeholder";
             predicate = this.suggestion_variable;
-            object = (nextNonWsToken && nextNonWsToken.string) || "?object_placeholder";
+            object = (nextNonWsToken && this.canWriteObject(nextNonWsToken) && nextNonWsToken.string) || "?object_placeholder";
         } else 
 
         if(this.canWriteObject(currentToken)){
-            subject = previousPreviousNonWsToken && previousPreviousNonWsToken.string || "?subject_placeholder";
-            predicate = (previousNonWsToken && previousNonWsToken.string) || "?predicate_placeholder";
+            subject = previousPreviousNonWsToken && this.canWriteSubject(previousPreviousNonWsToken) && previousPreviousNonWsToken.string || "?subject_placeholder";
+            predicate = (previousNonWsToken && this.canWritePredicate(previousNonWsToken) && previousNonWsToken.string) || "?predicate_placeholder";
             object = this.suggestion_variable;
         } else {
             console.log("COULDN'T DETERMINE CURRENT TOKEN TYPE. CURRENT TOKEN : ")
@@ -238,11 +271,12 @@ export const TPBasedCompleter = {
     getNextNonWsTokenMultiLine: function(yasqe, line, currentPos){
         let next = yasqe.getNextNonWsToken(line, currentPos)
 
-        if(next && !next.type) return this.getNextNonWsTokenMultiLine(yasqe, line, next.end + 1);
+        if (next && !next.type) return this.getNextNonWsTokenMultiLine(yasqe, line, next.end + 1);
 
-        if(!next && line < yasqe.getDoc().lineCount() - 1) return this.getNextNonWsTokenMultiLine(yasqe, line + 1, 0);
+        if (!next && line < yasqe.getDoc().lineCount() - 1) return this.getNextNonWsTokenMultiLine(yasqe, line + 1, 0);
 
-        next.line = line;
+        if (next) next.line = line;
+
         return next;
     }
 };
