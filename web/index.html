@@ -82,6 +82,7 @@
     <script type="module">
       import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
       import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
+      import {CSCompleter} from './js/autocompleters/context-sensitive-completer.js';
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
       import {YasguiConfig} from "./js/yasgui-config";
@@ -94,7 +95,8 @@
       // registering of plugins (must be done before Yasgui() ofc).
       Yasqe.forkAutocompleter('variables', KeywordsCompleter);
       Yasqe.forkAutocompleter('variables', TPBasedCompleter);
-      Yasqe.defaults.autocompleters = ['keywords-completer', 'tp-based-completer', 'variables'];
+      Yasqe.forkAutocompleter('variables', CSCompleter);
+      Yasqe.defaults.autocompleters = ['keywords-completer', 'context-sensitive-completer', 'tp-based-completer', 'variables'];
       Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
       

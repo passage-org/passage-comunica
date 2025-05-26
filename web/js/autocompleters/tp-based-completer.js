@@ -100,18 +100,16 @@ export const TPBasedCompleter = {
         }
         this.cache[query].lastString = currentString
         // this.cache[query].results
-        const temp =  this.cache[query].results
+        return this.cache[query].results
             .filter(result => result.sugg.includes(currentString) || result.sugg.includes(currentString.substring(1))) // filter results by currently typed string
             .sort((a, b) => b.proba - a.proba) // sort by lower proba first (lower proba = higher cardinality)
             .map(result => {return {binding: this.typedStringify(result.sugg, result.type), proba: result.proba}}) // show only the entity, properly written based on its type, not its probability (though it may be interesting to have both, even for the user!!)
             .filter((bindingAndProba, index, array) => array.findIndex(elt =>elt.binding === bindingAndProba.binding) === index) // distinct elements
             //.map(value => value.elt + " // " + (1 / value.proba))
             // .map(value => value.binding)
-
-        return temp
     },
     query: async function(url, query, currentString) {
-
+        console.log("buozerhfgoszhgzlo")
         try {
             const response = await fetch(url, {
                 method: "POST",
