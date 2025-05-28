@@ -14,7 +14,7 @@ export const TPBasedCompleter = {
         
         return hints.map(hint => {
             hint.render = function(el, self, data){
-                console.log(data)
+                // console.log(data)
                 const binding = data.displayText.binding
                 const proba = data.displayText.proba
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
@@ -38,7 +38,7 @@ export const TPBasedCompleter = {
                 // We have to set the text field back to the suggestion only, since that's what's getting written on the editor. 
                 // Again, kinda hacky, but works, somehow
 
-                console.log(el)
+                // console.log(el)
             }
             return hint
         });
@@ -109,7 +109,6 @@ export const TPBasedCompleter = {
             // .map(value => value.binding)
     },
     query: async function(url, query, currentString) {
-        console.log("buozerhfgoszhgzlo")
         try {
             const response = await fetch(url, {
                 method: "POST",
@@ -137,7 +136,7 @@ export const TPBasedCompleter = {
                 )
             )
 
-            console.log(suggestions)
+            // console.log(suggestions)
 
             return suggestions
         } catch (error) {
