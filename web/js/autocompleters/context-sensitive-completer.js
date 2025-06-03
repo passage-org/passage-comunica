@@ -14,150 +14,179 @@ export const CSCompleter = {
     get: function(yasqe, token) {
         const acq = this.getAutocompletionQuery(yasqe, token);
 
+        console.log("acq : ", acq);
+
         return Promise.resolve(["THESE", "AREN'T", "ACTUAL", "SUGGESTIONS", "DUMMY"]);
     },
     isValidCompletionPosition: function (yasqe) {
+        // const token = yasqe.getCompleteToken();
+
         return true;
     },
 
     getAutocompletionQuery: function(yasqe, token) {
-        //step 1
-        const tokensAndIndex = this.getTokensFromCurrentContext(yasqe, token);
-        const tokens = tokensAndIndex.tokens;
-        const index = tokensAndIndex.idx; // index of the current token in the token array
+        // step 1 : get all tokens
+        const tokens = this.getTokensFromCurrentContext(yasqe, token);
 
-        console.log(tokens);
+        // step 2 : generate relevant context
 
-        const triple = this.getACQueryTriple(yasqe, tokens, index);
+        // Already computed in getTokensFromCurrentContext. Might want to compute it once and keep it as part of the method's returned object
+        const currentTokenIndex = tokens.findIndex(tkn => tkn.isCurrentToken);
 
-        console.log(triple);
+        const incompleteTriple = this.getIncompleteTriple(tokens, currentTokenIndex);
+        
+        const contextTriples = [];
+        const variables = [...incompleteTriple.variables];
 
-        //step 2
-        // const tree = this.getQueryTree(tokens);
+        const acqTriple = this.getACQueryTripleTokens(
+            yasqe.getDoc().getCursor().line, 
+            yasqe.getDoc().getCursor().ch,
+            incompleteTriple.entities);
 
+        console.log(acqTriple)
+
+        let context = [...tokens];
+
+        // We replace the tokens of the incomplete triple by fake tokens
+        // Thus, we inject our triple into the context 
+        context.splice(
+            incompleteTriple.start, 
+            incompleteTriple.end - incompleteTriple.start + 1, 
+            acqTriple.subject, acqTriple.predicate, acqTriple.object, {string: ".", type: "fake"});
+
+        console.log(context)
+
+        for(let i = 0; i < context.length; i++){
+            try {
+                const triple = this.getTriple(context, i);
+                i = triple.end;
+                contextTriples.push(triple);
+            } catch (error) {
+            }
+        }
+
+        let lastSize = 0;
+        while(lastSize !== variables.length){
+            lastSize = variables.length;
+
+            // Add all variables linked to the variables of the triple being written. Doesn't look good
+            // TODO : find more efficient / elegant way to do this :S
+            for(const tp of contextTriples){
+                for(const variable of tp.variables){
+                    if(variables.includes(variable)){
+                        for(const tpVar of tp.variables){
+                            if(!variables.includes(tpVar)){
+                                variables.push(tpVar);
+                            }
+                        }
+                        
+                        tp.tokens.forEach(tkn => tkn.outOfContext = false);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Remove triples that don't join whatsoever with the triple being written
+        context = context.filter(tkn => !tkn.outOfContext);
+        
+        const acqString = `SELECT * WHERE ${this.stringifyTokenGroup(context)}`; 
+
+        return acqString;
     },
 
-    // utils
-    getTokensFromCurrentContext: function(yasqe, token) {
+    getTokensFromCurrentContext: function(yasqe) {
         const line = yasqe.getDoc().getCursor().line;
         const ch = yasqe.getDoc().getCursor().ch;
 
-        // works only for unfinished but well bracketed queries 
+        const nbLines = yasqe.getDoc().size; //number of lines
+        let tokenArray = [];
 
-        // step 1.1:
-        // go up from current token, retrieve all tokens you come across in reverse order until you find the last GRAPH / UNION / OPTIONAL / FILTER and count the number of brackets along the way
-        // if you find optional, ignore and keep going 
-        // store tokens in arr1
-        const preContext = this.getAllPreviousTokensFromContextAndBracketCount(yasqe, token, line)
-        let arr1 = preContext.tokenArray.slice(0, -1); // last element == current token == first element of arr2, to avoid duplicates
-        let currentTokenIndex = arr1.length;
+        for(let i = 0; i < nbLines; i++){
+            const lineTokens = yasqe.getLineTokens(i);
 
+            // mark the current token in the array
+            if(line === i){lineTokens.forEach(tkn => {if(tkn.start <= ch && ch <= tkn.end){tkn.isCurrentToken = true}});}
 
-        // step 1.2: 
-        // come back to current token with bracket, retrieve all tokens you come across in the same order until you come accross the end of the query or the bracket count is 0. 
-        // store tokens in arr2
-        let arr2 = this.getAllNextTokensFromContext(yasqe, line, ch + 1, preContext.bracketCount);
+            tokenArray = tokenArray.concat(lineTokens);
+        }
 
-        // console.log(arr1)
-        // console.log(token.type === "ws" ? [] : [token])
-        // console.log(arr2)
-        let conc = arr1.concat(token.type === "ws" ? [] : [token]).concat(arr2);
-        // let conc = arr1.concat([token]).concat(arr2);
+        tokenArray = tokenArray.filter(tkn => tkn.type != "ws" || tkn.isCurrentToken);
 
-        return {tokens: conc, idx: currentTokenIndex};
+        const currentTokenIndex = tokenArray.findIndex(tkn => tkn.isCurrentToken);
+
+        const preContext = this.getAllPreviousTokensFromContextAndBracketCount(tokenArray, currentTokenIndex);
+
+        // works only for unfinished but well bracketed queries
+        let arr1 = preContext.preContextTokens;
+
+        let arr2 = this.getAllNextTokensFromContext(tokenArray, currentTokenIndex + 1, preContext.bracketCount);
+
+        return arr1.concat(arr2);
     },
 
-    getAllPreviousTokensFromContextAndBracketCount: function(yasqe, startingToken, startingLine){
-        let prev = startingToken;
-        let line = startingLine;
+    getAllPreviousTokensFromContextAndBracketCount: function(tokenArray, startingTokenIndex){
+        let prev = tokenArray[startingTokenIndex];
 
         let skipUnion = false;
         let skipPrev = false;
         let endOfUnion = [];
+        let preContextTokens = [];
 
-        const shouldStop = function(token){
-            return token.state.stack.length === 1 && token.state.stack[0] === "sparql11"
+        const shouldStop = function(index){
+            return index < 0;
         };
 
         let count = 0;
-        // let countBuffer = 0;
+        let index = startingTokenIndex;
 
-        const tokenArray = []
-        // let tokenArrayBuffer = []
+        while(!shouldStop(index)){
 
-        while(!shouldStop(prev)){
-
-            // tokenArrayBuffer.push(prev)
-
-            // if(prev.string === "{") countBuffer++;
-            // if(prev.string === "}") countBuffer--;
             if(prev.string === "{") count++;
             if(prev.string === "}") count--;
-
-            /* switch (prev.string.toLowerCase()) {
-                case "graph":
-                case "filter":
-                case "union":
-                case "optional":
-                case "select":
-                    tokenArray.push(...tokenArrayBuffer);
-                    tokenArrayBuffer = [];
-                    count = countBuffer;
-                    break;
-                default:
-                    break;
-            } */
 
             if(skipUnion && count === endOfUnion.at(-1)){ // We've closed the brackets for that union branch
                 skipUnion = false;
                 skipPrev = true; // We're on the closing bracket of a union branch we want to skip. We do not want that closing bracket, we want everything after
                 endOfUnion.pop();
-                console.log("LISTEN")
             }
 
             if(prev.string.toLowerCase() === "union" && count > 0){ // We are coming across a union while having started inside one of its branches
                 skipUnion = true;
                 endOfUnion.push(count);
-                console.log("HEY")
-                // if(tokenArray.at(-1).string.toLowerCase() === "UNION") tokenArray.pop() // kind of brutal, but we remove the union token a posteriori
             }
             
             if(!skipUnion && !skipPrev){
-                tokenArray.push(prev);
+                preContextTokens.push(prev);
             }
 
             skipPrev = false;
 
-            prev = this.getPreviousNonWsTokenMultiLine(yasqe, line, prev);
-            line = prev.line;
+            index--;
+            prev = tokenArray[index];
         }
 
-
-        tokenArray.reverse(); //reverse order to get first token of the query body first in the array
-        while(tokenArray[0].string !== "{") tokenArray.shift(); //removing everything from the initial SELECT...WHERE claus
-        return {tokenArray: tokenArray, bracketCount: count};
+        preContextTokens.reverse(); // Reverse order to get first token of the query body first in the array
+        while(preContextTokens[0].string !== "{") preContextTokens.shift(); // Remove everything until the first bracket (after the WHERE)
+        return {preContextTokens: preContextTokens, bracketCount: count};
     },
 
-    getAllNextTokensFromContext: function(yasqe, line, char, bracketCount){
+    getAllNextTokensFromContext: function(tokenArray, startingTokenIndex, bracketCount){
         // Variables to keep track of where we are inside the query / scope
         let skipUnion = false;
         let skipNext = false;
         let endOfUnion = [];
+        let postContextTokens = [];
         let count = 0;
+        let index = startingTokenIndex;
 
-        let next = this.getNextNonWsTokenMultiLine(yasqe, line, char);
-        line = next.line;
+        let next = tokenArray[startingTokenIndex];
 
-        const tokenArray = []
-
-        const shouldStop = function(count, next){
-            return count + bracketCount === 0 || !next;
+        const shouldStop = function(count, index){
+            return count + bracketCount === 0 || index >= tokenArray.length;
         };
 
-        while(!shouldStop(count, next)){
-
-            line = next.line;
-            char = next.end + 1;
+        while(!shouldStop(count, index)){
 
             if(next.string === "{") count++;
             if(next.string === "}") count--;
@@ -166,71 +195,93 @@ export const CSCompleter = {
                 skipUnion = false;
                 skipNext = true; // We're on the closing bracket of a union branch we want to skip. We do not want that closing bracket, we want everything after
                 endOfUnion.pop();
-                console.log("LISTEN")
             }
 
             if(next.string.toLowerCase() === "union" && count < 0){ // We are coming across a union while having started inside one of its branches
                 skipUnion = true;
                 endOfUnion.push(count);
-                console.log("HEY")
                 // if(tokenArray.at(-1).string.toLowerCase() === "UNION") tokenArray.pop() // kind of brutal, but we remove the union token a posteriori
             }
 
             if(!skipUnion && !skipNext){
-                tokenArray.push(next);
+                postContextTokens.push(next);
             }
 
             skipNext = false;
 
-            next = this.getNextNonWsTokenMultiLine(yasqe, line, char);
+            index++;
+            next = tokenArray[index]
         }
 
-        if(shouldStop(count, next)) return tokenArray;
+        if(shouldStop(count, next)) return postContextTokens;
         throw new Error("The query couldn't be parsed : brackets not well formed")
     },
 
-    getNextTokenAfterUnion: function(yasqe, line, char) {
-
-    },
 
     getTriple: function(tokenArray, index){
         let triple = {};
         triple.variables = [];
 
-        const before = this.getTripleBefore(tokenArray, index - 1);
+        const before = this.getTripleBefore(tokenArray, index);
+        const beforeLength = before.length;
+
         const after = this.getTripleAfter(tokenArray, index + 1);
+        const afterLength = after.length;
 
         const tripleTokens = before.concat(after);
 
-        tripleTokens.forEach(elt => {if(elt.type === "atom") triple.variables.push(elt.string)}); // keep all variable
-
         const entities = this.getTokenGroupsOfTriple(tripleTokens);
+
+        if(entities.length === 0 || entities.length > 3) throw new Error("Not a triple");
+
+        tripleTokens.forEach(elt => {if(elt.type === "atom") triple.variables.push(elt.string)}); // keep all variables
 
         triple.subject = this.stringifyTokenGroup(entities[0]);
         triple.predicate = this.stringifyTokenGroup(entities[1]);
         triple.object = this.stringifyTokenGroup(entities[2]);
+
+        triple.start = index - beforeLength;
+        triple.end = index + afterLength;
+
+        triple.tokens = tripleTokens;
+        triple.tokens.forEach(tkn => tkn.outOfContext = true);
         
         return triple;
     },
 
-    getACQueryTriple: function(yasqe, tokenArray, index){
-        const line = yasqe.getDoc().getCursor().line;
-        const ch = yasqe.getDoc().getCursor().ch;
-
+    getIncompleteTriple: function(tokenArray, index){
         let triple = {};
-        let subject, predicate, object;
-        let variables = [];
+        triple.variables = [];
 
-        const before = this.getTripleBefore(tokenArray, index - 1);
+        const before = this.getTripleBefore(tokenArray, index);
+        const beforeLength = before.length;
+
         const after = this.getTripleAfter(tokenArray, index + 1);
+        const afterLength = after.length;
 
-        const tripleTokens = before.concat([tokenArray[index]]).concat(after);
-
-        tripleTokens.forEach(elt => {if(elt.type === "atom") variables.push(elt.string)}); // keep all variable
+        const tripleTokens = before.concat(after);
 
         const entities = this.getTokenGroupsOfTriple(tripleTokens);
 
-        console.log(entities)
+        if(entities.length > 3) throw new Error("Not a triple");
+
+        tripleTokens.forEach(elt => {if(elt.type === "atom") triple.variables.push(elt.string)}); // Keep all variables
+
+        triple.tokens = tripleTokens;
+
+        triple.start = index - beforeLength;
+        triple.end = index + afterLength;
+        
+        triple.tokens = tripleTokens;
+
+        triple.entities = entities;
+
+        return triple;
+    },
+
+
+    getACQueryTripleTokens: function(line, ch, entities){
+        let subject, predicate, object, filter;
 
         if(entities.length === 3) throw new Error("Subject, Predicate and Object found. Triple already written.");
 
@@ -258,17 +309,13 @@ export const CSCompleter = {
         }
 
         if(entities.length === 2) {
+
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
                 // x [[entity]] [[entity]]
                 subject = this.suggestion_variable;
                 predicate = this.stringifyTokenGroup(entities[0]);
                 object = this.stringifyTokenGroup(entities[1]);
             }
-
-            // console.log(entities[1][0]);
-            // console.log(entities[0].at(-1));
-            // console.log(this.isPosBeforeToken(line, ch, entities[1][0]));
-            // console.log(this.isPosAfterToken(line, ch, entities[0].at(-1)));
 
             if(this.isPosBeforeToken(line, ch, entities[1][0]) 
                 && this.isPosAfterToken(line, ch, entities[0].at(-1))){
@@ -284,17 +331,45 @@ export const CSCompleter = {
                 predicate = this.stringifyTokenGroup(entities[1]);
                 object = this.suggestion_variable;
             }
+
+
+            // one finished entity and another being typed
+            // if(this.isPosJustBeforeToken(line, ch, entities[0][0])){
+            //     // x[[entity]] [[entity]]
+            //     subject = this.suggestion_variable;
+            //     predicate = this.stringifyTokenGroup(entities[0]);
+            //     object = this.stringifyTokenGroup(entities[1]);
+            // }
+
+            // if(this.isPosJustAfterToken(line, ch, entities[0].at(-1))){
+            //     // [[entity]]x [[entity]]
+            //     subject = this.suggestion_variable;
+            //     predicate = "?p";
+            //     object = this.stringifyTokenGroup(entities[1]);
+
+            //     filter = `FILTER REGEX (${this.suggestion_variable}, \"^${this.stringifyTokenGroup(entities[0])}\")`;
+            // }
+
+            // if(this.isPosJustBeforeToken(line, ch, entities[1][0])){
+            //     // [[entity]] x[[entity]]
+            //     subject = this.suggestion_variable;
+            //     predicate = this.stringifyTokenGroup(entities[0]);
+            //     object = this.stringifyTokenGroup(entities[1]);
+            // }
+
+            // if(this.isPosBeforeToken(line, ch, entities[1].at(-1))){
+            //     // [[entity]] [[entity]]x
+            //     subject = this.suggestion_variable;
+            //     predicate = this.stringifyTokenGroup(entities[0]);
+            //     object = this.stringifyTokenGroup(entities[1]);
+            // }
         }
 
-        triple.subject = subject;
-        triple.predicate = predicate;
-        triple.object = object;
-
-        triple.variables = variables;
-
-        // console.log(triple);
-
-        return triple;
+        return {
+            subject: {string: subject, type: "fake"}, 
+            predicate: {string: predicate, type: "fake"}, 
+            object: {string: object, type: "fake"}
+        };
     },
 
     getTokenGroupsOfTriple: function(tokenArray) {
@@ -345,9 +420,11 @@ export const CSCompleter = {
                     if(token.string === "." 
                     || token.string === ";"
                     || token.string === ",") break;
+                
+                case "ws":
+                    break;
 
                 default:
-                    console.log("WARN : No entites found");
                     return []
             }
 
@@ -356,133 +433,159 @@ export const CSCompleter = {
         
         return entities;
     },
-    
+
 
     getTripleBefore: function(tokenArray, index){
+
+        const current = tokenArray[index];
+
+        // Fake token used for the tokens inserted by hand
+        if(current.type === "fake") {
+            throw new Error("Fake Token; not to be processed here.");
+        }
+
+        return this.getTripleBefore_(tokenArray, index);
+    },
+    
+
+    getTripleBefore_: function(tokenArray, index){
         if(index <= -1) return [];
         const current = tokenArray[index];
+
         switch (current.type) {
             case "atom":// variable
             case "variable-3": // uri
             case "string": // literal
             case "string-2": // blank node
             case "number": // number
-                return this.getTripleBefore(tokenArray, index - 1).concat([current]);
+                return this.getTripleBefore_(tokenArray, index - 1).concat([current]);
 
-            case "punc": // ^^
-                if(current.string === "^^") return this.getTripleBefore(tokenArray, index - 1).concat([current]);
+            case "ws":
+                return this.getTripleBefore_(tokenArray, index - 1);
+
+            case "punc": // ^^ or .
+                if(current.string === "^^") return this.getTripleBefore_(tokenArray, index - 1).concat([current]);
 
             case "meta": // @
-                if(current.string.startsWith("@")) return this.getTripleBefore(tokenArray, index - 1).concat([current]);
+                if(current.string.startsWith("@")) return this.getTripleBefore_(tokenArray, index - 1).concat([current]);
 
             default:
-                return []
+                return [];
         }
     },
 
     getTripleAfter: function(tokenArray, index){
+        if (tokenArray[index] && tokenArray[index].type === "punc"){
+            switch (tokenArray[index].string) {
+                case ".":
+                case ",":
+                case ";":
+                    return [];
+                default:
+                    break;
+            }
+        }
+
+        return this.getTripleAfter_(tokenArray, index)
+    },
+
+    getTripleAfter_: function(tokenArray, index){
         if(index >= tokenArray.length) return [];
         const current = tokenArray[index];
+
         switch (current.type) {
             case "atom":// variable
             case "variable-3": // uri
             case "string": // literal
             case "string-2": //blank node
             case "number": // number
-                return [current].concat(this.getTripleAfter(tokenArray, index + 1));
+                return [current].concat(this.getTripleAfter_(tokenArray, index + 1));
+
+            case "ws":
+                return this.getTripleAfter_(tokenArray, index + 1);
 
             case "punc": // ^^
-                if(current.string === "^^") return [current].concat(this.getTripleAfter(tokenArray, index + 1));
+                if(current.string === "^^") return [current].concat(this.getTripleAfter_(tokenArray, index + 1));
                 if(current.string === "." 
                 || current.string === ";"
                 || current.string === ",") return [current];
 
             case "meta": // @
-                if(current.string.startsWith("@")) return [current].concat(this.getTripleAfter(tokenArray, index + 1));
+                if(current.string.startsWith("@")) return [current].concat(this.getTripleAfter_(tokenArray, index + 1));
             
             default:
                 if(current.string === "." 
                 || current.string === ";"
                 || current.string === ",") return [current];
-                return []
+                return [];
         }
     },
 
-    // tokens getter (previous / next)
-    getPreviousNonWsTokenMultiLine: function(yasqe, line, currentToken){
-        let previous = yasqe.getPreviousNonWsToken(line, currentToken);
-        
-        if(!previous.type && previous.start === 0 && line > 0) {
-            // beginning of line and not first line = we need to look at the end of previous line 
-            previous.start = Number.MAX_SAFE_INTEGER 
-            /* Looks really bad, but needed because of how previous token are retrieved example :  
-            1    token1
-            2  token2
-            3           token3
-            4
-            yasqe.getPreviousNonWsToken(2, token3) = token2
-            yasqe.getPreviousNonWsToken(1, token2) = <empty token>
-            */
-            return this.getPreviousNonWsTokenMultiLine(yasqe, line - 1, previous);
-        }
 
-        previous.line = line;
-        return previous;
-    },
 
-    getNextNonWsTokenMultiLine: function(yasqe, line, currentPos){
-        let next = yasqe.getNextNonWsToken(line, currentPos);
 
-        if (next && !next.type) return this.getNextNonWsTokenMultiLine(yasqe, line, next.end + 1);
 
-        if (!next && line < yasqe.getDoc().lineCount() - 1) return this.getNextNonWsTokenMultiLine(yasqe, line + 1, 0);
 
-        if (next) next.line = line;
 
-        return next;
-    },
 
     stringifyTokenGroup: function(tokenArray){
         const strings = [];
         tokenArray.forEach(token => {
             strings.push(token.string)
         });
-        return strings.join("");
+        return strings.join(" ");
     },
 
     isPosBeforeToken: function(line, ch, token){
-        return this.isBefore(line, ch, token.line, token.start)
+        return this.isBefore(line, ch, token.line || line, token.start)
     },
 
     isBefore: function(line1, ch1, line2, ch2){
-        return (line1 === line2 && ch1 < ch2) || line1 < line2;
+        return (line1 === line2 && ch1 <= ch2) || line1 < line2;
     },
 
     isPosAfterToken(line, ch, token){
-        return this.isAfter(line, ch, token.line, token.end)
+        return this.isAfter(line, ch, token.line || line, token.end)
     },
     
     isAfter: function(line1, ch1, line2, ch2){
-        return (line1 === line2 && ch1 > ch2) || line1 > line2;
+        return (line1 === line2 && ch1 >= ch2) || line1 > line2;
     },
 
-    // stupid
-    printArray: function(array){
-        console.log("--------------------");
-        let idx = 0;
-        let elt = array[idx];
-        while(elt){
-          console.log("-----------");
-  
-          console.log("element ", elt);
-          console.log("idx ", idx);
-  
-          console.log("-----------");
-  
-          elt = array[idx];
-          idx++;
-        }
-        console.log("length : ", idx);
-        console.log("--------------------");
-      },
+    isPosJustBeforeToken: function(line, ch, token){
+        return this.isSamePosition(line, ch, token.line || line, token.start)
+    },
+
+    isPosJustAfterToken(line, ch, token){
+        return this.isSamePosition(line, ch, token.line || line, token.end)
+    },
+
+    isSamePosition: function(line1, ch1, line2, ch2){
+        return line1 === line2 && ch1 === ch2;
+    },
 };
+
+
+
+
+
+
+
+
+/* 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?p ?o ?probabilityOfRetrievingRestOfMapping WHERE {
+  GRAPH ?g {
+  	?s ?p ?s1.
+    {
+       ?s ?p ?o    .
+       "0"^^<http://example.org/ns/userDatatype>   ?o  .
+                                                    
+       ?o11  ?p12 ?o12.
+    }UNION{
+      ?s2 ?p2 ?o2.
+    }
+  }
+} 
+*/
