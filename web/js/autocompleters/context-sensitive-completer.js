@@ -16,7 +16,12 @@ export const CSCompleter = {
 
         console.log("acq : ", acq);
 
-        return Promise.resolve(["THESE", "AREN'T", "ACTUAL", "SUGGESTIONS", "DUMMY"]);
+        const currentString = token.string
+
+        const url = yasqe.config.requestConfig().endpoint
+
+        return Promise.resolve(this.queryWithCache(url, acq, currentString));
+        // return Promise.resolve(["THESE", "AREN'T", "ACTUAL", "SUGGESTIONS", "DUMMY"]);
     },
     isValidCompletionPosition: function (yasqe) {
         // const token = yasqe.getCompleteToken();
@@ -24,7 +29,116 @@ export const CSCompleter = {
         return true;
     },
 
+
+    postprocessHints: function (_yasqe, hints) {
+        
+        return hints.map(hint => {
+            hint.render = function(el, self, data){
+                const binding = data.displayText.binding
+                const proba = data.displayText.proba
+                // We store an object in the displayTextField. Definitely not as intented, but works (...?)
+
+                const suggestionDiv = document.createElement("div");
+
+                const suggestionValue = document.createElement("span");
+                suggestionValue.textContent = binding || "";
+
+                const suggestionProba = document.createElement("span");
+                suggestionProba.textContent = "  " + (proba || "");
+                // This added space feels out of place, but it works. Used to prevent texts from suggestion and proba being directly next to each other.
+                suggestionProba.style.cssFloat = "right";
+                suggestionProba.style.color = "";
+
+                suggestionDiv.appendChild(suggestionValue);
+                suggestionDiv.appendChild(suggestionProba);
+                
+                el.appendChild(suggestionDiv);
+
+                data.text = binding
+
+                // Prevents autocompleted tokens from eating end of line periods, colons and semicolons
+                // self.to.ch = self.to.ch - 1;
+
+                // console.log("data", data);
+                // console.log("self", self);
+                // We have to set the text field back to the suggestion only, since that's what's getting written on the editor. 
+                // Again, kinda hacky, but works, somehow
+
+                // console.log(el)
+            }
+            return hint
+        });
+    },
+
+
+
+
+
+    queryWithCache: async function(url, query, currentString) {
+
+        if(this.cache[query]){
+            if(this.cache[query].lastString === currentString){
+                const res = await Promise.resolve(this.query(url, query, currentString))
+                this.cache[query].results = this.cache[query].results.concat(res)
+            }
+        } else {
+            const res = await Promise.resolve(this.query(url, query, currentString))
+            this.cache[query] = new Object()
+            this.cache[query].results = res
+        }
+        this.cache[query].lastString = currentString
+        // this.cache[query].results
+        return this.cache[query].results
+            .filter(result => result.sugg.includes(currentString) || result.sugg.includes(currentString.substring(1))) // filter results by currently typed string
+            .sort((a, b) => b.proba - a.proba) // sort by lower proba first (lower proba = higher cardinality)
+            .map(result => {return {binding: this.typedStringify(result.sugg, result.type), proba: result.proba}}) // show only the entity, properly written based on its type, not its probability (though it may be interesting to have both, even for the user!!)
+            .filter((bindingAndProba, index, array) => array.findIndex(elt =>elt.binding === bindingAndProba.binding) === index) // distinct elements
+            //.map(value => value.elt + " // " + (1 / value.proba))
+            //.map(value => value.binding)
+    },
+
+    query: async function(url, query, currentString) {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({ "query" : query }),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+
+            const json = await response.json();
+            const suggestions = Array.from(
+                new Set(
+                    json["results"]["bindings"]
+                    .filter(b => b[this.suggestion_variable_name]) // safety measure, in case something goes wrong and bindings don't have mapping for suggestion_variable
+                    .map(b => {
+                        return {sugg: b[this.suggestion_variable_name]["value"], 
+                                proba: b["probabilityOfRetrievingRestOfMapping"]["value"] || 0,
+                                type: b[this.suggestion_variable_name]["type"],
+                            } 
+                        })
+                )
+            )
+
+            // console.log(suggestions)
+
+            return suggestions
+        } catch (error) {
+            console.error(error.message);
+        }
+    },
+
+
+
+
+
     getAutocompletionQuery: function(yasqe, token) {
+
         // step 1 : get all tokens
         const tokens = this.getTokensFromCurrentContext(yasqe, token);
 
@@ -43,8 +157,6 @@ export const CSCompleter = {
             yasqe.getDoc().getCursor().ch,
             incompleteTriple.entities);
 
-        console.log(acqTriple)
-
         let context = [...tokens];
 
         // We replace the tokens of the incomplete triple by fake tokens
@@ -52,9 +164,8 @@ export const CSCompleter = {
         context.splice(
             incompleteTriple.start, 
             incompleteTriple.end - incompleteTriple.start + 1, 
-            acqTriple.subject, acqTriple.predicate, acqTriple.object, {string: ".", type: "fake"});
-
-        console.log(context)
+            acqTriple.subject, acqTriple.predicate, acqTriple.object,
+            {type:"fake", string: "."});
 
         for(let i = 0; i < context.length; i++){
             try {
@@ -62,6 +173,7 @@ export const CSCompleter = {
                 i = triple.end;
                 contextTriples.push(triple);
             } catch (error) {
+                // console.log(error)
             }
         }
 
@@ -90,9 +202,23 @@ export const CSCompleter = {
         // Remove triples that don't join whatsoever with the triple being written
         context = context.filter(tkn => !tkn.outOfContext);
         
-        const acqString = `SELECT * WHERE ${this.stringifyTokenGroup(context)}`; 
+        const prefixes = this.getACQPrefixes(yasqe);
+
+        const acqString = `${prefixes} SELECT * WHERE ${this.stringifyTokenGroup(context)}`; 
 
         return acqString;
+    },
+
+
+    getACQPrefixes: function(yasqe){
+        const prefixes = yasqe.getPrefixesFromQuery();
+        const prefixStrings = [];
+
+        for (const [key, value] of Object.entries(prefixes)){
+            prefixStrings.push(`PREFIX ${key}: <${value}>`);
+        }
+
+        return prefixStrings.join(" ");
     },
 
     getTokensFromCurrentContext: function(yasqe) {
@@ -300,7 +426,7 @@ export const CSCompleter = {
                 object = this.stringifyTokenGroup(entities[0]);
             }
 
-            if(this.isPosBeforeToken(line, ch, entities[0][-1])){
+            if(this.isPosAfterToken(line, ch, entities[0].at(-1))){
                 // [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.suggestion_variable;
@@ -344,8 +470,8 @@ export const CSCompleter = {
             // if(this.isPosJustAfterToken(line, ch, entities[0].at(-1))){
             //     // [[entity]]x [[entity]]
             //     subject = this.suggestion_variable;
-            //     predicate = "?p";
-            //     object = this.stringifyTokenGroup(entities[1]);
+            //     predicate = this.stringifyTokenGroup(entities[1]);
+            //     object = "?o";
 
             //     filter = `FILTER REGEX (${this.suggestion_variable}, \"^${this.stringifyTokenGroup(entities[0])}\")`;
             // }
@@ -384,8 +510,8 @@ export const CSCompleter = {
             
             switch (token.type) {
                 case "variable-3": // uri
-                case "string-2": //blank node
-                case "atom":// variable
+                case "string-2": // blank node
+                case "atom": // variable
                     entities.push(buffer);
                     buffer = [];
                     break;
@@ -414,6 +540,8 @@ export const CSCompleter = {
                             }
                         }
                     }
+                    entities.push(buffer);
+                    buffer = [];
                     break;
 
                 case "punc":
@@ -521,17 +649,13 @@ export const CSCompleter = {
         }
     },
 
-
-
-
-
-
-
-
     stringifyTokenGroup: function(tokenArray){
         const strings = [];
         tokenArray.forEach(token => {
-            strings.push(token.string)
+            // TODO : change :)
+            if(token.string !== "." || strings.at(-1) !== "."){
+                strings.push(token.string)
+            }
         });
         return strings.join(" ");
     },
@@ -541,7 +665,7 @@ export const CSCompleter = {
     },
 
     isBefore: function(line1, ch1, line2, ch2){
-        return (line1 === line2 && ch1 <= ch2) || line1 < line2;
+        return (line1 === line2 && ch1 < ch2) || line1 < line2;
     },
 
     isPosAfterToken(line, ch, token){
@@ -549,7 +673,7 @@ export const CSCompleter = {
     },
     
     isAfter: function(line1, ch1, line2, ch2){
-        return (line1 === line2 && ch1 >= ch2) || line1 > line2;
+        return (line1 === line2 && ch1 > ch2) || line1 > line2;
     },
 
     isPosJustBeforeToken: function(line, ch, token){
@@ -562,6 +686,19 @@ export const CSCompleter = {
 
     isSamePosition: function(line1, ch1, line2, ch2){
         return line1 === line2 && ch1 === ch2;
+    },
+
+    typedStringify: function(entity, type) {
+        switch(type) {
+            case 'iri':
+              return "<" + entity + ">"
+            case 'uri':
+              return "<" + entity + ">"
+            case 'literal':
+                return "\"" + entity + "\""
+            default:
+              return "UNKNOWN TYPE : " + entity
+        }
     },
 };
 
