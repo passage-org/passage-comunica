@@ -35,8 +35,10 @@ export class PhysicalPlanPlugin {
                 }
                 return logger.n2id.get(n);
             };
-            
+
+            const previousLogOperation = logger.logOperation;
             logger.logOperation = (lo, po, n, pn, a, m) => {
+                previousLogOperation.apply(logger, [lo, po, n, pn, a, m]);
                 const message = Date.now() +": " + JSON.stringify({
                     type:'physical',
                     subtype:'init',
@@ -51,7 +53,9 @@ export class PhysicalPlanPlugin {
                     this.container.innerHTML += message + '\n';
                 };
             };
+            const previousAppendMetadata = logger.appendMetadata;
             logger.appendMetadata = (n, m) => {
+                previousAppendMetadata.apply(logger, [n, m]);
                 const message = Date.now() + ": " + JSON.stringify({
                     type:'physical',
                     subtype:'append',
