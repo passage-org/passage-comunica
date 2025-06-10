@@ -58,7 +58,7 @@ export class OperatorsChoser {
 handle locally by Comunica. The more operators are pushed to Passage,
 the more efficient the computation. Unfortunately, all operators are not available to Passage (yet).`;
         const td_head_name = document.createElement("th");
-        td_head_name.innerHTML = "Operators";
+        td_head_name.innerHTML = "Endpoint Interface";
         const td_head_checkbox = document.createElement("th");
         tr_head.appendChild(td_head_name);
         tr_head.appendChild(td_head_checkbox);
