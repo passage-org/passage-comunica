@@ -8,8 +8,15 @@ import {LoggerPretty} from '@comunica/logger-pretty';
 /// It requires slight modification to the default behavior of yasgui.
 
 export class MonkeyQueryEngine {
+
+    yasr; // the result part of yasgui
+    yasqe; // the editor part of yasgui
+    shaper; // the shape configuration for passage x comunica
+    resultIterator;
+    responseChip; // the monkey-patched tooltip printing the number of results and time
     
-    constructor(yasqe, yasr) {
+    constructor(yasqe, yasr, shaper) {
+        this.shaper = shaper;
         this.yasqe = yasqe;
         this.yasr  = yasr;
         this.responseChip = new MonkeyResponseChip(this.yasr);
@@ -95,12 +102,14 @@ export class MonkeyQueryEngine {
             const requestConfig = this.yasqe.config.requestConfig(); // headers and all.
             const headers = new Headers();
             requestConfig.args.forEach(e => {headers.set(e.name, e.value);});
+            const shape = this.shaper.toJson();
             
             console.log("Executing the following SPARQL query on " + requestConfig.endpoint + ": \n" + query);
             // list of available key/value: https://comunica.dev/docs/query/advanced/context/
             this.configEngine = {
                 sources: [requestConfig.endpoint], // always only one endpoint
                 headers: headers,
+                shape: shape,
                 log: this.yasr.plugins['Log'].getLogger(), // allows retrieving the logging from comunica
                 physicalQueryPlanLogger: this.yasr.plugins['Plan'].getLogger(), // create the physical plan
                 abort: {value: false}, // allows stopping the query execution when needed

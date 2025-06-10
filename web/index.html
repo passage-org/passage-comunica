@@ -68,7 +68,7 @@
       <dialog id="fedshop_dialog" class="examples_dialog"></dialog>
       
       <div id="yasgui"></div>
-      
+
       <footer class="footer">
         <p class="text-center">
           Ⓒ 2017–2025
@@ -80,6 +80,7 @@
     </div>
     
     <script type="module">
+      import {OperatorsChoser} from './js/views/operators-choser';
       import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
@@ -100,8 +101,9 @@
       const yasqe = yasgui.getTab().yasqe;
       const yasr  = yasgui.getTab().yasr;
 
-      // we change the behavior of the execute button to execute with passage x comunica      
-      const engine = new MonkeyQueryEngine(yasqe, yasr);
+      // we change the behavior of the execute button to execute with passage x comunica
+      const shaper = new OperatorsChoser(document.getElementsByClassName("tabMenu")[0]);
+      const engine = new MonkeyQueryEngine(yasqe, yasr, shaper);
       
       new QueriesDialog(
           document.getElementById("header_wikidata"),
@@ -119,7 +121,9 @@
           document.getElementById("header_fedshop"),
           document.getElementById("fedshop_dialog"),
           FedShopQueries,
-          yasqe);
+      yasqe);
+
+
       
     </script>
   </body>

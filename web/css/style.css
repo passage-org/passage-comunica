@@ -8,7 +8,7 @@
 
     color-scheme: light dark; /* need this to be enabled for light dark */
     &:has(input[name="dark-light-toggle"]:checked) { color-scheme: dark; }; /* TODO toggle between 3 states */
-    &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; /* Force dark mode */ }
+    &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; } /* Force dark mode */ 
     
     --logo-color              : light-dark(var(--frost-1), var(--aurora-3));
     --background-color        : light-dark(white, var(--polar-night-1)); 

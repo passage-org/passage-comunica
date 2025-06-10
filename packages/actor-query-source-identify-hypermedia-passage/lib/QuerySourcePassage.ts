@@ -94,7 +94,7 @@ export class QuerySourcePassage implements IQuerySource {
     }
 
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
-        return QuerySourcePassage.SELECTOR_SHAPE;
+        return this.context.get(new ActionContextKey("shape")) || QuerySourcePassage.SELECTOR_SHAPE;
     }
 
     public queryBindings(
