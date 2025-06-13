@@ -1,19 +1,21 @@
-import {MonkeyResponseChip} from '/js/views/monkey-response-chip.js';
-import Passage from '/passage-comunica-engine.js';
-import MergedParsedResults from '/js/merged-parsed-results.js';
-import {LoggerPretty} from '@comunica/logger-pretty';
+import {MonkeyResponseChip} from "/js/views/monkey-response-chip.js";
+import Passage from "/passage-comunica-engine.js";
+import MergedParsedResults from "/js/merged-parsed-results.js";
+import {LoggerPretty} from "@comunica/logger-pretty";
+import {MessageStart, MessageAbort} from "/js/workers/task-messages.js";
+import {MessageRouter} from "/js/workers/message-router.js";
 
 /// Instead of using the default yasqe query executor that fetches the
 /// result, we use passage-comunica to retrieve them.
 /// It requires slight modification to the default behavior of yasgui.
-
 export class MonkeyQueryEngine {
 
     yasr; // the result part of yasgui
     yasqe; // the editor part of yasgui
     shaper; // the shape configuration for passage x comunica
-    resultIterator;
     responseChip; // the monkey-patched tooltip printing the number of results and time
+    worker;
+    router;
     
     constructor(yasqe, yasr, shaper) {
         this.shaper = shaper;
@@ -23,68 +25,48 @@ export class MonkeyQueryEngine {
         this.reset();
         this.yasr.results.stop();
         this.stop(); // start stopped
+        this.router = new MessageRouter(this, this.yasr.plugins["Log"], this.yasr.plugins["Plan"]);
     }
 
-    // start the query execution. The query
-    // button becomes stoppable.
-    start () {
-        this.yasqe.queryBtn.onclick = () => {
-            this.yasqe.req = false; // click state
-            this.yasqe.updateQueryButton();
-            this.yasqe.queryBtn.title = "run query";
-            this.configEngine.abort.value = true;
-            this.configEngine.log.log = (level, color, message, data) => {
-                // muted
-            };
-            
-            this.stop(); // becomes startable
-        };
-    }
 
     // clean the underlying structure to allow yasgui to restart
     // a SPARQL query.
     reset () {
         this.yasr.results = new MergedParsedResults();
+        this.yasr.plugins["Log"] && this.yasr.plugins["Log"].reset();
+        this.yasr.plugins["Plan"] && this.yasr.plugins["Plan"].reset();
         this.yasqe.req = false; // this is about the click on queryBtn.
-        if (this.resultIterator) { // this states that it actually started
-            // so we remove all listener to start fresh
-            this.resultIterator.removeAllListeners();
-            this.resultIterator = null;
-        }
+        this.worker && this.worker.terminate(); // should: this.worker.removeAllListeners() ?
         this.yasr.draw(); // reset the view of results
     }
 
     forceStartedButton() {
         this.yasqe.req = true;
-        this.yasqe.queryStatus = 'valid';
-        this.yasqe.updateQueryButton('valid');
+        this.yasqe.queryStatus = "valid";
+        this.yasqe.updateQueryButton("valid");
         this.yasqe.queryBtn.title = "stop query";
     }
     
     forceErrorButton(err) {
-        console.log('Error: ', err);
+        console.log("Error: ", err);
         this.reset(); // reset the results as well
         this.yasr.results.stop();
-        this.yasqe.queryBtn.title = 'run query';
-        this.yasqe.updateQueryButton('error');
+        this.yasqe.queryBtn.title = "run query";
+        this.yasqe.updateQueryButton("error");
         this.responseChip.stop();
         this.stop();
     }
 
     forceDoneButton() {
         this.yasr.results.stop();
-        if (this.resultIterator) { // this states that it actually started
-            // so we remove all listener to start fresh
-            this.resultIterator.removeAllListeners();
-            this.resultIterator = null;
-        }
+        this.worker && this.worker.terminate();
         this.yasr.draw();
         this.yasqe.req = false;
-        this.yasqe.queryBtn.title = 'run query';
-        this.yasqe.updateQueryButton('valid');
+        this.yasqe.queryBtn.title = "run query";
+        this.yasqe.updateQueryButton("valid");
         this.responseChip.stop();
         this.stop(); // becomes startable
-        console.log('We are done with the query!');
+        console.log("We are done with the query!");
     }
     
     // stop the query execution. The query button
@@ -94,68 +76,38 @@ export class MonkeyQueryEngine {
             this.yasqe.queryBtn.onclick = () => {}; // disabled
             this.reset(); // reset as soon as the button has been clicked to start a new execution
             this.responseChip.start();
-
-            // update the queryBtn to be in execution state.
-            this.forceStartedButton();
+            this.forceStartedButton(); // update the queryBtn to be in execution state.
 
             const query = this.yasqe.getDoc().getValue();
             const requestConfig = this.yasqe.config.requestConfig(); // headers and all.
-            const headers = new Headers();
-            requestConfig.args.forEach(e => {headers.set(e.name, e.value);});
             const shape = this.shaper.toJson();
             
             console.log("Executing the following SPARQL query on " + requestConfig.endpoint + ": \n" + query);
             // list of available key/value: https://comunica.dev/docs/query/advanced/context/
-            this.configEngine = {
-                sources: [requestConfig.endpoint], // always only one endpoint
-                headers: headers,
-                shape: shape,
-                log: this.yasr.plugins['Log'].getLogger(), // allows retrieving the logging from comunica
-                physicalQueryPlanLogger: this.yasr.plugins['Plan'].getLogger(), // create the physical plan
-                abort: {value: false}, // allows stopping the query execution when needed
+
+            // TODO conditionally, when workers are not enabled, execute the query old-school with
+            //      possible slows down when the query is big to optimize.
+            this.worker = new Worker("/js/workers/task-execute-query.js", { type: "module" });
+            this.worker.postMessage(new MessageStart(query, requestConfig, shape));
+
+            this.worker.onmessage = (event) => {
+                this.router.routeMessageFromWorker(event.data);
             };
-            
-            Passage.PassageFactory().query(query, this.configEngine).then(async (result) => {
-                this.start(); // becomes stopable
-                switch (result.resultType) {
-                case 'bindings': this.resultIterator = await result.execute(); break;
-                default: throw new Exception('Should get an iterator of bindings but gets something else: ' + result.resultType);
-                };
-                this.resultIterator.on('error', (e) => this.forceErrorButton(e));
-                this.resultIterator.on('end', ()  => this.forceDoneButton());
-                this.resultIterator.on('data', (result) => {
-                    // put back the data as if it was the result of one standard call to
-                    // a SPARQL enpdoint…
-                    const jsonBindings = Object.fromEntries([...result].map(([key, value]) => {
-                        let type = null;
-                        switch (value.termType) {
-                        case 'NamedNode' : type = 'uri';     break;
-                        case 'Literal'   : type = 'literal'; break;
-                        case 'BlankNode' : type = 'bnode';   break;
-                        default: console.log('Unhandled type: ' + value.termType); 
-                        };                        
-                        const jsonValue = {
-                            value: value.value,
-                            type: type,
-                            datatype: value && value.datatype && value.datatype.value,
-                        };
-                        
-                        return [key.value, jsonValue];
-                    }));
-                    
-                    this.yasr.results.appendResponse({vars: Object.keys(jsonBindings), bindings: jsonBindings});
-                    
-                    this.yasr.results.whenMoreCalm(()=>{this.yasr.plugins['table'].draw();});
-                    // not emitting to avoid all calls to stringify 
-                    // yasqe.emit("queryResponse", mergedResults);
-                });
-            }).catch((e) => {
-                this.forceErrorButton(e)
-            });
-           
+
+            this.start(); // becomes stopable
         };
     }
 
 
-    
+    // start the query execution. The query
+    // button becomes stoppable.
+    start () {
+        this.yasqe.queryBtn.onclick = () => {
+            this.yasqe.req = false; // click state
+            this.yasqe.updateQueryButton();
+            this.yasqe.queryBtn.title = "run query";
+            this.worker && this.worker.postMessage(new MessageAbort());
+            this.stop(); // becomes startable
+        };
+    }
 }

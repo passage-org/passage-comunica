@@ -31,18 +31,15 @@ export class ComunicaConsolePlugin {
         this.container && this.container.remove();
         this.container = null;
     }
+
+    reset() {
+        this.resetDOM(); // view
+        this.history = []; // data
+    }
     
-    getLogger() {
-        this.resetDOM();
-        this.history = []; // reset history
-        const id = ++this.currentId;
-        const logger = new LoggerPretty({ level: 'info' });
-        logger.log = (level, color, message, data) => {
-            const entry = {level: level, message: message, date:Date.now()};
-            this.history.push(entry);
-            this.concatNewRow(entry);
-        };
-        return logger;
+    append(entry) {
+        this.history.push(entry);
+        this.concatNewRow(entry);
     }
     
     canHandleResults() { return this.history.length > 0; }

@@ -20,64 +20,24 @@ export class PhysicalPlanPlugin {
             filename: `${filename}.json`,
         };
     }
-    
-    getLogger() {
-        this.history = []; // reset
-        this.container = null;
-        const loggerFactory = () => {
-            const logger = new MemoryPhysicalQueryPlanLogger();
-            // overload the logger with an identifier allocator for
-            // logical nodes, to remove the recursive issue.
-            logger.n2id = new Map();
-            logger.getId = (n) => {
-                if (!logger.n2id.has(n)) {
-                    logger.n2id.set(n, logger.n2id.size);
-                }
-                return logger.n2id.get(n);
-            };
 
-            const previousLogOperation = logger.logOperation;
-            logger.logOperation = (lo, po, n, pn, a, m) => {
-                previousLogOperation.apply(logger, [lo, po, n, pn, a, m]);
-                const message = Date.now() +": " + JSON.stringify({
-                    type:'physical',
-                    subtype:'init',
-                    lo:lo,
-                    pn:logger.getId(pn),
-                    n: logger.getId(n),
-                    m: m,
-                });
-                // TODO 
-                this.history.push(message);
-                if (this.container) {
-                    this.container.innerHTML += message + '\n';
-                };
-            };
-            const previousAppendMetadata = logger.appendMetadata;
-            logger.appendMetadata = (n, m) => {
-                previousAppendMetadata.apply(logger, [n, m]);
-                const message = Date.now() + ": " + JSON.stringify({
-                    type:'physical',
-                    subtype:'append',
-                    n:logger.getId(n),
-                    m:m,
-                });
-                // TODO
-                this.history.push(message);
-                if (this.container) {
-                    this.container.innerHTML += message + '\n';
-                };
-            };
-            return logger;
+    reset() {
+        this.container = null;
+        this.history = [];
+    }
+    
+    append(entry) {
+        this.history.push(entry);
+        if (this.container) {
+            this.container.textContent += JSON.stringify(entry) + "\n"; // TODO proper update function
         };
-        return loggerFactory;
     }
 
     canHandleResults() { return this.history.length > 0; }
 
     draw () {
         this.container = document.createElement('pre');
-        this.container.innerHTML = this.history.join('\n');
+        this.container.textContent = this.history.map(e => JSON.stringify(e)).join('\n');
         this.yasr.resultsEl.appendChild(this.container);
     }
 
