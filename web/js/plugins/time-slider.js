@@ -7,15 +7,14 @@ export class TimeSlider {
 
     parent; // the parent DOM element
     container; // the slider container
+    slider; // the slider itself
 
     minTime =  Infinity;
     maxTime = -Infinity;
         
     constructor(parent) {
         this.parent = parent;
-        this.slider = null;
-        this.label = null;
-        this.container = null;
+        this.reset();
         // TODO fix this
         this.onChangeCallback = (percent) => {
             const minTime = timeLine[0].timestamp;
@@ -27,12 +26,21 @@ export class TimeSlider {
             );
             this.replayStateAt(currentTime);
         };
+        this.mount();
     }
 
     update(entry) {
         this.minTime = entry && entry.date && Math.min(this.minTime, entry.date);
         this.maxTime = entry && entry.date && Math.max(this.maxTime, entry.date);
         // TODO update view
+    }
+
+    reset() {
+        this.minTime =  Infinity;
+        this.maxTime = -Infinity;
+        
+        this.container && this.container.remove(); // remove DOM
+        this.mount();
     }
     
     mount() {
@@ -45,9 +53,8 @@ export class TimeSlider {
         this.slider.min = "0";
         this.slider.max = "100";
         this.slider.value = "0";
-        this.slider.id = "time-slider";
         this.slider.style.width = "100%";
-
+        
         this.slider.addEventListener("input", () => {
             const percent = parseInt(this.slider.value, 10);
             if (this.onChangeCallback) {
@@ -77,10 +84,5 @@ export class TimeSlider {
     //       this.label.textContent = new Date(timestamp).toLocaleTimeString();
     //     }
     //   }
-
-    destroy() {
-        if (this.container && this.container.parentNode) {
-            this.container.parentNode.removeChild(this.container);
-        }
-    }
+    
 }

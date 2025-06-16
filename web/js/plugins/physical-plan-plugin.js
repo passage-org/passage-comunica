@@ -1,13 +1,6 @@
 import {MemoryPhysicalQueryPlanLogger} from "@comunica/actor-query-process-explain-physical";
-import {Tree} from "/js/plugins/build-tree.js";
-import {TimeSlider} from "/js/plugins/time-slider.js";
-import {
-    renderTreeWithTimeouts,
-    timeLine,
-    replayStateAt,
-    // updateNodeMetadata,
-    // addNodeToTree,
-} from "/js/plugins/render-tree.js";
+import {PhysicalTree} from "/js/plugins/physical-tree.js";
+// import {TimeSlider} from "/js/plugins/time-slider.js";
 
 /// Displays the physical plan created by comunica, that
 /// dynamically gets updated over query execution.
@@ -19,8 +12,8 @@ export class PhysicalPlanPlugin {
     
     constructor(yasr) {
         this.yasr = yasr;
-        this.slider = new TimeSlider(this.yasr.resultsEl);
-        this.tree = new Tree(this.yasr.resultsEl); 
+        // this.slider = new TimeSlider(this.yasr.resultsEl);
+        this.tree = new PhysicalTree(this.yasr.resultsEl); 
     }
 
     download(filename) {
@@ -35,81 +28,23 @@ export class PhysicalPlanPlugin {
 
     reset() {
         this.history = [];
-        this.slider.reset(); // TODO
+        // this.slider.reset(); // TODO
         this.tree.reset(); // TODO
     }
     
     append(entry) {
         this.history.push(entry);
-        this.slider.update(entry); // TODO
+        // this.slider.update(entry); // TODO
         this.tree.update(entry); // TODO
     }
 
-    updateTreeDisplay() {
-        // const parsedHistory = this.getParsedHistory();
-        // TODO parsedHistory from
-        if (!parsedHistory.length) return;
-
-        // const alreadyKnown = new Set(timeLine.map(e => e.timestamp));
-        const alreadyKnown = new Set(this.history.map(h => h.split(":")[0]));
-
-        const newEvents = parsedHistory.filter(e => !alreadyKnown.has(e.timestamp));
-
-        if (!newEvents.length) return;
-
-        for (const event of newEvents) {
-            this.tree.updateBuildTree(event);
-            timeLine.push(event);
-        }
-
-        if (!this.container) {
-            this.container = document.createElement("div");
-            this.container.id = "physical-plan-container";
-            this.yasr.resultsEl.appendChild(this.container);
-        } else {
-            this.container.innerHTML = ""; // nettoie le contenu précédent
-        }
-
-        if (!document.body.contains(this.container)) return;
-
-        if (!this.timeSlider) {
-            this.timeSlider = new TimeSlider((percent) => {
-                const elapsed = performance.now() - Math.max(0, this.minTime);
-                const currentTime = Math.min(
-                    minTime + ((maxTime - minTime) * percent) / 100,
-                    minTime + elapsed
-                );
-                replayStateAt(currentTime);
-            });
-
-            this.timeSlider.mount(this.yasr.resultsEl);
-        }
-
-        renderTreeWithTimeouts(this.tree.rootNodes, this.container, this.timeSlider);
-    }
-
-    
     canHandleResults() {
         return this.history && this.history.length > 0;
     }
 
     draw() {
-        this.container = document.createElement("div");
-        this.container.id = "physical-plan-container";
-        this.yasr.resultsEl.appendChild(this.container);
-
-        const parsedHistory = this.getParsedHistory();
-        const flatData = transformData(parsedHistory); // transformData has been removed
-        const treeData = this.tree.buildTree(flatData);
-
-        timeLine.length = 0;
-        timeLine.push(...flatData);
-
-        const timeSlider = new TimeSlider();
-
-        timeSlider.mount(this.yasr.resultsEl);
-
-        renderTreeWithTimeouts(treeData, this.container, timeSlider);
+        this.tree && this.tree.initialize(this.history) && this.tree.draw();
+        // this.slider && this.slider.initialize(this.history);
     }
 
     getIcon() {
