@@ -198,7 +198,6 @@ export const CSCompleterImproved = {
             try{
                 var parsedQuery = parser.parse(bracketed);
             }catch(error){
-                console.log(bracketed);
                 throw new Error("Could not parse the query")
             }
         }
@@ -466,7 +465,8 @@ export const CSCompleterImproved = {
                 case "punc":
                     if(token.string === "." 
                     || token.string === ";"
-                    || token.string === ",") break;
+                    || token.string === ","
+                    || token.string === "}") break;
 
                     // incomplete uri
                     if(token.string === "<"){
