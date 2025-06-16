@@ -184,6 +184,8 @@ export const CSCompleterImproved = {
             {type:"fake", string: shouldAddPeriod ? "." : ""});
 
 
+        console.log(acqTriple);
+
         // Parse the query as is
 
         const string = this.getACQPrefixes().concat(context.map(tkn => tkn.string).join(" "));
@@ -640,6 +642,7 @@ export const CSCompleterImproved = {
         
             case "union":
             case "group":
+            case "optional": // we treat optional like a join, debatable but works 
                 parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
                     p => p.inContext
                 )
@@ -701,6 +704,12 @@ export const CSCompleterImproved = {
             case "bgp":
                 return parsedQueryTree.triples;
             
+            case "optional":
+                return parsedQueryTree.patterns.reduce(
+                    (acc, val) => acc.concat(this.getTriples(val)),
+                    []  
+                ); 
+            
             default : // triple
                 return [parsedQueryTree];
         }
@@ -717,6 +726,7 @@ export const CSCompleterImproved = {
             
             case "graph":
             case "group":
+            case "optional": // we treat optional like a join, debatable but works 
                 parsedQueryTree.inContext = true;
                 parsedQueryTree.patterns.forEach(
                     c => this.markRelevantNodes(c)
@@ -744,7 +754,7 @@ export const CSCompleterImproved = {
                     c => this.markRelevantNodes(c)
                 )
                 break;
-            
+
             default : // triple
                 {} // nothing to do;
         }
@@ -761,6 +771,7 @@ export const CSCompleterImproved = {
             case "graph":
             case "union":
             case "group":
+            case "optional": // we treat optional like a join, debatable but works 
                 return parsedQueryTree.patterns.reduce(
                     (acc, val) => acc || this.hasCurrentTriple(val),
                     false  
