@@ -632,27 +632,24 @@ export const CSCompleterImproved = {
                 parsedQueryTree.where = parsedQueryTree.where.filter(
                     w => w.inContext
                 )
-                .map(
-                    w => this.trim(w) 
-                )
+                .map(w => this.trim(w))
 
                 // if(parsedQueryTree.where.length === 1) return parsedQueryTree.where[0];
 
                 return parsedQueryTree
         
             case "union":
+            case "group":
                 parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
                     p => p.inContext
                 )
                 .map(p => this.trim(p))
-
 
                 if(parsedQueryTree.patterns.length === 1) return parsedQueryTree.patterns[0];
 
                 return parsedQueryTree
             
             case "graph":
-            case "group":
                 parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
                     p => p.inContext
                 )
