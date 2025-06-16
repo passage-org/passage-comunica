@@ -1,3 +1,5 @@
+import {formatTime} from "/js/utils.js";
+import {PhysicalNode} from "/js/plugins/physical-node.js";
 
 /// The tree structure that is the physical plan. Merging the metadata
 /// when need be.
@@ -5,10 +7,8 @@ export class PhysicalTree {
 
     parent; // The parent DOM
     container; // The DOM container of the tree
-    rootNodes; // TODO possibly remove this
-    nodeMap; // to ensure uniqueness easily
-    node2dom;
-    node2domChildren;
+    id2dom; // integer_id -> dom 
+    id2node; // integer_id -> node (service may have 2 init append calls for 1 id)
     
     constructor(parent) {
         this.parent = parent;
@@ -17,23 +17,29 @@ export class PhysicalTree {
 
     reset() {
         this.container && this.container.remove();
-        this.rootNodes = [];
-        this.nodeMap = new Map();
-        this.node2dom = new Map();
+        this.id2node = new Map();
+    }
+
+    resetDOM() {
+        this.container && this.container.remove();
+        this.container = document.createElement("ul"); // the plan is a big nested list
+        this.container.style.paddingLeft = "0px";
+        this.parent.appendChild(this.container);
+        this.id2dom = new Map();
     }
     
     initialize(messages) {
-        console.log("init");
-        this.container = document.createElement("ul");
-        this.parent.appendChild(this.container);
-        
+        this.reset();
+        this.resetDOM();
         const sorted = messages.sort((a, b) => a.date - b.date);
         sorted.forEach((message) => {this.update(message);}); // update includes render
         return true;
     }
 
     draw() {
-        this.nodeMap.forEach((v, k) => {
+        this.resetDOM();
+        let sorted = [...this.id2node.entries()].sort((a, b) => a[0] - b[0]);
+        sorted.forEach(([k, v]) => {
             this.renderNode(v);
         });
     }
@@ -41,45 +47,23 @@ export class PhysicalTree {
     update(message) {
         switch (message.type) {
         case "MessagePhysicalPlanInit":
-            // TODO possibly get rid of entry.date as key builder element
-            const uniqueKey = `${message.n}-${message.date}`;
-            const node = {
-                ...message,
-                children: [],
-                events: [],
-                m: { ...(message.m || {}) },
+            const node = this.id2node.get(message.n) || new PhysicalNode(message.n, message.pn);
+            node.update(message);
+            // could already exist, it happens for service physical nodes that send 2 queries
+            if (!this.id2node.has(node.id)) {
+                this.id2node.set(node.id, node);
+                const parent = this.id2node.get(message.pn);
+                parent && parent.addChild(node); // crawlable both ways then
             };
-
-            this.nodeMap.set(uniqueKey, node);
-
-            const parentNode = [...this.nodeMap.values()].find((n) => n.n === message.pn);
-            if (parentNode) {
-                parentNode.children.push(node);
-                node.parent = parentNode;
-            } else {
-                this.rootNodes.push(node);
-            }
             
-            return node; // return the new node properly set.
+            if (this.container && !this.id2dom.has(node.id)) {
+                this.renderNode(node);
+            }
+            return;
         case "MessagePhysicalPlanAppend":
-            // TODO possibly change this since nodeMap may change
-            const targetNode = [...this.nodeMap.values()]
-                .reverse()
-                .find((n) => n.n === message.n);
-            
-            if (targetNode) {
-                targetNode.events.push(message);
-                
-                if (message.m) {
-                    targetNode.m = {
-                        ...targetNode.m,
-                        ...message.m,
-                    };
-                }
-            } else {
-                throw new Exception(`Tree ask for update node while its initialization is not performed: ${message.n}.`);
-            }
-            return targetNode; // return the node that previously existed.
+            const updatedNode = this.id2node.get(message.n).update(message); // should be enough to update
+            this.updateNode(updatedNode);
+            return;
         default: throw new Exception(`Tree update cannot handle:  ${JSON.stringify(message)}.`);
         };
     }
@@ -116,68 +100,76 @@ export class PhysicalTree {
     }
 
     renderNode(node) {
-        if (this.node2dom.get(node)) {return ;} // already rendered
-        const parentElement = (!node.parent && this.container) || this.node2dom.get(node.parent);
-        if (PhysicalTree.isProjectWithOnlyServices(node)) {
-            return this.renderServiceSquares(node, parentElement);
-        }
+        if (!this.container) {return ;}
+        const parentDom = this.id2dom.get(node.parent) || this.container;
+
+        // TODO
+        // if (PhysicalTree.isProjectWithOnlyServices(node)) { 
+        //     return this.renderServiceSquares(node, parentElement);
+        // }
 
         const li = document.createElement("li");
-        // li.style.listStyleType = "none";
         li.classList.add("node");
-        li.setAttribute("data-node-id", node.n); // TODO, why not use .id
+        node.status() && li.classList.add(`physical-${node.status()}`);
+        li.title = node.metadata();
+        this.id2dom.set(node.id, li); // register the dom representing the node
 
+        const timestampSpan = document.createElement("span");
+        timestampSpan.classList.add("timestamp");
+        timestampSpan.innerHTML = `[${formatTime(node.date())}]`;
         const contentSpan = document.createElement("span");
-        contentSpan.className = "node-label";
-        // TODO createElement instead of innerHTML
-        contentSpan.innerHTML = `<span class="timestamp">[${new Date(
-    node.date
-  ).toLocaleTimeString()}]</span>  ${node.lo}`;
-
+        contentSpan.classList.add("node-label");
+        contentSpan.innerHTML = node.logical();
         const eventSpan = document.createElement("span");
-        eventSpan.className = "event-inline";
-        eventSpan.style.marginLeft = "10px";
+        eventSpan.classList.add("event-inline");
 
+        li.appendChild(timestampSpan);
         li.appendChild(contentSpan);
         li.appendChild(eventSpan);
 
+        // create space for the children
         const ul = document.createElement("ul");
-        ul.style.display = "block"; // TODO all style should be in stylesheet
+        ul.classList.add("children");
         li.appendChild(ul);
-        parentElement.appendChild(li);
-        this.node2dom.set(node, ul);
 
-        node.events.forEach((evt) => {
-            const m = evt.m;
-            const displayParts = [];
-            if ("timeLife" in m) displayParts.push(`time: ${m.timeLife}`);
-            if ("cardinalityReal" in m)
-                displayParts.push(`cardinality: ${m.cardinalityReal}`);
-            if ("startAt" in m) li.classList.add("executing");
-            if ("doneAt" in m) li.classList.remove("executing");
+        parentDom.appendChild(li); // TODO get first ul
+
+        // node.events.forEach((evt) => {
+        //     const m = evt.m;
+        //     const displayParts = [];
+        //     if ("timeLife" in m) displayParts.push(`time: ${m.timeLife}`);
+        //     if ("cardinalityReal" in m)
+        //         displayParts.push(`cardinality: ${m.cardinalityReal}`);
+        //     if ("startAt" in m) li.classList.add("executing");
+        //     if ("doneAt" in m) li.classList.remove("executing");
             
-            if (displayParts.length > 0) {
-                eventSpan.textContent += "  " + displayParts.join(" ");
-            }
-        });
+        //     if (displayParts.length > 0) {
+        //         eventSpan.textContent += "  " + displayParts.join(" ");
+        //     }
+        // });
         
-        node.children.forEach((child) => {
-            this.renderNode(child);
-        });
+        // node.children.forEach((child) => {
+        //     this.renderNode(child);
+        // });
     }
 
+    updateNode(node) {
+        if (!this.container) {return ;} // not updating the dom node
+        const dom = this.id2dom.get(node.id);
+        dom.title = node.metadata();
+        dom.classList.replace("physical-pending", `physical-${node.status()}`);
+    }
 
     renderServiceSquares(node, parentElement) {
         const li = document.createElement("li");
         li.style.listStyleType = "none";
-        li.style.paddingLeft = "40px";
+        li.style.paddingLeft = "10px";
         li.classList.add("node");
+        li.classList.add(node.status());
         this.node2dom.set(node, parentElement);
         const contentSpan = document.createElement("span");
         contentSpan.className = "node-label";
-        contentSpan.innerHTML = `<span class="timestamp">[${new Date(
-    node.date
-  ).toLocaleTimeString()}]</span>  project (service group)`;
+        contentSpan.innerHTML = `<span class="timestamp">[${formatTime(node.date)}]</span>  project (service group)`;
 
         const grid = document.createElement("div");
         grid.className = "service-grid";
@@ -201,7 +193,6 @@ export class PhysicalTree {
 
         li.appendChild(contentSpan);
         li.appendChild(grid);
-        console.log(node, parentElement);
         parentElement.appendChild(li);
 
         const baseTime =  Date.now(); // timeLine[0].timestamp; // TODO fix this

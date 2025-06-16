@@ -1,4 +1,5 @@
-import {LoggerPretty} from '@comunica/logger-pretty';
+import {LoggerPretty} from "@comunica/logger-pretty";
+import {formatTime} from "/js/utils.js";
 
 /// A plugin that draws the standard console output from
 /// Comunica. Should only be text based, nothing too fancy.
@@ -80,9 +81,7 @@ export class ComunicaConsolePlugin {
             // append a new line to the table
             const row = document.createElement('tr');
             const dateContainer = document.createElement('td');
-            const hoursOnly = new Date(entry.date).toLocaleString().split(' ')[1];
-            const millisOnly = new Date(entry.date).getMilliseconds();
-            dateContainer.innerHTML = hoursOnly+"."+String(millisOnly).padStart(3, '0');
+            dateContainer.innerHTML = formatTime(entry.date);
             const levelContainer = document.createElement('td');
             levelContainer.innerHTML = entry.level;
             levelContainer.classList.add(entry.level);

@@ -1,0 +1,223 @@
+
+/** Style of the physical plan plugin that displays the Passage x Comunica
+ *  plan to better understand its execution behavior.
+ */
+
+.node {
+    list-style-type: "none";
+    font-family: var(--base-font-family);
+    /* font-weight: bold; */
+    /* color: #2c3e50; */
+    color: var(--text-color);
+    /* background: #e3f2fd; */
+    background-color:  var(--header-background-color);
+    padding: 0px;
+    padding-left: 10px;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 0;
+}
+
+.node:hover {
+    background: var(--snow-storm-1); 
+    cursor: pointer;
+}
+
+ul {
+    list-style-type: none;
+    padding-left:10px;
+    margin: 0;
+}
+
+.event {
+    color: #555;
+    margin: 4px 0;
+    background: #f1f1f1;
+    padding: 4px 8px;
+    border-left: 3px solid #ccc;
+    border-radius: 4px;
+}
+
+.event::before {
+    content: "↳ ";
+    color: #888;
+}
+
+.timestamp {
+    color: #999;
+    font-family: monospace;
+    margin-right: 6px;
+}
+
+.event {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 6px;
+}
+
+.event-inline {
+    display: inline;
+    margin-left: 10px;
+}
+
+.executing .node-label {
+    position: relative;
+}
+
+ul .children {
+    display: "block";
+}
+
+.status-indicator {
+    display: inline-block;
+    margin-left: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: limegreen;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+
+#timeline-container {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    margin-top: 30px;
+    /* background: #f9f9f9; */
+    /* border: 1px solid #ccc; */
+}
+
+
+
+#timeline-line {
+    position: relative;
+    height: 4px;
+    background: red;
+    width: 90%;
+    margin: 0 auto;
+}
+
+.timeline-point.bumped{
+    top: 20px;
+}
+
+.arrowhead {
+    position: absolute;
+    right: 0;
+    top: -6px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid red;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+
+
+.timeline-point {
+    position: absolute;
+    top: -6px;
+    width: 16px;
+    height: 16px;
+    background-color: #0a0;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    border: 2px solid white;
+}
+
+
+
+.timeline-point.active-point {
+    background-color: #ff5722; 
+    box-shadow: 0 0 2px rgba(255, 87, 34, 0.7);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#debug-btn.processing {
+    background-color: darkred;
+    color: white;
+    position: relative;
+}
+
+#debug-btn:disabled {
+    cursor: not-allowed;  
+    opacity: 0.8;
+}
+
+/* .service-grid { */
+/*     display: flex; */
+/*     gap: 8px; */
+/*     padding-left: 20px; */
+/*     margin-top: 6px; */
+/* } */
+
+
+
+.service-box {
+    display: inline-block;
+    width: 50px;
+    height: 30px;
+    background-color: lightblue;
+    border: 1px solid #555;
+    border-radius: 4px;
+    border: 2px solid #444;
+    margin: 4px;
+    text-align: center;
+    font-size: 10px;
+    line-height: 30px;
+    font-family: monospace;
+    cursor: help;
+}
+
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 24px);
+    gap: 5px;
+    margin-top: 4px;
+    padding-left: 3px;
+}
+
+.service-square {
+    width: 24px;
+    height: 24px;
+    background-color: #cce0f5;
+    border: 1px solid #999;
+    border-radius: 3px;
+}
+
+
+li .physical-pending {
+    color: var(--frost-2);
+}
+
+li .physical-error {
+    color: var(--aurora-1);
+}
+
+li .physical-completed {
+    color: var(--aurora-4);
+}

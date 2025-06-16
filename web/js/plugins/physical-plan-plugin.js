@@ -43,7 +43,7 @@ export class PhysicalPlanPlugin {
     }
 
     draw() {
-        this.tree && this.tree.initialize(this.history) && this.tree.draw();
+        this.tree && this.tree.draw();
         // this.slider && this.slider.initialize(this.history);
     }
 
