@@ -88,6 +88,8 @@ export const CSCompleterImproved = {
                 else
                     this.cache[query] = {results: res};  
 
+                console.log(`Finished query with ${res.length} results`);
+
             }
 
         } catch (error) {
@@ -183,8 +185,6 @@ export const CSCompleterImproved = {
             acqTriple.subject, acqTriple.predicate, acqTriple.object,
             {type:"fake", string: shouldAddPeriod ? "." : ""});
 
-
-        console.log(acqTriple);
 
         // Parse the query as is
 
@@ -635,43 +635,57 @@ export const CSCompleterImproved = {
                     w => w.inContext
                 )
                 .map(w => this.trim(w))
-
-                // if(parsedQueryTree.where.length === 1) return parsedQueryTree.where[0];
+                .flat();
 
                 return parsedQueryTree
         
             case "union":
             case "group":
-            case "optional": // we treat optional like a join, debatable but works 
                 parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
                     p => p.inContext
                 )
                 .map(p => this.trim(p))
+                .flat();
 
-                if(parsedQueryTree.patterns.length === 1) return parsedQueryTree.patterns[0];
+                if(parsedQueryTree.patterns.length === 1) return [parsedQueryTree.patterns[0]];
 
-                return parsedQueryTree
+                return [parsedQueryTree]
             
             case "graph":
                 parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
                     p => p.inContext
                 )
                 .map(p => this.trim(p)) 
+                .flat();
 
-                return parsedQueryTree
+                return [parsedQueryTree]
+
+            case "optional": 
+                parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
+                    p => p.inContext
+                )
+                .map(p => this.trim(p)) 
+                .flat();
+
+                console.log([...parsedQueryTree.patterns]);
+
+                if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
+
+                return [parsedQueryTree]
 
             case "bgp":
                 parsedQueryTree.triples = parsedQueryTree.triples.filter(
                     t => t.inContext
                 )
                 .map(t => this.trim(t))
+                .flat()
 
-                if(parsedQueryTree.triples.length === 1) return parsedQueryTree.triples[0];
+                if(parsedQueryTree.triples.length === 1) return [parsedQueryTree.triples[0]];
 
-                return parsedQueryTree;
+                return [parsedQueryTree];
             
             default : // triple
-                return parsedQueryTree;
+                return [parsedQueryTree];
         }
     },
 
@@ -726,7 +740,8 @@ export const CSCompleterImproved = {
             
             case "graph":
             case "group":
-            case "optional": // we treat optional like a join, debatable but works 
+            case "optional":
+            
                 parsedQueryTree.inContext = true;
                 parsedQueryTree.patterns.forEach(
                     c => this.markRelevantNodes(c)
@@ -771,7 +786,7 @@ export const CSCompleterImproved = {
             case "graph":
             case "union":
             case "group":
-            case "optional": // we treat optional like a join, debatable but works 
+            case "optional":
                 return parsedQueryTree.patterns.reduce(
                     (acc, val) => acc || this.hasCurrentTriple(val),
                     false  
