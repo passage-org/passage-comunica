@@ -121,10 +121,6 @@ export const CSCompleterImproved = {
                     if(result.sugg.includes(filterString.replace("http://", ""))) return true;
                 else
                     if(result.sugg.includes(currentString)) return true;
-
-                // if("<http://".includes(currentString)) return true;
-                // if(filterString.includes("http://")) return result.sugg.includes(filterString.replace("http://", ""));
-                // if(result.sugg.includes(currentString.replace("<http://", ""))) return true;
             }
 
             const split = filterString.split(":");
