@@ -98,46 +98,47 @@ export const CSCompleterImproved = {
         this.cache[query].lastString = currentString
         let results = this.cache[query].results
             .filter(result => result.proba > 0) // not failed
-        
-        // const prefixes = Object.entries(this.yasqe.getPrefixesFromQuery());
-        // for(const [key, val] of prefixes){
-        //     if(entity.includes(val)) {
-        //         return entity.replace(val, key+":")
-        //     }
-        // }
 
+
+
+        // filter results based on already written parts of the entity to complete
+        // TODO : refacto
         let prefixes = this.yasqe.getPrefixesFromQuery();
-
-        let filterString = currentString.startsWith("<") ? currentString.slice(1) : currentString;
 
         const isUriStart = function(string){
             return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
         }
 
+        const filterString = currentString.toLowerCase();
+
         const filter = function(result, filterString, prefixes) {
-            // console.log(result.sugg)
+
+            const toTest = result.sugg.toLowerCase();
+
+            if(filterString.startsWith("\"")){
+                if(result.type === "literal" && toTest.includes(filterString.slice(1))) return true;
+            }
+
             if(isUriStart(currentString)){
-                if(filterString.includes("http://"))
-                    if(result.sugg.includes(filterString.replace("http://", ""))) return true;
+                if(filterString.includes("<http://"))
+                    if(toTest.includes(filterString.replace("<http://", ""))) return true;
                 else
-                    if(result.sugg.includes(currentString)) return true;
+                    if(toTest.includes(currentString)) return true;
             }
 
             const split = filterString.split(":");
             if(split.length === 1){
-                if(result.sugg.includes(prefixes[split[0]]) || result.sugg.includes(split[0])) return true;
+                if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
             }else
 
             if(split.length === 2){
-                if(result.sugg.includes(prefixes[split[0]]) && result.sugg.includes(split[1])) return true;
+                if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
             }
 
             return false;
         }
             
         results = results.filter(result => filter(result, filterString, prefixes));
-
-        // console.log(results);
 
         const grouped = groupBy(results, 'sugg');
         const aggregated = [];
