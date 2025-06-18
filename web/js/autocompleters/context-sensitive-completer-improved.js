@@ -16,13 +16,23 @@ export const CSCompleterImproved = {
     get: function(yasqe, token) {
         this.yasqe = yasqe;
 
-        const {acqs, currentString} = this.getAutocompletionQuery();
+        let autocompletionQueryString, currentString;
+        try {
+            let {acqs, cs} = this.getAutocompletionQuery();
+            autocompletionQueryString = acqs;
+            currentString = cs;
+        }catch(error){
+            console.error("Could not generate an autocompletion query.")
+            // console.log(error);
 
-        console.log("Autocompletion Query : \n", acqs);
+            return Promise.resolve([]);
+        }
+
+        console.log("Autocompletion Query", autocompletionQueryString);
 
         const url = yasqe.config.requestConfig().endpoint
 
-        return Promise.resolve(this.queryWithCache(url, acqs, currentString));
+        return Promise.resolve(this.queryWithCache(url, autocompletionQueryString, currentString));
     },
     isValidCompletionPosition: function () {
         // TODO
@@ -89,6 +99,7 @@ export const CSCompleterImproved = {
                     this.cache[query] = {results: res};  
 
                 console.log(`Finished query with ${res.length} results`);
+                console.log(res);
 
             }
 
@@ -112,6 +123,8 @@ export const CSCompleterImproved = {
         const filterString = currentString.toLowerCase();
 
         const filter = function(result, filterString, prefixes) {
+
+            if(filterString === "") return true;
 
             const toTest = result.sugg.toLowerCase();
 
@@ -176,6 +189,7 @@ export const CSCompleterImproved = {
             }
 
             const json = await response.json();
+            console.log(json);
             const suggestions = Array.from(
                 new Set(
                     json["results"]["bindings"]
@@ -208,11 +222,22 @@ export const CSCompleterImproved = {
 
         const currentTokenIndex = tokens.findIndex(tkn => tkn.isCurrentToken);
 
-        const incompleteTriple = this.getIncompleteTriple(tokens, currentTokenIndex);
+        let incompleteTriple; 
+        try {
+            incompleteTriple = this.getIncompleteTriple(tokens, currentTokenIndex);
+        }catch(error){
+            throw new Error("Could not retrieve the incomplete triple.")
+        }
 
         // console.log("incompleteTriple", incompleteTriple)
 
-        const acqTriple = this.getACQueryTripleTokens(incompleteTriple.entities);
+        let acqTriple;
+        try {
+            acqTriple = this.getACQueryTripleTokens(incompleteTriple.entities);
+        }catch(error){
+            // console.log(error);
+            throw new Error("Could not generate the autocompletion triple.");
+        }
 
         this.current_string = acqTriple.filter ?? "";
 
@@ -230,6 +255,7 @@ export const CSCompleterImproved = {
             incompleteTriple.end - incompleteTriple.start + 1, 
             acqTriple.subject, acqTriple.predicate, acqTriple.object,
             {type:"fake", string: shouldAddPeriod ? "." : ""});
+
 
         // console.log(acqTriple);
         // console.log(context);
@@ -250,8 +276,8 @@ export const CSCompleterImproved = {
                 var parsedQuery = parser.parse(bracketed);
             }catch(error){
                 console.log(bracketed)
-                console.log(error)
-                throw new Error("Could not parse the query")
+                // console.log(error)
+                throw new Error("Could not parse the autcompletion query.")
             }
         }
 
@@ -301,7 +327,7 @@ export const CSCompleterImproved = {
 
         // console.log("currentString2", acqTriple.filter ?? "")
 
-        return {acqs: AutocompletionQueryString, currentString: acqTriple.filter ?? ""};
+        return {acqs: AutocompletionQueryString, cs: acqTriple.filter ?? ""};
     },
 
 
@@ -349,16 +375,16 @@ export const CSCompleterImproved = {
 
         if(entities.length > 3) throw new Error("Not a triple");
 
-        // console.log("before", before)
-        // console.log("after", after)
-        // console.log("tokenArray", tokenArray)
-        // console.log("index", index)
+        console.log("before", before)
+        console.log("after", after)
+        console.log("tokenArray", tokenArray)
+        console.log("index", index)
 
         const start = index - (before.length - 1);
         const end = start + before.length + after.length - 1;
 
-        // console.log("start", start)
-        // console.log("end", end)
+        console.log("start", start)
+        console.log("end", end)
 
         return {
             start: start,
@@ -376,8 +402,6 @@ export const CSCompleterImproved = {
         const line = this.yasqe.getDoc().getCursor().line;
         const ch = this.yasqe.getDoc().getCursor().ch;
 
-
-
         let subject = "?default_s";
         let predicate = "?default_p";
         let object = "?default_o";
@@ -385,7 +409,7 @@ export const CSCompleterImproved = {
 
         if(entities.length === 3){
 
-            // console.log(entities)
+            console.log(entities)
 
             const idx = entities.findIndex(entity => entity.find(tkn => tkn.isCurrentToken));
             if(idx === -1) throw new Error("Subject, Predicate and Object found. Triple already written.");
@@ -427,8 +451,8 @@ export const CSCompleterImproved = {
 
         if(entities.length === 0) {
             subject = this.suggestion_variable;
-            predicate = "?p";
-            object = "?o";
+            predicate = "?predicate_placeholder";
+            object = "?object_placeholder";
         }
 
         if(entities.length === 1) {
@@ -436,7 +460,7 @@ export const CSCompleterImproved = {
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
                 // x [[entity]]
                 subject = this.suggestion_variable;
-                predicate = "?p";
+                predicate = "?predicate_placeholder";
                 object = this.stringifyTokenGroup(entities[0]);
             }
 
@@ -444,7 +468,7 @@ export const CSCompleterImproved = {
                 // [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.suggestion_variable;
-                object = "?o";
+                object = "?object_placeholder";
             }
         }
 
@@ -485,7 +509,7 @@ export const CSCompleterImproved = {
                 // [[entity]]x [[entity]]
                 subject = this.suggestion_variable;
                 predicate = this.stringifyTokenGroup(entities[1]);
-                object = "?o";
+                object = "?object_placeholder";
 
                 // filter = `FILTER REGEX (${this.suggestion_variable}, \"^${entities[0].map(tkn => tkn.string).join("").slice(1, -1)}\")`;
                 filter = entities[0].map(tkn => tkn.string).join("");
@@ -504,7 +528,7 @@ export const CSCompleterImproved = {
                 // [[entity]] [[entity]]x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.suggestion_variable;
-                object = "?o";
+                object = "?object_placeholder";
 
                 // filter = `FILTER REGEX (${this.suggestion_variable}, \"^${entities[1].map(tkn => tkn.string).join("").slice(1, -1)}\")`;
                 filter = entities[1].map(tkn => tkn.string).join("");
@@ -606,11 +630,14 @@ export const CSCompleterImproved = {
                         const tokens = tokenArray.slice(idx, probe);
                         const string = this.stringifyTokenGroup(tokens);
 
+                        
+
                         entities.push([{
                             type: "incomplete-uri", 
                             string: string,
                             start: tokens.at(0).start,
                             end: tokens.at(-1).end,
+                            isCurrentToken: (tokens.findIndex(tkn=>tkn.isCurrentToken) !== -1)
                         }]);
 
                         // console.log("entities rn", entities);
@@ -696,8 +723,10 @@ export const CSCompleterImproved = {
                 case ".":
                 case ",":
                 case ";":
-                case "}":
                     return [tokenArray[index]];
+                case "}":
+                case "{":
+                    return [];    
                 default:
                     break;
             }
@@ -727,6 +756,8 @@ export const CSCompleterImproved = {
                 if(current.string === "." 
                 || current.string === ";"
                 || current.string === ",") return [current];
+                if(current.string === "{"
+                || current.string === "}") return [];
 
             case "meta": // @
                 if(current.string.startsWith("@")) return [current].concat(this.getTripleAfter_(tokenArray, index + 1));
@@ -1126,3 +1157,18 @@ SELECT ?s ?p ?o ?probabilityOfRetrievingRestOfMapping WHERE {
   }
 } 
 */
+
+
+/* PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?s ?l ?probabilityOfRetrievingRestOfMapping WHERE {
+  
+  ?s rdf:type ?t.
+  {
+    ?s rdfs:label ?l
+  }UNION{ 
+    ?s owl:sameAs ?sa
+  }
+} */
