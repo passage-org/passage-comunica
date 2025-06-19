@@ -8,7 +8,7 @@ export class PhysicalNode {
     messages = [];
     children = [];
     logical;
-    unfold = false;
+    unfold = true;
     
     constructor(n,  pn) {
         this.id = n;
@@ -42,13 +42,18 @@ export class PhysicalNode {
                 acc + (curr.m && curr.m.timeLife || 0), 0);
             const timeFirstResult = this.messages.reduce((acc,curr) =>
                 acc + (curr.m && curr.m.timeFirstResult || 0), 0);
+            const errorMessages = this.messages.filter((message) => message.m.status === "error");
 
             const tooltip = [];
             queries.length > 0 && tooltip.push(`[${formatTime(this.date())}] service`);
             queries.length > 0 && tooltip.push(`\n${queries.at(0).m.query}\n`);
-            this.status() !== "pending" && tooltip.push(`number of results: ${cardinality}`);
-            this.status() !== "pending" && tooltip.push(`execution time: ${formatDuration(timeElapsed)}`);
-            timeFirstResult > 0 && tooltip.push(`time for first result: ${formatDuration(timeFirstResult)}`);
+            if (this.status() === "error") {
+                tooltip.push(`error: ${errorMessages.at(0).m.message}`);
+            } else {
+                this.status() !== "pending" && tooltip.push(`number of results: ${cardinality}`);
+                this.status() !== "pending" && tooltip.push(`execution time: ${formatDuration(timeElapsed)}`);
+                timeFirstResult > 0 && tooltip.push(`time for first result: ${formatDuration(timeFirstResult)}`);
+            }
 
             return tooltip.join("\n");
         default: return `[${formatTime(this.date())}] ${this.logical}`;
@@ -100,15 +105,62 @@ export class PhysicalNode {
     }
 
     getOriginalService (caller) { // caller is a service
-        if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice") {
+        // TODO improve this, we don't want to enumerate all operators
+        if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice" || this.logical === "orderby"
+           || this.logical === "join") {
         // if (this.logical === caller.parent.logical) {
             const services = this.children.filter(c => c.logical === "service");
             if (services.length === 1) {
-                const service = this.parent.getOriginalService(caller); // maybe go higher
+                const service = this.parent && this.parent.getOriginalService(caller); // maybe go higher
                 return service || services.at(0); // if not, return this service
             }
         }
         return null;
+    }
+
+    previous() {
+        if (this.logical !== "service") {return ;}
+        const grandParent = this.parent && this.parent.parent;
+        if (!grandParent) {return ;}
+        console.log("grandParent", grandParent);
+        if (grandParent.logical === "pattern" || grandParent.logical === "project" ||
+            grandParent.logical === "slice" || grandParent.logical === "orderby" ||
+            grandParent.logical === "join") {
+            const services = grandParent.children.filter(c => c.logical === "service");
+            return services.length === 1 && services.at(0) || null;
+        }
+        return null;
+    }
+    
+    allPrevious() {
+        if (this.logical !== "service") {return ;}
+        const allPrevious = [];
+        let previousService = this.previous();
+        while (previousService) {
+            allPrevious.push(previousService);
+            previousService = previousService.previous();
+        }
+        return allPrevious.reverse();
+    }
+
+    next() {
+        if (this.logical !== "service") {return ;}
+        const siblings = this.parent && this.parent.children.filter(c => c.logical !== "service");
+        if (!siblings || siblings.length <= 0) { return null;}
+        const sibling = siblings.at(0);
+        const services = sibling.children.filter(c => c.logical === "service");
+        return services.length === 1 && services.at(0) || null;
+    }
+
+    allNext() {
+        if (this.logical !== "service") { return ;}
+        const allNext = [];
+        let nextService = this.next();
+        while (nextService) {
+            allNext.push(nextService);
+            nextService = nextService.next();
+        }
+        return allNext;
     }
     
     countServices(childrenCount) {return this.count((c) => c.logical === "service", childrenCount);}
@@ -132,5 +184,5 @@ export class PhysicalNode {
             acc + (curr.m && curr.m.timeLife || 0), 0);
         return timeElapsed > 0 ? timeElapsed : defaultWidth; // 10px default
     }
-    
+
 }

@@ -1,5 +1,6 @@
 import {formatTime} from "/js/utils.js";
 import {PhysicalNode} from "/js/plugins/physical-node.js";
+import {ContinuationsCarousel} from "/js/views/continuations-carousel.js";
 
 /// The tree structure that is the physical plan. Merging the metadata
 /// when need be.
@@ -10,7 +11,7 @@ export class PhysicalTree {
     id2dom; // integer_id -> dom 
     id2node; // integer_id -> node (service may have 2 init append calls for 1 id)
 
-    maxWidth = 10; // the max width of the service, start at a default 10px
+    maxWidth = 16; // the max width of the service, start at a default 10px
     
     constructor(parent) {
         this.parent = parent;
@@ -18,6 +19,7 @@ export class PhysicalTree {
     }
 
     reset() {
+        this.maxWidth = 16;
         this.container && this.container.remove();
         this.id2node = new Map();
     }
@@ -172,11 +174,11 @@ export class PhysicalTree {
         timestampSpan.onclick = foldUnfold;
         buttonFoldUnfold.onclick = foldUnfold;
         contentSpan.onclick = foldUnfold;
-        if (!node.unfold) {this.fold(node);}
+        // if (!node.unfold) {this.fold(node);}
 
-        if (node.logical === "service") {
-            !node.parent.unfold && this.fold(node.parent);
-        }
+        // if (node.logical === "service") {
+        //     !node.parent.unfold && this.fold(node.parent);
+        // }
 
         const parentDom = this.id2dom.get(node.parent && node.parent.id) || this.container;
         const parentChildrenDom = parentDom.getElementsByClassName("children")[0] || this.container;
@@ -197,9 +199,8 @@ export class PhysicalTree {
             } else {
                 const parentDom = this.id2dom.get(node.parent.id);
                 parentDom.remove();
-
             }
-            
+
             const originalService = this.id2dom.get(original.id);
             const originalEventSpan = originalService.getElementsByClassName("event-inline")[0];
 
@@ -224,6 +225,19 @@ export class PhysicalTree {
             box.title = node.metadata();
             originalEventSpan.appendChild(box);
             original !== node && this.id2dom.set(node.id, box);
+
+
+            box.onclick = () => {
+                // TODO move this elsewhere,
+                //      especially the getElementById
+                // TODO possibly create the dialog in the plugin.
+                const dialog = document.getElementById("continuations_dialog");
+                dialog.onclick = () => {
+                    dialog.close();
+                };
+                new ContinuationsCarousel(dialog, node);
+                dialog.showModal();
+            };
             
             // for (let j = 0; j< Math.random() * 10; j++) {
             //     const box = document.createElement("button");

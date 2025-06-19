@@ -177,7 +177,16 @@ ul.physical-plan-container {
 }
 
 /* li.physical-pending { color: var(--frost-2); }*/
-button.physical-pending {background-color: var(--frost-2); }
+button.physical-pending {
+    background-color: var(--frost-2);
+    animation: pending 2s infinite;
+}
+
+@keyframes pending {
+    0% { background-color: var(--frost-1); }
+    50% { background-color: var(--frost-4); }
+    100% { background-color: var(--frost-1); }
+}
 
 /*li.physical-error { color: var(--aurora-1); }*/
 button.physical-error { background-color: var(--aurora-1); }
@@ -196,3 +205,26 @@ button.fold-unfold {
     height: 16px;
 }
 
+
+
+/** Carousel-related style **/
+
+ul.carousel-container {
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    width: 50vw;
+    height: 300px;
+    padding: 20px;
+    display: flex;
+    gap: 4vw;
+}
+
+li.carousel-element {
+    list-style-type: none;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    padding: 20px;
+    
+    flex: 0 0 30%;
+    scroll-snap-align: center;
+}

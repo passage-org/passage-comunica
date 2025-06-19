@@ -107,6 +107,7 @@
 
 .dropdown:hover .dropdown_content {display: block;}
 
+.examples_dialog { z-index: 10; }
 .examples_dialog_content,
 .examples_dialog_content table,
 .examples_dialog_content tbody,
@@ -119,7 +120,7 @@
 
 .examples_dialog_button {
     background-color: var(--frost-3);
-    width:100%;
+    width: 100%;
     border: none;
     color: white;
     padding: 5px;
