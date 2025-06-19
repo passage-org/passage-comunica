@@ -14,6 +14,9 @@ export const CSCompleterImproved = {
     yasqe: null,
     // interface methods 
     get: function(yasqe, token) {
+        console.log(yasqe.getDoc().getCursor().line)
+        console.log(yasqe.getDoc().getCursor().ch)
+
         this.yasqe = yasqe;
 
         let autocompletionQueryString, currentString;
@@ -42,9 +45,19 @@ export const CSCompleterImproved = {
     // RESULT DISPLAY 
 
     postprocessHints: function (_yasqe, hints) {
+
+        const line = _yasqe.getDoc().getCursor().line;
+        const ch  = _yasqe.getDoc().getCursor().ch;
         
         return hints.map(hint => {
             hint.render = function(el, self, data){
+
+                // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
+                const current = _yasqe.getTokenAt({line: line, ch: ch});
+                data.from = {line: line, ch: current.string === "." ? ch : self.from.ch};
+                data.to = {line: line, ch: Math.min(self.to.ch, ch)};
+
+
                 const binding = data.displayText.binding
                 const score = data.displayText.score
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
@@ -99,7 +112,7 @@ export const CSCompleterImproved = {
                     this.cache[query] = {results: res};  
 
                 console.log(`Finished query with ${res.length} results`);
-                console.log(res);
+                // console.log(res);
 
             }
 
@@ -189,7 +202,6 @@ export const CSCompleterImproved = {
             }
 
             const json = await response.json();
-            console.log(json);
             const suggestions = Array.from(
                 new Set(
                     json["results"]["bindings"]
@@ -375,16 +387,15 @@ export const CSCompleterImproved = {
 
         if(entities.length > 3) throw new Error("Not a triple");
 
-        console.log("before", before)
-        console.log("after", after)
-        console.log("tokenArray", tokenArray)
-        console.log("index", index)
-
         const start = index - (before.length - 1);
         const end = start + before.length + after.length - 1;
 
-        console.log("start", start)
-        console.log("end", end)
+        // console.log("before", before)
+        // console.log("after", after)
+        // console.log("tokenArray", tokenArray)
+        // console.log("index", index)
+        // console.log("start", start)
+        // console.log("end", end)
 
         return {
             start: start,
