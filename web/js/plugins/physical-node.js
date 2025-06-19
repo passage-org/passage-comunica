@@ -96,7 +96,6 @@ export class PhysicalNode {
     isSimilarToParent(parent) {
         if (!parent) {return false; }
         if (this.logical !== "service") { return false; } // focused on services
-        // console.log(this.parent, parent);
         if (this.parent.logical === parent.logical &&
             parent.children.filter(c => c.logical === "service").length > 0) {
             return true;
@@ -122,7 +121,6 @@ export class PhysicalNode {
         if (this.logical !== "service") {return ;}
         const grandParent = this.parent && this.parent.parent;
         if (!grandParent) {return ;}
-        console.log("grandParent", grandParent);
         if (grandParent.logical === "pattern" || grandParent.logical === "project" ||
             grandParent.logical === "slice" || grandParent.logical === "orderby" ||
             grandParent.logical === "join") {

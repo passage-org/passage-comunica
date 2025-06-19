@@ -29,28 +29,42 @@ export class ContinuationsCarousel {
 
         const id2dom = new Map();
         for (let service of allServices) {
-            const li = document.createElement("li");
-            li.classList.add("carousel-element");
-            const pre = document.createElement("pre");
-            pre.textContent = service.metadata();
-            li.append(pre);
-            this.container.append(li);
-            id2dom.set(service.id, li);
+            const card = this.createCard(service);
+            this.container.append(card);
+            id2dom.set(service.id, card);
         }
         
         parent.append(this.container);
 
+        const target = id2dom.get(node.id);
+        target.classList.add("carousel-targeted");
         
         requestAnimationFrame(() => { // < need this otherwise offsetLeft is 0
             // center the carousel on the targeted item
-            const target = id2dom.get(node.id);
+
             const targetOffset = target.offsetLeft;
             const targetWidth = target.offsetWidth;
             const containerWidth = this.container.offsetWidth;
             const offset = targetOffset - (containerWidth / 2) + (targetWidth / 2);
             this.container.scrollLeft = offset;
+            this.container.focus(); // important that focus is in requestAnimationFrame too
         });
+
+
+    }
+
+    /// Create the styled card containing all information about the service
+    /// node. For instance, the containuation query itself, its execution
+    /// time, etc.
+    createCard(service) {
+        const card = document.createElement("li");
         
+        card.classList.add("carousel-element");
+        const pre = document.createElement("pre");
+        pre.textContent = service.metadata();
+        card.append(pre);
+
+        return card;
     }
     
 }
