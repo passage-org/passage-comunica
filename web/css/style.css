@@ -241,6 +241,12 @@ table.dataTable thead {
 table.dataTable tbody tr:nth-child(2n)   { background-color: var(--header-background-color); }
 table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-color); }
 
+.yasr_results {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
 .yasr .dataTables_wrapper .dataTable td pre {
     margin: 0px;
 }

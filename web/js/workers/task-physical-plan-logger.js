@@ -11,8 +11,6 @@ export class TaskPhysicalPlanLogger extends MemoryPhysicalQueryPlanLogger {
     constructor(worker) {
         super();
         this.worker = worker;
-        // this.previousLogOperation = this.logOperation;
-        // this.previousAppendMetadata = this.appendMetadata;
     }
     
     /// Return the identifier of the node. If none, it creates one.
@@ -22,7 +20,6 @@ export class TaskPhysicalPlanLogger extends MemoryPhysicalQueryPlanLogger {
         }
         return this.n2id.get(n);
     }
-
 
     logOperation (lo, po, n, pn, a, m) {
         super.logOperation(lo, po, n, pn, a, m);

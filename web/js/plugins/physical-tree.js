@@ -9,6 +9,8 @@ export class PhysicalTree {
     container; // The DOM container of the tree
     id2dom; // integer_id -> dom 
     id2node; // integer_id -> node (service may have 2 init append calls for 1 id)
+
+    maxWidth = 10; // the max width of the service, start at a default 10px
     
     constructor(parent) {
         this.parent = parent;
@@ -21,9 +23,9 @@ export class PhysicalTree {
     }
 
     resetDOM() {
-        this.container && this.container.remove();
+        this.container && this.container.remove();        
         this.container = document.createElement("ul"); // the plan is a big nested list
-        this.container.style.paddingLeft = "0px";
+        this.container.classList.add("physical-plan-container");
         this.parent.appendChild(this.container);
         this.id2dom = new Map();
     }
@@ -47,7 +49,7 @@ export class PhysicalTree {
     update(message) {
         switch (message.type) {
         case "MessagePhysicalPlanInit":
-            const node = this.id2node.get(message.n) || new PhysicalNode(message.n, message.pn);
+            const node = this.id2node.get(message.n) || new PhysicalNode(message.n, this.id2node.get(message.pn));
             node.update(message);
             // could already exist, it happens for service physical nodes that send 2 queries
             if (!this.id2node.has(node.id)) {
@@ -101,131 +103,190 @@ export class PhysicalTree {
 
     renderNode(node) {
         if (!this.container) {return ;}
-        const parentDom = this.id2dom.get(node.parent) || this.container;
 
-        // TODO
-        // if (PhysicalTree.isProjectWithOnlyServices(node)) { 
-        //     return this.renderServiceSquares(node, parentElement);
-        // }
+        if (node.logical === "service") {
+            // ugly complexity, but for now, it will do.
+            let exploringNode = node;
+            let countServices = null;
+            while (exploringNode.parent && exploringNode.parent.children.filter(c=>c.logical==="service").length > 0) {
+                countServices = exploringNode.parent.countServices(countServices);
+                if (countServices > 1 && this.id2dom.has(exploringNode.parent.id)) {
+                    const parentDom = this.id2dom.get(exploringNode.parent.id);
+                    parentDom.title = `${exploringNode.parent.metadata()}\n\nNumber of sub-services: ${countServices}`;
+                    // const inlineField = parentDom.getElementsByClassName("event-inline")[0];
+                    // inlineField.innerHTML = `x${countServices} services`;
+                }
+                exploringNode = exploringNode.parent;
+            }
+        }
+        
+        const renderNormal = node.logical !== "service" || node.parent.getOriginalService(node) === node;
 
-        const li = document.createElement("li");
-        li.classList.add("node");
-        node.status() && li.classList.add(`physical-${node.status()}`);
-        li.title = node.metadata();
-        this.id2dom.set(node.id, li); // register the dom representing the node
+        if (renderNormal) {
+            const li = document.createElement("li");
+            li.classList.add("node");
+            node.status() && li.classList.add(`physical-${node.status()}`);
+            li.title = node.metadata();
+            this.id2dom.set(node.id, li); // register the dom representing the node
+        }
+        
+        node.logical === "service" && this.renderCompactService(node)
+        if (!renderNormal) { return ; }
+
+        const li = this.id2dom.get(node.id);
 
         const timestampSpan = document.createElement("span");
         timestampSpan.classList.add("timestamp");
         timestampSpan.innerHTML = `[${formatTime(node.date())}]`;
         const contentSpan = document.createElement("span");
         contentSpan.classList.add("node-label");
-        contentSpan.innerHTML = node.logical();
-        const eventSpan = document.createElement("span");
-        eventSpan.classList.add("event-inline");
+        contentSpan.innerHTML = node.logical;
 
-        li.appendChild(timestampSpan);
-        li.appendChild(contentSpan);
-        li.appendChild(eventSpan);
+        
+        li.prepend(contentSpan);
+        // li.prepend(timestampSpan);
+
+        
 
         // create space for the children
         const ul = document.createElement("ul");
         ul.classList.add("children");
         li.appendChild(ul);
 
-        parentDom.appendChild(li); // TODO get first ul
-
-        // node.events.forEach((evt) => {
-        //     const m = evt.m;
-        //     const displayParts = [];
-        //     if ("timeLife" in m) displayParts.push(`time: ${m.timeLife}`);
-        //     if ("cardinalityReal" in m)
-        //         displayParts.push(`cardinality: ${m.cardinalityReal}`);
-        //     if ("startAt" in m) li.classList.add("executing");
-        //     if ("doneAt" in m) li.classList.remove("executing");
-            
-        //     if (displayParts.length > 0) {
-        //         eventSpan.textContent += "  " + displayParts.join(" ");
-        //     }
-        // });
+        const buttonFoldUnfold = document.createElement("button");
+        li.prepend(buttonFoldUnfold);
         
-        // node.children.forEach((child) => {
-        //     this.renderNode(child);
-        // });
+        const foldUnfold = () => {
+            if (buttonFoldUnfold.innerHTML === "+") {
+                this.fold(node);
+            } else if (buttonFoldUnfold.innerHTML === "-") {
+                this.unfold(node);
+            }
+        }
+        
+        // TODO, on update if it has more than one child
+        buttonFoldUnfold.classList.add("fold-unfold");
+        if (node.logical !== "service") { // should be children > 0
+            buttonFoldUnfold.innerHTML = "+";
+        }
+        timestampSpan.onclick = foldUnfold;
+        buttonFoldUnfold.onclick = foldUnfold;
+        contentSpan.onclick = foldUnfold;
+        if (!node.unfold) {this.fold(node);}
+
+        if (node.logical === "service") {
+            !node.parent.unfold && this.fold(node.parent);
+        }
+
+        const parentDom = this.id2dom.get(node.parent && node.parent.id) || this.container;
+        const parentChildrenDom = parentDom.getElementsByClassName("children")[0] || this.container;
+        parentChildrenDom.appendChild(li);
     }
 
+
+    renderCompactService(node) {
+        if (node.logical === "service") {
+            const original = node.parent.getOriginalService(node);
+            
+            if (original === node) {
+                // TODO could be put in render normal
+                const li = this.id2dom.get(node.id);
+                const eventSpan = document.createElement("div");
+                eventSpan.classList.add("event-inline");
+                li.appendChild(eventSpan);
+            } else {
+                const parentDom = this.id2dom.get(node.parent.id);
+                parentDom.remove();
+
+            }
+            
+            const originalService = this.id2dom.get(original.id);
+            const originalEventSpan = originalService.getElementsByClassName("event-inline")[0];
+
+            const REMOVE_MARGIN_THRESHOLD = 1000; // TODO put this elsewhere, possibly calculate it
+            
+            if (originalEventSpan.childElementCount === REMOVE_MARGIN_THRESHOLD) {
+                const boxes = originalEventSpan.getElementsByTagName("button");
+                for (let box of boxes) {
+                    box.style.marginLeft = "0px";
+                }
+            }
+
+            const box = document.createElement("button");
+            box.classList.add("service-box");
+            box.classList.add(`physical-${node.status()}`);
+            box.style.width = `${node.getWidth(this.maxWidth)}px`;
+            if (originalEventSpan.childElementCount >= REMOVE_MARGIN_THRESHOLD) {
+                box.style.marginLeft = "0px"; // above threshold, we remove the border, otherwise it takes the whole screen
+                // box.style.padding = "0";
+            };
+            box.innerHTML = "";
+            box.title = node.metadata();
+            originalEventSpan.appendChild(box);
+            original !== node && this.id2dom.set(node.id, box);
+            
+            // for (let j = 0; j< Math.random() * 10; j++) {
+            //     const box = document.createElement("button");
+            //     box.classList.add("service-box");
+            //     box.classList.add("physical-pending");
+            //     box.style.width = `${Math.random() * 500 + 16}px`;
+            //     box.innerHTML = "";
+            //     originalEventSpan.appendChild(box);
+            // };
+        }
+
+    }
+    
+    
+
+    /// Unfold a bunch of nodes at once. It avoids clicking on every
+    /// node to unfold them one by one. but it also prevent from unfolding the
+    /// whole tree. A good compromise.
+    /// TODO implement a depth
+    unfold(node, n) {
+        if (n === 0) {
+            this.fold(node);
+            return 0;
+        }
+        const nDefault = n || 50;
+        let nbUnfolded = 1; // this, has been unfolded
+        node.unfold = true;
+        const dom = this.id2dom.get(node.id);
+        if (node.children.length > 0 && dom) {
+            const domChildren = dom.getElementsByClassName("children")[0];
+            const domButton = dom.getElementsByClassName("fold-unfold")[0];
+            if (node.logical !== "service") { domButton.innerHTML = "+" };
+            domChildren.style.display = "block";
+
+            let i = 0; 
+            while (i < node.children.length) {
+                nbUnfolded += this.unfold(node.children[i], nDefault-nbUnfolded);
+                ++i;
+            }
+        }
+        return nbUnfolded;
+    }
+
+    /// Fold is less difficult: only close the current one will close all bottom
+    /// ones.
+    fold(node) {
+        const dom = this.id2dom.get(node.id);
+        const domChildren = dom.getElementsByClassName("children")[0];
+        if (domChildren) {
+            const domButton = dom.getElementsByClassName("fold-unfold")[0];
+            if (node.logical !== "service") { domButton.innerHTML = "-" };
+            domChildren.style.display = "none";
+            node.unfold = false; // remember
+        }
+    }
+    
     updateNode(node) {
         if (!this.container) {return ;} // not updating the dom node
         const dom = this.id2dom.get(node.id);
         dom.title = node.metadata();
         dom.classList.replace("physical-pending", `physical-${node.status()}`);
+        this.maxWidth = Math.max(this.maxWidth, node.getWidth(this.maxWidth));
+        dom.style.width = `${node.getWidth(this.maxWidth)}px`;
     }
 
-    renderServiceSquares(node, parentElement) {
-        const li = document.createElement("li");
-        li.style.listStyleType = "none";
-        li.style.paddingLeft = "10px";
-        li.classList.add("node");
-        li.classList.add(node.status());
-        this.node2dom.set(node, parentElement);
-        const contentSpan = document.createElement("span");
-        contentSpan.className = "node-label";
-        contentSpan.innerHTML = `<span class="timestamp">[${formatTime(node.date)}]</span>  project (service group)`;
-
-        const grid = document.createElement("div");
-        grid.className = "service-grid";
-
-        const flatServices = [];
-        
-        const self = this;
-        function collectServices(n) {
-            n.children.forEach(child => {
-                if (child.lo === "service") {
-                    flatServices.push(child);
-                } else if (child.lo === "slice"  || child.lo === "project") {
-                    self.node2dom.set(child, parentElement); // TODO remove this, do it cleaner
-                    collectServices(child);
-
-                }
-            });
-        }
-
-        collectServices(node);
-
-        li.appendChild(contentSpan);
-        li.appendChild(grid);
-        parentElement.appendChild(li);
-
-        const baseTime =  Date.now(); // timeLine[0].timestamp; // TODO fix this
-
-        flatServices.forEach(service => {
-            this.node2dom.set(service, parentElement);
-            const delay = service.timestamp - baseTime;
-
-            const square = document.createElement("div");
-            square.className = "service-square";
-            
-            square.title = `     
-     Timestamp: ${new Date(service.date).toLocaleTimeString()}\n
-     TimeLife: ${service?.m?.timeLife ?? "N/A"}\n
-     Cardinality: ${service?.m?.cardinalityReal ?? "N/A"}\n
-     Query: ${service?.m?.query ?? "N/A"}`;
-
-            grid.appendChild(square);
-            if (service?.m?.status === "error") {
-                square.style.backgroundColor = "red";
-                square.title = ` ${service?.m?.message}`;
-            } else {
-                square.style.backgroundColor = " #a3be8c";
-            }
-
-            // Force transition sur l'opacité
-            requestAnimationFrame(() => {
-                square.style.opacity = "1";
-            });
-            setTimeout(() => {
-            }, delay);
-        });
-    }
-
-    
 }

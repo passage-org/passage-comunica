@@ -3,19 +3,18 @@
  *  plan to better understand its execution behavior.
  */
 
-.node {
-    list-style-type: "none";
-    font-family: var(--base-font-family);
-    /* font-weight: bold; */
-    /* color: #2c3e50; */
-    color: var(--text-color);
-    /* background: #e3f2fd; */
-    background-color:  var(--header-background-color);
-    padding: 0px;
+li.node {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--header-background-color);
+    padding: 0;
+    margin: 0;
     padding-left: 10px;
-    border-radius: 4px;
-    display: block;
-    margin-bottom: 0;
+    min-width: 0; /* so items are adapted to the width of screen */
+}
+
+span.node-label {
+    min-width: fit-content;
 }
 
 .node:hover {
@@ -23,49 +22,48 @@
     cursor: pointer;
 }
 
-ul {
-    list-style-type: none;
-    padding-left:10px;
+ul.children {
+    min-width: 0;
+    padding: 0;
     margin: 0;
-}
-
-.event {
-    color: #555;
-    margin: 4px 0;
-    background: #f1f1f1;
-    padding: 4px 8px;
-    border-left: 3px solid #ccc;
-    border-radius: 4px;
-}
-
-.event::before {
-    content: "↳ ";
-    color: #888;
+    border-left: 1px solid var(--inversed-text-color);
 }
 
 .timestamp {
-    color: #999;
+    color: var(--frost-1);
     font-family: monospace;
     margin-right: 6px;
 }
 
-.event {
-    position: relative;
-    padding-left: 20px;
-    margin-bottom: 6px;
-}
-
 .event-inline {
-    display: inline;
+    display: flex;
     margin-left: 10px;
+    min-width: 200px;
+    /* max-width: 500px;*/
+    /* width: 100%;*/
+    padding: 0;
+    /* overflow-x: scroll;*/
+    white-space: nowrap;
+    scrollbar-width: none;
 }
 
-.executing .node-label {
-    position: relative;
+.event-inline::-webkit-scrollbar {
+  display: none;
+  width: 0px;
+  background: transparent;
 }
 
-ul .children {
-    display: "block";
+.service-box {
+    padding: 0;
+    border: 0;
+    border-top: 2px solid var(--header-background-color); 
+    border-bottom: 2px solid var(--header-background-color);
+    margin-left: 1px;
+}
+
+.service-box:hover {
+    background-color: var(--aurora-5);
+    color: var(--text-color);
 }
 
 .status-indicator {
@@ -168,56 +166,33 @@ ul .children {
     opacity: 0.8;
 }
 
-/* .service-grid { */
-/*     display: flex; */
-/*     gap: 8px; */
-/*     padding-left: 20px; */
-/*     margin-top: 6px; */
-/* } */
-
-
-
-.service-box {
-    display: inline-block;
-    width: 50px;
-    height: 30px;
-    background-color: lightblue;
-    border: 1px solid #555;
-    border-radius: 4px;
-    border: 2px solid #444;
-    margin: 4px;
-    text-align: center;
-    font-size: 10px;
-    line-height: 30px;
-    font-family: monospace;
-    cursor: help;
+ul.physical-plan-container {
+    font-size: 14px;
+    display: flex;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    min-width: 0;
+    background-color: var(--header-background-color);
 }
 
-.service-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 24px);
-    gap: 5px;
-    margin-top: 4px;
-    padding-left: 3px;
+/* li.physical-pending { color: var(--frost-2); }*/
+button.physical-pending {background-color: var(--frost-2); }
+
+/*li.physical-error { color: var(--aurora-1); }*/
+button.physical-error { background-color: var(--aurora-1); }
+
+/* li.physical-completed {color: var(--aurora-4);}*/
+button.physical-completed {background-color: var(--aurora-4);}
+
+.yasr_results:has(ul.physical-plan-container) {
+    background-color: var(--header-background-color);
 }
 
-.service-square {
-    width: 24px;
-    height: 24px;
-    background-color: #cce0f5;
-    border: 1px solid #999;
-    border-radius: 3px;
+button.fold-unfold {
+    border: 0px;
+    background-color: var(--inverted-text-color);
+    width: 16px; /* not content because + and - are not same size*/
+    height: 16px;
 }
 
-
-li .physical-pending {
-    color: var(--frost-2);
-}
-
-li .physical-error {
-    color: var(--aurora-1);
-}
-
-li .physical-completed {
-    color: var(--aurora-4);
-}

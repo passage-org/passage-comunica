@@ -62,6 +62,7 @@ export default class MergedParsedResults {
     }
 
     whenMoreCalm(callback) {
+        return;
         if (this.bindings.length < 50) {
             callback();
         } else {

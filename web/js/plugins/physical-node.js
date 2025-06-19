@@ -1,19 +1,24 @@
+import {formatTime,formatDuration} from "/js/utils.js";
 
-/// Node stored in the physical tree plan. 
+/// Node stored in the physical tree plan.
 export class PhysicalNode {
 
     parent;
     id;
     messages = [];
     children = [];
+    logical;
+    unfold = false;
     
     constructor(n,  pn) {
         this.id = n;
         this.parent = pn;
+        this.unfold = !this.parent; // the root is unfolded
     }
 
     update(message) {
         this.messages.push(message);
+        this.logical = message.lo || this.logical; // all messages should have the same logical node
         return this; // for convenience
     }
 
@@ -22,19 +27,13 @@ export class PhysicalNode {
         return this; // for convenience
     }
 
-    logical() {
-        // all messages should have the same logical node
-        return this.messages.at(0).lo;
-    }
-
     date() {
         // the first message is often the earlier timestamp
         return this.messages.at(0).date;
     }
 
     metadata() {
-        switch (this.logical()) {
-        case "project": return this.messages.at(0).m.vars || "";
+        switch (this.logical) {
         case "service":
             const cardinality = this.messages.reduce((acc,curr) =>
                 acc + (curr.m && curr.m.cardinalityReal || 0), 0);
@@ -45,17 +44,19 @@ export class PhysicalNode {
                 acc + (curr.m && curr.m.timeFirstResult || 0), 0);
 
             const tooltip = [];
-            queries.length > 0 && tooltip.push(`query: ${queries.at(0).m.query}\n`);
-            this.status() !== "pending" && tooltip.push(`cardinality: ${cardinality}`);
-            this.status() !== "pending" && tooltip.push(`execution time: ${timeElapsed}`);
-            timeFirstResult > 0 && tooltip.push(`time for first result: ${timeFirstResult}`);
+            queries.length > 0 && tooltip.push(`[${formatTime(this.date())}] service`);
+            queries.length > 0 && tooltip.push(`\n${queries.at(0).m.query}\n`);
+            this.status() !== "pending" && tooltip.push(`number of results: ${cardinality}`);
+            this.status() !== "pending" && tooltip.push(`execution time: ${formatDuration(timeElapsed)}`);
+            timeFirstResult > 0 && tooltip.push(`time for first result: ${formatDuration(timeFirstResult)}`);
+
             return tooltip.join("\n");
-        default: return "";
+        default: return `[${formatTime(this.date())}] ${this.logical}`;
         };
     }
-
+    
     status() { // null, "pending", "error", "completed"
-        if (this.logical() !== "service") { return null; };
+        if (this.logical !== "service") { return null; };
         // all init should have their corresponding completed field to be complete
         const nbInits = this.messages.filter((e) => e.type === "MessagePhysicalPlanInit").length;
         const nbDones = this.messages.filter((e) => e.m && e.m.doneAt).length;
@@ -68,6 +69,68 @@ export class PhysicalNode {
         } else {
             return "pending";
         }
+    }
+
+    /// Checks if the pattern of logical operators is similar to the other one.
+    /// For instance, `project service SELECT * WHERE {?s ?p ?o}` is similar to
+    /// `project service SELECT * WHERE {?s ?p ?o} LIMIT 100`.
+    isSimilar(other) {
+        if (this.logical === other.logical && this.children.length === other.children.length) {
+            // approximated so it cost slightly less
+            // TODO possibly limit ourselves to service
+            for (let child in children) {
+                if (!other.children.any(oc => child.isSimilar(oc))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    isSimilarToParent(parent) {
+        if (!parent) {return false; }
+        if (this.logical !== "service") { return false; } // focused on services
+        // console.log(this.parent, parent);
+        if (this.parent.logical === parent.logical &&
+            parent.children.filter(c => c.logical === "service").length > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    getOriginalService (caller) { // caller is a service
+        if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice") {
+        // if (this.logical === caller.parent.logical) {
+            const services = this.children.filter(c => c.logical === "service");
+            if (services.length === 1) {
+                const service = this.parent.getOriginalService(caller); // maybe go higher
+                return service || services.at(0); // if not, return this service
+            }
+        }
+        return null;
+    }
+    
+    countServices(childrenCount) {return this.count((c) => c.logical === "service", childrenCount);}
+    countChildren(childrenCount) {return this.count((_) => true, childrenCount);}
+
+    count(predicate, childrenCount) {
+        let sum = this.children.filter(predicate).length;
+
+        if (!childrenCount) {
+            for (let child in this.children) {
+                sum += this.children[child].count(predicate);
+            }
+        } else {
+            sum += childrenCount;
+        }
+        return sum;
+    }
+
+    getWidth(defaultWidth) {
+        const timeElapsed = this.messages.reduce((acc,curr) =>
+            acc + (curr.m && curr.m.timeLife || 0), 0);
+        return timeElapsed > 0 ? timeElapsed : defaultWidth; // 10px default
     }
     
 }
