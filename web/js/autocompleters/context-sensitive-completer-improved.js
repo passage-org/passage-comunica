@@ -12,10 +12,34 @@ export const CSCompleterImproved = {
     suggestion_variable_name: "suggestion_variable",
     suggestion_variable: "?suggestion_variable",
     yasqe: null,
+    suggestionsBuffer: null,
     // interface methods 
     get: function(yasqe, token) {
-        console.log(yasqe.getDoc().getCursor().line)
-        console.log(yasqe.getDoc().getCursor().ch)
+        if(this.suggestionsBuffer) {
+            let ret = this.suggestionsBuffer;
+            this.suggestionsBuffer = null;
+            return ret;
+        }
+
+        try {
+            return this.get_(yasqe, token);
+        }catch(error){
+            return [];
+        }
+    },
+    isValidCompletionPosition: function (yasqe) {
+        
+        try {
+            this.suggestionsBuffer = this.get_(yasqe, null);
+        }catch(error){
+            return false;
+        }
+
+        return true;
+    },
+    get_: function(yasqe, token) {
+        // console.log(yasqe.getDoc().getCursor().line)
+        // console.log(yasqe.getDoc().getCursor().ch)
 
         this.yasqe = yasqe;
 
@@ -25,10 +49,11 @@ export const CSCompleterImproved = {
             autocompletionQueryString = acqs;
             currentString = cs;
         }catch(error){
-            console.error("Could not generate an autocompletion query.")
+            throw new Error("Could not generate an autocompletion query.");
+            // console.error("Could not generate an autocompletion query.")
             // console.log(error);
 
-            return Promise.resolve([]);
+            // return Promise.resolve([]);
         }
 
         console.log("Autocompletion Query", autocompletionQueryString);
@@ -36,10 +61,6 @@ export const CSCompleterImproved = {
         const url = yasqe.config.requestConfig().endpoint
 
         return Promise.resolve(this.queryWithCache(url, autocompletionQueryString, currentString));
-    },
-    isValidCompletionPosition: function () {
-        // TODO
-        return true;
     },
 
     // RESULT DISPLAY 
@@ -54,7 +75,7 @@ export const CSCompleterImproved = {
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
                 const current = _yasqe.getTokenAt({line: line, ch: ch});
-                data.from = {line: line, ch: current.string === "." ? ch : self.from.ch};
+                data.from = {line: line, ch: current.string === "." || current.string === "{" ? ch : self.from.ch};
                 data.to = {line: line, ch: Math.min(self.to.ch, ch)};
 
 
@@ -117,7 +138,7 @@ export const CSCompleterImproved = {
             }
 
         } catch (error) {
-            return [];
+            throw new Error("Query with cache failed for the following reason:", error)
         }
         this.cache[query].lastString = currentString
         let results = this.cache[query].results
@@ -420,10 +441,22 @@ export const CSCompleterImproved = {
 
         if(entities.length === 3){
 
-            console.log(entities)
+            // console.log(entities)
 
-            const idx = entities.findIndex(entity => entity.find(tkn => tkn.isCurrentToken));
-            if(idx === -1) throw new Error("Subject, Predicate and Object found. Triple already written.");
+            const currentToken = entities.flat().find(tkn => tkn.isCurrentToken);
+            const idx = entities.findIndex(entity => entity.find(currentToken));
+            console.log(entities)
+            if(idx === -1 &&
+                ["variable-3", // uri
+                "atom", // variable
+                "error", // possible first unfinished string of entity like pre:id
+                "number", // number
+                "string"] // literal
+                .includes(currentToken.type)
+            ) {
+                console.log("sfqsffj")
+                throw new Error("Subject, Predicate and Object found. Triple already written.");
+            }
             
             // console.log("idx", idx);
             // const incompleteUriIndex = entities.findIndex(entity => entity.find(tkn => tkn.type === "incomplete-uri"));
@@ -469,6 +502,7 @@ export const CSCompleterImproved = {
         if(entities.length === 1) {
             
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
+                console.log("before")
                 // x [[entity]]
                 subject = this.suggestion_variable;
                 predicate = "?predicate_placeholder";
@@ -476,6 +510,7 @@ export const CSCompleterImproved = {
             }
 
             if(this.isPosAfterToken(line, ch, entities[0].at(-1))){
+                console.log("after")
                 // [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.suggestion_variable;
@@ -641,8 +676,6 @@ export const CSCompleterImproved = {
                         const tokens = tokenArray.slice(idx, probe);
                         const string = this.stringifyTokenGroup(tokens);
 
-                        
-
                         entities.push([{
                             type: "incomplete-uri", 
                             string: string,
@@ -794,6 +827,8 @@ export const CSCompleterImproved = {
         for(let i = 0; i < nbLines; i++){
             const lineTokens = this.yasqe.getLineTokens(i);
 
+            lineTokens.forEach(tkn => tkn.line = i);
+
             // mark the current token in the array
             if(line === i){
 
@@ -857,6 +892,8 @@ export const CSCompleterImproved = {
                 .flat();
 
                 // console.log([...parsedQueryTree.patterns]);
+
+                if(parsedQueryTree.patterns.length === 0) return [];
 
                 if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
 
