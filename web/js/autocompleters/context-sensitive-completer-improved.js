@@ -28,7 +28,7 @@ export const CSCompleterImproved = {
         }
     },
     isValidCompletionPosition: function (yasqe) {
-        
+        // Not very efficient because every key pressed procs this
         try {
             this.suggestionsBuffer = this.get_(yasqe, null);
         }catch(error){
