@@ -29,8 +29,24 @@ export const CSCompleterImproved = {
     },
     isValidCompletionPosition: function (yasqe) {
         // Not very efficient because every key pressed procs this
+        // try {
+        //     this.suggestionsBuffer = this.get_(yasqe, null);
+        // }catch(error){
+        //     return false;
+        // }
+
+        if (!this.yasqe) this.yasqe = yasqe;
+
+        const queryTokens = this.getQueryTokens();
+        const index = queryTokens.findIndex(tkn => tkn.isCurrentToken);
+
+        // console.log(queryTokens)
+
+        if (queryTokens[index] && queryTokens[index].type === "keyword") return false;
+
         try {
-            this.suggestionsBuffer = this.get_(yasqe, null);
+            const icptp = this.getIncompleteTriple(queryTokens, index);
+            this.getACQueryTripleTokens(icptp.entities)
         }catch(error){
             return false;
         }
@@ -49,6 +65,7 @@ export const CSCompleterImproved = {
             autocompletionQueryString = acqs;
             currentString = cs;
         }catch(error){
+            // console.log(error)
             throw new Error("Could not generate an autocompletion query.");
             // console.error("Could not generate an autocompletion query.")
             // console.log(error);
@@ -57,6 +74,7 @@ export const CSCompleterImproved = {
         }
 
         console.log("Autocompletion Query", autocompletionQueryString);
+        console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
         const url = yasqe.config.requestConfig().endpoint
 
@@ -268,7 +286,7 @@ export const CSCompleterImproved = {
         try {
             acqTriple = this.getACQueryTripleTokens(incompleteTriple.entities);
         }catch(error){
-            // console.log(error);
+            console.log(error);
             throw new Error("Could not generate the autocompletion triple.");
         }
 
@@ -444,8 +462,8 @@ export const CSCompleterImproved = {
             // console.log(entities)
 
             const currentToken = entities.flat().find(tkn => tkn.isCurrentToken);
-            const idx = entities.findIndex(entity => entity.find(currentToken));
-            console.log(entities)
+            const idx = entities.findIndex(entity => entity.find(tkn => tkn == currentToken));
+
             if(idx === -1 &&
                 ["variable-3", // uri
                 "atom", // variable
@@ -454,7 +472,6 @@ export const CSCompleterImproved = {
                 "string"] // literal
                 .includes(currentToken.type)
             ) {
-                console.log("sfqsffj")
                 throw new Error("Subject, Predicate and Object found. Triple already written.");
             }
             
@@ -502,7 +519,7 @@ export const CSCompleterImproved = {
         if(entities.length === 1) {
             
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
-                console.log("before")
+                // console.log("before")
                 // x [[entity]]
                 subject = this.suggestion_variable;
                 predicate = "?predicate_placeholder";
@@ -510,7 +527,7 @@ export const CSCompleterImproved = {
             }
 
             if(this.isPosAfterToken(line, ch, entities[0].at(-1))){
-                console.log("after")
+                // console.log("after")
                 // [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.suggestion_variable;
@@ -725,6 +742,7 @@ export const CSCompleterImproved = {
         if(index <= -1) return [];
         const current = tokenArray[index];
 
+        // TODO: do the same for literals
         const startOfUnfinishedUri = this.getStartOfUnfinishedUri(tokenArray, index);
         if (startOfUnfinishedUri !== -1) {
             return this.getTripleBefore_(tokenArray, startOfUnfinishedUri - 1).concat(tokenArray.slice(startOfUnfinishedUri, index + 1));
@@ -1093,11 +1111,6 @@ export const CSCompleterImproved = {
 
     getStartOfUnfinishedUri: function(tokenArray, index){
 
-        if(tokenArray && tokenArray[index] && ["punc", "error", "string-2"].includes(tokenArray[index].type)){
-            // punctuation, error or blank node. otherwise, don't even try.
-
-        }
-
         const closestLessThanIndexBefore = this.getClosestCharBefore(tokenArray, index, "<");
         const closestGreaterThanIndexBefore = this.getClosestCharBefore(tokenArray, index, ">");
         const closestLessThanIndexAfter = this.getClosestCharAfter(tokenArray, index, "<");
@@ -1112,11 +1125,6 @@ export const CSCompleterImproved = {
         }
 
         return -1;
-    },
-
-    getStartOfUnfinishedEntity: function(tokenArray, index){
-        // skip to first previous 
-
     },
 
     stringifyTokenGroup: function(tokenArray){
