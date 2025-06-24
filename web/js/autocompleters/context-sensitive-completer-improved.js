@@ -59,6 +59,10 @@ export const CSCompleterImproved = {
 
         this.yasqe = yasqe;
 
+        const requestConfig = this.yasqe.config;
+
+        console.log(requestConfig)
+
         let autocompletionQueryString, currentString;
         try {
             let {acqs, cs} = this.getAutocompletionQuery();
@@ -156,18 +160,20 @@ export const CSCompleterImproved = {
             }
 
         } catch (error) {
-            throw new Error("Query with cache failed for the following reason:", error)
+            console.log(error)
+            throw new Error("Query with cache failed for the following reason:", )
         }
         this.cache[query].lastString = currentString
         let results = this.cache[query].results
             .filter(result => result.proba > 0) // not failed
 
-
+        const nbResultsQuery = results.length;
 
         // filter results based on already written parts of the entity to complete
         // TODO : refacto
         let prefixes = this.yasqe.getPrefixesFromQuery();
 
+        // TODO: https 
         const isUriStart = function(string){
             return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
         }
@@ -184,6 +190,7 @@ export const CSCompleterImproved = {
                 if(result.type === "literal" && toTest.includes(filterString.slice(1))) return true;
             }
 
+            // TODO: https 
             if(isUriStart(currentString)){
                 if(filterString.includes("<http://"))
                     if(toTest.includes(filterString.replace("<http://", ""))) return true;
@@ -213,7 +220,7 @@ export const CSCompleterImproved = {
                 {
                     sugg : key,
                     type : val[0].type,
-                    score : (val.reduce((acc, curr) => { {}; return acc + (curr.proba > 0 ? 1/curr.proba : 0)}, 0.0) / val.length) * (val.length / results.length),
+                    score : (val.reduce((acc, curr) => { {}; return acc + (curr.proba > 0 ? 1/curr.proba : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
                     nbWalks : val.length
                 }
             );
@@ -256,6 +263,7 @@ export const CSCompleterImproved = {
 
             return suggestions
         } catch (error) {
+            console.log(error)
             throw new Error("Query failed")
         }
     },
@@ -286,7 +294,7 @@ export const CSCompleterImproved = {
         try {
             acqTriple = this.getACQueryTripleTokens(incompleteTriple.entities);
         }catch(error){
-            console.log(error);
+            // console.log(error);
             throw new Error("Could not generate the autocompletion triple.");
         }
 
@@ -326,7 +334,7 @@ export const CSCompleterImproved = {
             try{
                 var parsedQuery = parser.parse(bracketed);
             }catch(error){
-                console.log(bracketed)
+                // console.log(bracketed)
                 // console.log(error)
                 throw new Error("Could not parse the autcompletion query.")
             }
@@ -417,8 +425,6 @@ export const CSCompleterImproved = {
 
         let tripleTokens = before.concat(after);
         tripleTokens = this.removeWhiteSpacetokens(tripleTokens);
-
-        // console.log("pleas", tripleTokens);
 
         const entities = this.getTokenGroupsOfTriple(tripleTokens);
 

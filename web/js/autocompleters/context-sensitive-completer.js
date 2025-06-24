@@ -134,9 +134,6 @@ export const CSCompleter = {
     },
 
 
-
-
-
     getAutocompletionQuery: function(yasqe, token) {
 
         // step 1 : get all tokens
