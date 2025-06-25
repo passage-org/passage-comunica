@@ -9,8 +9,11 @@ export const CSCompleterImproved = {
     autoShow: false,
     bulk: false,
     cache: new Object(),
-    suggestion_variable_name: "suggestion_variable",
-    suggestion_variable: "?suggestion_variable",
+    sugg_var: "suggestion_variable",
+    q_sugg_var : "?suggestion_variable",
+    proba_var: "probabilityOfRetrievingRestOfMapping",
+    q_proba_var: "?probabilityOfRetrievingRestOfMapping",
+
     yasqe: null,
     suggestionsBuffer: null,
     // interface methods 
@@ -61,7 +64,7 @@ export const CSCompleterImproved = {
 
         const requestConfig = this.yasqe.config;
 
-        console.log(requestConfig)
+        // console.log("requestConfig", requestConfig)
 
         let autocompletionQueryString, currentString;
         try {
@@ -82,7 +85,7 @@ export const CSCompleterImproved = {
 
         const url = yasqe.config.requestConfig().endpoint
 
-        return Promise.resolve(this.queryWithCache(url, autocompletionQueryString, currentString));
+        return Promise.resolve(this.provideSuggestions(url, autocompletionQueryString, currentString))
     },
 
     // RESULT DISPLAY 
@@ -95,14 +98,20 @@ export const CSCompleterImproved = {
         return hints.map(hint => {
             hint.render = function(el, self, data){
 
+                // console.log("el", el)
+                // console.log("self", self)
+                // console.log("data", data)
+
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
                 const current = _yasqe.getTokenAt({line: line, ch: ch});
                 data.from = {line: line, ch: current.string === "." || current.string === "{" ? ch : self.from.ch};
                 data.to = {line: line, ch: Math.min(self.to.ch, ch)};
 
+                const suggestionObject = data.displayText;
+                const binding = suggestionObject.value;
+                const score = suggestionObject.score;
+                const finalProvenances = suggestionObject.suggestionVariableProvenances;
 
-                const binding = data.displayText.binding
-                const score = data.displayText.score
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
                 const suggestionDiv = document.createElement("div");
@@ -121,12 +130,156 @@ export const CSCompleterImproved = {
                 
                 el.appendChild(suggestionDiv);
 
+                suggestionDiv.onmouseover = function(e){
+                    // console.log(e);
+                    const display = document.createElement("div");
+                    display.className = "provenance";
+                    display.innerHTML = finalProvenances;
+
+                    el.appendChild(display);
+                }
+
+                suggestionDiv.onmouseout = function(e){
+                    Array.prototype.forEach.call(document.getElementsByClassName("provenance"), function(node) {
+                        el.removeChild(node);
+                    });
+
+                }
+
                 data.text = binding;
             }
             return hint
         });
     },
 
+
+    // PROVIDING SUGGESTION DATA 
+
+    provideSuggestions: async function(url, autocompletionQueryString, currentString){
+        const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
+
+        return Promise.resolve(this.processACQResults(acqResults, currentString));
+    },
+
+
+    // AUTOCOMPLETION QUERY RESULTS POST PROCESSING
+
+    processACQResults: async function(acqResults, currentString){
+
+        const prefixes = this.yasqe.getPrefixesFromQuery();
+        const filterString = currentString.toLowerCase();
+
+        const successfulWalks = acqResults.filter(mapping => mapping[this.proba_var].value > 0);
+        const nbResultsQuery = successfulWalks.length;
+
+        const formatted = this.formatBindings(successfulWalks);
+        const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString, prefixes));
+        const grouped = this.groupBy(filtered, 'entity', 'value');
+        const aggregated = this.aggregate(grouped, nbResultsQuery);
+
+        return aggregated
+            // building the item containing the data needed for display
+            .map(suggestion => {
+                return {
+                    value: this.typedStringify(suggestion.value, suggestion.type), 
+                    score: Math.round(suggestion.score), 
+                    provenances: suggestion.provenances, 
+                    suggestionVariableProvenances: suggestion.suggestionVariableProvenances}
+                }
+            ) 
+            // Higher up
+            .sort((a, b) => a.score - b.score) 
+    },
+
+    formatBindings: function(bindings){
+        return bindings.map(b => {
+            let formatted = {
+                suggestionVariableProvenance: "",
+                provenances: [],
+                probability: 0,
+                entity: "",
+            };
+
+            for(const [key, val] of Object.entries(b)){
+                if(key.includes("provenance")){
+                    // Provenance var
+
+                    // For suggestion_variable (= final result provenance)
+                    if(key.includes(this.sugg_var)) formatted.suggestionVariableProvenance = val.value;
+
+                    // Update provenances set if needed
+                    if(!formatted.provenances.includes(val.value)) formatted.provenances.push(val.value);
+                } else
+
+                if(key.includes(this.proba_var)) {
+                    formatted.probability = val.value;
+                } else 
+                
+                if(key.includes(this.sugg_var)) formatted.entity = val;
+            }
+
+            return formatted;
+        })
+    },
+
+    filterByString: function(mappingInfo, filterString, prefixes) {
+
+        // TODO: https 
+        const isUriStart = function(string){
+            return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
+        }
+
+        if(filterString === "") return true;
+
+        const toTest = mappingInfo.entity.value.toLowerCase();
+        const type = mappingInfo.entity.type;
+
+        if(filterString.startsWith("\"")){
+            if(type === "literal" && toTest.includes(filterString.slice(1))) return true;
+        }
+
+        // TODO: https 
+        if(isUriStart(filterString)){
+            if(filterString.includes("<http://"))
+                if(toTest.includes(filterString.replace("<http://", ""))) return true;
+            else
+                if(toTest.includes(currentString)) return true;
+        }
+
+        const split = filterString.split(":");
+        if(split.length === 1){
+            if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
+        }else
+
+        if(split.length === 2){
+            if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
+        }
+
+        return false;
+    },
+
+    aggregate: function(suggestionGroups, nbResultsQuery){
+        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thanks
+
+        const aggregated = [];
+
+        for(const [key, val] of Object.entries(suggestionGroups)){
+            aggregated.push(
+                {
+                    value : key,
+                    type : val[0].entity.type,
+                    score : (val.reduce((acc, curr) => {return acc + (curr.probability > 0 ? 1/curr.probability : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
+                    nbWalks : val.length,
+
+                    // TODO : percentage?
+                    provenances : Array.from(new Set(val.map(val => val.provenances).flat())),
+                    suggestionVariableProvenances : Array.from(new Set(val.map(val => val.suggestionVariableProvenance))),
+                }
+            );
+        }
+
+        return aggregated;
+    },
 
 
     // AUTOCOMPLETION QUERY EXECUTION
@@ -135,102 +288,30 @@ export const CSCompleterImproved = {
 
         // console.log("currentString", currentString)
 
-        var groupBy = function(xs, key) {
-            return xs.reduce(function(rv, x) {
-              (rv[x[key]] ??= []).push(x);
-              return rv;
-            }, {});
-          };
-
         try {
 
             if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
                 // execute AC query 
-                const res = await Promise.resolve(this.query(url, query, currentString));
+                const bindings = await Promise.resolve(this.query(url, query, currentString));
 
                 // add to the cache if it already exists, otherwise create a new one
                 if(this.cache[query])
-                    this.cache[query].results = this.cache[query].results.concat(res)
+                    this.cache[query].bindings = this.cache[query].bindings.concat(bindings)
                 else
-                    this.cache[query] = {results: res};  
+                    this.cache[query] = {bindings: bindings};  
 
-                console.log(`Finished query with ${res.length} results`);
-                // console.log(res);
+                console.log(`Finished query with ${bindings.length} results`);
 
             }
+
+            this.cache[query].lastString = currentString;
+            return this.cache[query].bindings;
 
         } catch (error) {
-            console.log(error)
+            // console.log(error)
             throw new Error("Query with cache failed for the following reason:", )
         }
-        this.cache[query].lastString = currentString
-        let results = this.cache[query].results
-            .filter(result => result.proba > 0) // not failed
 
-        const nbResultsQuery = results.length;
-
-        // filter results based on already written parts of the entity to complete
-        // TODO : refacto
-        let prefixes = this.yasqe.getPrefixesFromQuery();
-
-        // TODO: https 
-        const isUriStart = function(string){
-            return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
-        }
-
-        const filterString = currentString.toLowerCase();
-
-        const filter = function(result, filterString, prefixes) {
-
-            if(filterString === "") return true;
-
-            const toTest = result.sugg.toLowerCase();
-
-            if(filterString.startsWith("\"")){
-                if(result.type === "literal" && toTest.includes(filterString.slice(1))) return true;
-            }
-
-            // TODO: https 
-            if(isUriStart(currentString)){
-                if(filterString.includes("<http://"))
-                    if(toTest.includes(filterString.replace("<http://", ""))) return true;
-                else
-                    if(toTest.includes(currentString)) return true;
-            }
-
-            const split = filterString.split(":");
-            if(split.length === 1){
-                if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
-            }else
-
-            if(split.length === 2){
-                if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
-            }
-
-            return false;
-        }
-            
-        results = results.filter(result => filter(result, filterString, prefixes));
-
-        const grouped = groupBy(results, 'sugg');
-        const aggregated = [];
-
-        for(const [key, val] of Object.entries(grouped)){
-            aggregated.push(
-                {
-                    sugg : key,
-                    type : val[0].type,
-                    score : (val.reduce((acc, curr) => { {}; return acc + (curr.proba > 0 ? 1/curr.proba : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
-                    nbWalks : val.length
-                }
-            );
-
-        }
-
-        return aggregated
-            .map(result => {return {binding: this.typedStringify(result.sugg, result.type), score: result.score}}) // show only the entity, properly written based on its type
-            .map(result => {return {binding: result.binding, score: Math.round(result.score)}}) // round score, to make it readable. Also 
-            .sort((a, b) => a.score - b.score) // sort by lower proba first (lower proba = higher cardinality)
     },
 
     query: async function(url, query, currentString) {
@@ -248,22 +329,22 @@ export const CSCompleterImproved = {
             }
 
             const json = await response.json();
-            const suggestions = Array.from(
+            const bindings = Array.from(
                 new Set(
                     json["results"]["bindings"]
-                    .filter(b => b[this.suggestion_variable_name]) // safety measure, in case something goes wrong and bindings don't have mapping for suggestion_variable
-                    .map(b => {
-                        return {sugg: b[this.suggestion_variable_name]["value"], 
-                                proba: b["probabilityOfRetrievingRestOfMapping"]["value"] || 0,
-                                type: b[this.suggestion_variable_name]["type"],
-                            } 
-                        })
+                    // .filter(b => b[this.suggestion_variable_name]) // safety measure, in case something goes wrong and bindings don't have mapping for suggestion_variable
+                    // .map(b => {
+                    //     return {sugg: b[this.suggestion_variable_name]["value"], 
+                    //             proba: b[this.proba_var]["value"] || 0,
+                    //             type: b[this.suggestion_variable_name]["type"],
+                    //         } 
+                    //     })
                 )
             )
 
-            return suggestions
+            return bindings
         } catch (error) {
-            console.log(error)
+            // console.log(error)
             throw new Error("Query failed")
         }
     },
@@ -343,7 +424,7 @@ export const CSCompleterImproved = {
         // Find triples relevant to the context
 
         const triples = this.getTriples(parsedQuery);
-        triples.forEach(t => t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.suggestion_variable_name)); // weird way to find the triple being worked on
+        triples.forEach(t => t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.sugg_var)); // weird way to find the triple being worked on
         triples.forEach(t => t.inContext = t.isCurrentTriple);
 
         let lastSize = 0;
@@ -376,8 +457,9 @@ export const CSCompleterImproved = {
 
         
         // Generate the AC query string 
+        parsedQuery.variables = [{termType: "Wildcard", value: "*"}];
 
-        parsedQuery.variables = ['?suggestion_variable', '?probabilityOfRetrievingRestOfMapping'];
+        // console.log("parsed", parsedQuery);
         parsedQuery.prefixes = this.yasqe.getPrefixesFromQuery();
 
         var Gen = Parser.Generator;
@@ -490,21 +572,21 @@ export const CSCompleterImproved = {
             // console.log("incompleteUriIndex", incompleteUriIndex)
             switch (idx) {
                 case 0:
-                    subject = this.suggestion_variable;
+                    subject = this.q_sugg_var;
                     predicate = this.stringifyTokenGroup(entities[1]);
                     object = this.stringifyTokenGroup(entities[2]);
                     break;
 
                 case 1:
                     subject = this.stringifyTokenGroup(entities[0]);
-                    predicate = this.suggestion_variable;
+                    predicate = this.q_sugg_var;
                     object = this.stringifyTokenGroup(entities[2]);
                     break;
 
                 case 2:
                     subject = this.stringifyTokenGroup(entities[0]);
                     predicate = this.stringifyTokenGroup(entities[1]);
-                    object = this.suggestion_variable;
+                    object = this.q_sugg_var;
                     break;
             
                 default:
@@ -517,7 +599,7 @@ export const CSCompleterImproved = {
         // console.log(entities);
 
         if(entities.length === 0) {
-            subject = this.suggestion_variable;
+            subject = this.q_sugg_var;
             predicate = "?predicate_placeholder";
             object = "?object_placeholder";
         }
@@ -527,7 +609,7 @@ export const CSCompleterImproved = {
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
                 // console.log("before")
                 // x [[entity]]
-                subject = this.suggestion_variable;
+                subject = this.q_sugg_var;
                 predicate = "?predicate_placeholder";
                 object = this.stringifyTokenGroup(entities[0]);
             }
@@ -536,7 +618,7 @@ export const CSCompleterImproved = {
                 // console.log("after")
                 // [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
-                predicate = this.suggestion_variable;
+                predicate = this.q_sugg_var;
                 object = "?object_placeholder";
             }
         }
@@ -545,7 +627,7 @@ export const CSCompleterImproved = {
 
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
                 // x [[entity]] [[entity]]
-                subject = this.suggestion_variable;
+                subject = this.q_sugg_var;
                 predicate = this.stringifyTokenGroup(entities[0]);
                 object = this.stringifyTokenGroup(entities[1]);
             }
@@ -554,7 +636,7 @@ export const CSCompleterImproved = {
                 && this.isPosAfterToken(line, ch, entities[0].at(-1))){
                 // [[entity]] x [[entity]]
                 subject = this.stringifyTokenGroup(entities[0]);
-                predicate = this.suggestion_variable;
+                predicate = this.q_sugg_var;
                 object = this.stringifyTokenGroup(entities[1]);
             }
 
@@ -562,7 +644,7 @@ export const CSCompleterImproved = {
                 // [[entity]] [[entity]] x
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.stringifyTokenGroup(entities[1]);
-                object = this.suggestion_variable;
+                object = this.q_sugg_var;
             }
 
 
@@ -576,7 +658,7 @@ export const CSCompleterImproved = {
 
             if(this.isPosJustAfterToken(line, ch, entities[0].at(-1))){
                 // [[entity]]x [[entity]]
-                subject = this.suggestion_variable;
+                subject = this.q_sugg_var;
                 predicate = this.stringifyTokenGroup(entities[1]);
                 object = "?object_placeholder";
 
@@ -596,7 +678,7 @@ export const CSCompleterImproved = {
             if(this.isPosJustAfterToken(line, ch, entities[1].at(-1))){
                 // [[entity]] [[entity]]x
                 subject = this.stringifyTokenGroup(entities[0]);
-                predicate = this.suggestion_variable;
+                predicate = this.q_sugg_var;
                 object = "?object_placeholder";
 
                 // filter = `FILTER REGEX (${this.suggestion_variable}, \"^${entities[1].map(tkn => tkn.string).join("").slice(1, -1)}\")`;
@@ -1192,6 +1274,13 @@ export const CSCompleterImproved = {
         return tokenArray.filter(tkn => tkn.type != "ws");
     },
 
+    groupBy: function(xs, key, subKey) {
+        return xs.reduce(function(rv, x) {
+
+            (rv[x[key][subKey] ?? x[key]] ??= []).push(x);
+            return rv;
+        }, {});
+    }
 };
 
 
