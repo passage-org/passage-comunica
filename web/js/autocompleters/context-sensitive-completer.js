@@ -19,8 +19,11 @@ export const CSCompleter = {
         const currentString = token.string
 
         const url = yasqe.config.requestConfig().endpoint
+        // we assume some kind of endpoint url such as <protocol>://<authority>/…/<dataset-name>/<passage>
+        // so the dataset becomes suffixed by -raw/raw
+        const rawUrl = url.replace(/\/([^\/]+)\/(passage)$/, "/$1-raw/raw");
 
-        return Promise.resolve(this.queryWithCache(url, acq, currentString));
+        return Promise.resolve(this.queryWithCache(rawUrl, acq, currentString));
         // return Promise.resolve(["THESE", "AREN'T", "ACTUAL", "SUGGESTIONS", "DUMMY"]);
     },
     isValidCompletionPosition: function (yasqe) {

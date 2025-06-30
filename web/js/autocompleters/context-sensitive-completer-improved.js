@@ -83,9 +83,12 @@ export const CSCompleterImproved = {
         console.log("Autocompletion Query", autocompletionQueryString);
         console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
-        const url = yasqe.config.requestConfig().endpoint
+        const url = yasqe.config.requestConfig().endpoint;
+        // we assume some kind of endpoint url such as <protocol>://<authority>/…/<dataset-name>/<passage>
+        // so the dataset becomes suffixed by -raw/raw
+        const rawUrl = url.replace(/\/([^\/]+)\/(passage)$/, "/$1-raw/raw");
 
-        return Promise.resolve(this.provideSuggestions(url, autocompletionQueryString, currentString))
+        return Promise.resolve(this.provideSuggestions(rawUrl, autocompletionQueryString, currentString));
     },
 
     // RESULT DISPLAY 
