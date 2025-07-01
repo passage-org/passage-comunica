@@ -14,13 +14,15 @@
         "help": "node ./engines/query-passage/bin/query.js",
         "query-passage": "node --max-old-space-size=10076 ./engines/query-passage/bin/query.js",
         "build:browser": "yarn build && comunica-compile-config ./engines/config-query-passage/config/config-default.json > ./src/passage-comunica-engine.js && echo '=============\\nExported the engine to ./src/passage-comunica-engine.js' && webpack-cli",
-        "build:web": "yarn run build:browser && cp ./dist/passage-comunica-engine.js ./web/ && npm --prefix ./web/ install",
+        "build:web": "yarn build:browser && cp ./dist/passage-comunica-engine.js ./web/ && npm --prefix ./web/ install && npm --prefix ./web run build",
         "server": "npm run --prefix ./web/ server"
     },
     "dependencies": {
         "@comunica/actor-init-query": "^4.2.0",
+        "@triply/yasgui": "^4.2.28",
+        "rdf-string": "^2.0.1",
         "color-hash": "^2.0.2",
-        "rdf-string": "^2.0.1"
+        "sparqlalgebrajs": "^4.3.1"
     },
     "devDependencies": {
         "@babel/core": "^7.26.9",
