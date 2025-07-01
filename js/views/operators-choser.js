@@ -1,4 +1,4 @@
-import {Algebra} from "sparqlalgebrajs";
+import Algebra from "sparqlalgebrajs";
 
 const BOOLEAN = {
     TRUE: true,
