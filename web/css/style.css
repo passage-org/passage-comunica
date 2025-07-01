@@ -309,3 +309,77 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     color: var(--aurora-1);
     text-align: center;
 }
+
+.provenance {
+    color: var(--polar-night-1);
+}
+
+.CodeMirror-hints > li {
+    margin: 0px 0;
+}
+
+.suggestion-div > li {
+    margin: 2px 0;
+}
+
+.suggestion-value {
+    text-align: left;
+    /* background-color: #88c0d0; */
+}
+
+.suggestion-provenance-detail {
+    text-align: left;
+    padding-left: 0%;
+    margin-left: 0%;
+}
+
+.suggestion-provenance {
+    text-align: left;
+}
+
+.suggestion-score {
+    text-align: left;
+}
+
+.suggestion-detail {
+    text-align: left;
+    margin-left: 5px;
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+
+    background-color: var(--frost-2);
+}
+
+.suggestion-detail .suggestion-provenance-detail {
+    /* background-color: var(--frost-4); */
+
+}
+
+.CodeMirror-hints.default {
+    max-width: 400px;
+}
+
+.source-marker-section {
+    overflow-x: scroll;
+    display: flex;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.source-marker {
+    --source-marker-size: 6px;
+    --source-marker-max-width: 10px;
+
+
+    height: auto;
+    /* min-width: 5px; */
+    max-width: var(--source-marker-max-width);
+    flex: auto;
+    margin-bottom: 5px;
+
+    height: var(--source-marker-size);
+    width: var(--source-marker-size);
+    border: 1px solid black;
+}
