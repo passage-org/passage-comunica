@@ -1,4 +1,5 @@
 import Parser from 'sparqljs';
+import ColorHash from 'color-hash';
 
 /// Queries the endpoint to retrieve a few example of values
 /// from the current triple pattern being type. This is
@@ -13,10 +14,9 @@ export const CSCompleterImproved = {
     q_sugg_var : "?suggestion_variable",
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
-
+    colorHash: new ColorHash(), 
     yasqe: null,
     suggestionsBuffer: null,
-    // interface methods 
     get: function(yasqe, token) {
         if(this.suggestionsBuffer) {
             let ret = this.suggestionsBuffer;
@@ -31,19 +31,11 @@ export const CSCompleterImproved = {
         }
     },
     isValidCompletionPosition: function (yasqe) {
-        // Not very efficient because every key pressed procs this
-        // try {
-        //     this.suggestionsBuffer = this.get_(yasqe, null);
-        // }catch(error){
-        //     return false;
-        // }
 
         if (!this.yasqe) this.yasqe = yasqe;
 
         const queryTokens = this.getQueryTokens();
         const index = queryTokens.findIndex(tkn => tkn.isCurrentToken);
-
-        // console.log(queryTokens)
 
         if (queryTokens[index] && queryTokens[index].type === "keyword") return false;
 
@@ -57,6 +49,7 @@ export const CSCompleterImproved = {
         return true;
     },
     get_: function(yasqe, token) {
+
         // console.log(yasqe.getDoc().getCursor().line)
         // console.log(yasqe.getDoc().getCursor().ch)
 
@@ -88,19 +81,31 @@ export const CSCompleterImproved = {
         return Promise.resolve(this.provideSuggestions(url, autocompletionQueryString, currentString))
     },
 
-    // RESULT DISPLAY 
+    // AUTOCOMPLETION DISPLAY 
 
     postprocessHints: function (_yasqe, hints) {
 
         const line = _yasqe.getDoc().getCursor().line;
         const ch  = _yasqe.getDoc().getCursor().ch;
         
-        return hints.map(hint => {
-            hint.render = function(el, self, data){
+        const removeProvenanceDisplay = function(e){
+            Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
+                node.remove();
+            }); 
+        };
 
-                // console.log("el", el)
-                // console.log("self", self)
-                // console.log("data", data)
+        var x = new MutationObserver(function (e) {
+            const hints = document.getElementsByClassName("CodeMirror-hint");
+            if (hints.length === 0) removeProvenanceDisplay(null);
+        });
+
+        x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
+
+        return hints.map(hint => {
+
+            const colorHash = new ColorHash();
+        
+            hint.render = function(el, self, data){
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
                 const current = _yasqe.getTokenAt({line: line, ch: ch});
@@ -108,45 +113,93 @@ export const CSCompleterImproved = {
                 data.to = {line: line, ch: Math.min(self.to.ch, ch)};
 
                 const suggestionObject = data.displayText;
-                const binding = suggestionObject.value;
+                const value = suggestionObject.value;
                 const score = suggestionObject.score;
-                const finalProvenances = suggestionObject.suggestionVariableProvenances;
+                const walks = suggestionObject.walks;
+                const finalProvenances = suggestionObject.suggestionVariableProvenances
+                    .map(source => source.split("http://").at(2)) // wanky but for now is ok
+                    .map(source => {return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
+                    .sort((a, b) => a.hsl[0] - b.hsl[0]);
 
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
                 const suggestionDiv = document.createElement("div");
+                suggestionDiv.className = "suggestion-div";
 
                 const suggestionValue = document.createElement("span");
-                suggestionValue.textContent = binding || "";
+                suggestionValue.className = "suggestion-value"
+                suggestionValue.cssFloat = ""
+                suggestionValue.textContent = value || "";
 
                 const suggestionScore = document.createElement("span");
-                suggestionScore.textContent = "  " + (score || "");
-                // This added space feels out of place, but it works. Used to prevent texts from suggestion and proba being directly next to each other.
-                suggestionScore.style.cssFloat = "right";
-                suggestionScore.style.color = "";
+                suggestionScore.className = "suggestion-score"
+                suggestionScore.textContent = "Estimated cardinality : " + (score || "");
+                suggestionScore.style.cssFloat = "";
+
+                const suggestionWalks = document.createElement("span");
+                suggestionWalks.className = "suggestion-walks"
+                suggestionWalks.textContent = "Random walks : " + (walks || "");
+                suggestionWalks.style.cssFloat = "";
+
+                const suggestionProvenance = document.createElement("span");
+                suggestionProvenance.className = "suggestion-provenance"
+                suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
+                suggestionProvenance.style.cssFloat = "";
+
+                const sourceMarkerSection = document.createElement("section");
+                sourceMarkerSection.className = "source-marker-section";
+                for(const prov of finalProvenances){
+                    const sourceMarker = document.createElement("div");
+                    sourceMarker.className = "source-marker";
+                    sourceMarker.style.backgroundColor = prov.hex;
+                    sourceMarkerSection.appendChild(sourceMarker);
+                    sourceMarker.title = prov.source;
+                }
+
+                const suggestionProvenanceDetail = document.createElement("ul");
+                suggestionProvenanceDetail.className = "suggestion-provenance-detail";
+                finalProvenances.forEach(p => {
+                    const li = document.createElement("li");
+                    li.innerHTML = p.source;
+                    suggestionProvenanceDetail.appendChild(li);
+                });
+
+                const suggestionDetail = document.createElement("div");
+                suggestionDetail.className = "suggestion-detail CodeMirror-hints";
+
+                suggestionDetail.appendChild(suggestionScore);
+                suggestionDetail.appendChild(suggestionWalks);
+                suggestionDetail.appendChild(suggestionProvenance);
+                suggestionDetail.appendChild(suggestionProvenanceDetail);
 
                 suggestionDiv.appendChild(suggestionValue);
-                suggestionDiv.appendChild(suggestionScore);
+                suggestionDiv.appendChild(sourceMarkerSection);
                 
                 el.appendChild(suggestionDiv);
 
-                suggestionDiv.onmouseover = function(e){
-                    // console.log(e);
-                    const display = document.createElement("div");
-                    display.className = "provenance";
-                    display.innerHTML = finalProvenances;
+                const displayProvenanceDetail = function(e){
+                    removeProvenanceDisplay(e);
+        
+                    const yasguiElement = document.getElementsByClassName("yasgui").item(0);
 
-                    el.appendChild(display);
+                    const dim = el.getBoundingClientRect();
+        
+                    suggestionDetail.style.left = (dim.x + dim.width) + "px";
+                    suggestionDetail.style.top = (dim.top + window.scrollY) + "px";
+
+                    suggestionDetail.style.width = dim.width;
+                    suggestionDetail.style.height = dim.bottom - dim.top;
+        
+                    yasguiElement.appendChild(suggestionDetail);
                 }
 
-                suggestionDiv.onmouseout = function(e){
-                    Array.prototype.forEach.call(document.getElementsByClassName("provenance"), function(node) {
-                        el.removeChild(node);
-                    });
+                suggestionDiv.onmouseover = displayProvenanceDetail;
 
-                }
+                // el.onclick = removeProvenanceDisplay;
 
-                data.text = binding;
+                // suggestionDiv.onmouseleave = removeProvenanceDisplay(e);
+
+                data.text = value;
             }
             return hint
         });
@@ -156,6 +209,7 @@ export const CSCompleterImproved = {
     // PROVIDING SUGGESTION DATA 
 
     provideSuggestions: async function(url, autocompletionQueryString, currentString){
+
         const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
@@ -184,11 +238,12 @@ export const CSCompleterImproved = {
                     value: this.typedStringify(suggestion.value, suggestion.type), 
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
+                    walks: suggestion.nbWalks,
                     suggestionVariableProvenances: suggestion.suggestionVariableProvenances}
                 }
             ) 
             // Higher up
-            .sort((a, b) => a.score - b.score) 
+            .sort((a, b) => b.score - a.score) 
     },
 
     formatBindings: function(bindings){
@@ -259,8 +314,8 @@ export const CSCompleterImproved = {
     },
 
     aggregate: function(suggestionGroups, nbResultsQuery){
-        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thanks
-
+        
+        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thank
         const aggregated = [];
 
         for(const [key, val] of Object.entries(suggestionGroups)){
@@ -301,6 +356,7 @@ export const CSCompleterImproved = {
                     this.cache[query] = {bindings: bindings};  
 
                 console.log(`Finished query with ${bindings.length} results`);
+                console.log(bindings);
 
             }
 
@@ -308,8 +364,7 @@ export const CSCompleterImproved = {
             return this.cache[query].bindings;
 
         } catch (error) {
-            // console.log(error)
-            throw new Error("Query with cache failed for the following reason:", )
+            throw new Error("Query with cache failed for the following reason:", error);
         }
 
     },
@@ -344,8 +399,7 @@ export const CSCompleterImproved = {
 
             return bindings
         } catch (error) {
-            // console.log(error)
-            throw new Error("Query failed")
+            throw new Error("Query failed : ", error)
         }
     },
 
