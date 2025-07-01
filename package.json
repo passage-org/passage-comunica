@@ -3,6 +3,7 @@
     "version": "0.0.3",
     "description": "Web interface of Passage x Comunica.",
     "main": "index.js",
+    "type": "module",
     "scripts": {
         "server": "vite"
     },
