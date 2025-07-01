@@ -120,9 +120,10 @@ export const CSCompleter = {
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
-                    .map(source => source.split("http://").at(2)) // wanky but for now is ok
-                    .map(source => {return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
-                    .sort((a, b) => a.hsl[0] - b.hsl[0]);
+                      .map(source => source.split("http://").at(2)) // wanky but for now is ok
+                      .filter(o => o !== undefined) // when there are no source , filter out
+                      .map(source => {console.log(source); return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
+                      .sort((a, b) => a.hsl[0] - b.hsl[0]);
 
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
