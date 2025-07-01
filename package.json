@@ -19,11 +19,12 @@
     },
     "dependencies": {
         "@comunica/actor-init-query": "^4.2.0",
+        "color-hash": "^2.0.2",
         "rdf-string": "^2.0.1"
     },
     "devDependencies": {
-        "@babel/preset-env": "^7.26.9",
         "@babel/core": "^7.26.9",
+        "@babel/preset-env": "^7.26.9",
         "babel-loader": "^10.0.0",
         "componentsjs-generator": "^4.2.0",
         "typescript": "^5.3.3",
