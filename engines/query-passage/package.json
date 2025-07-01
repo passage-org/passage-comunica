@@ -32,6 +32,7 @@
         "@comunica/config-query-sparql": "^4.2.0",
         "@comunica/query-sparql": "^4.2.0",
         "@comunica/runner-cli": "^4.2.0",
+        "@comunica/actor-query-operation-distinct-hash": "^4.2.0",
         "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.3",
         "@passage/config-query-passage": "^0.0.3",
         "@passage/actor-query-process-sequential-recursive": "^0.0.3"

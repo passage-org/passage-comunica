@@ -74,7 +74,7 @@
 
       <footer class="footer">
         <p class="text-center">
-          Ⓒ 2017–2025
+          Ⓒ 2017 – ∞
           <a href="https://sites.google.com/site/gddlina/">GDD Team</a>,
           <a href="https://www.ls2n.fr?lang=en">LS2N</a>,
           <a href="http://www.univ-nantes.fr/">University of Nantes</a>
@@ -85,9 +85,8 @@
     <script type="module">
       import {OperatorsChoser} from './js/views/operators-choser';
       import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
-      import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
+      // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
       import {CSCompleter} from './js/autocompleters/context-sensitive-completer.js';
-      import {CSCompleterImproved} from './js/autocompleters/context-sensitive-completer-improved.js';
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
       import {YasguiConfig} from "./js/yasgui-config";
@@ -99,15 +98,13 @@
 
       // registering of plugins (must be done before Yasgui() ofc).
       Yasqe.forkAutocompleter('variables', KeywordsCompleter);
-      Yasqe.forkAutocompleter('variables', TPBasedCompleter);
+      // Yasqe.forkAutocompleter('variables', TPBasedCompleter);
       Yasqe.forkAutocompleter('variables', CSCompleter);
-      Yasqe.forkAutocompleter('variables', CSCompleterImproved);
       Yasqe.defaults.autocompleters = [
-        'keywords-completer', 
-        // 'tp-based-completer', 
-        // 'context-sensitive-completer', 
-        'context-sensitive-completer-improved', 
-        'variables'
+          'keywords-completer', 
+          // 'tp-based-completer', 
+          'context-sensitive-completer', 
+          'variables'
       ];
       Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
