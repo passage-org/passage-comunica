@@ -1,10 +1,7 @@
 import Parser from 'sparqljs';
-import ColorHash from 'color-hash';
 
 /// Queries the endpoint to retrieve a few example of values
-/// from the current triple pattern being type. This is
-/// context-insensitive since it does not take into account the
-/// other operations of the SPARQL query.
+/// from the current query being typed.
 export const CSCompleter = {
     name: "context-sensitive-completer",
     autoShow: false,
@@ -14,9 +11,11 @@ export const CSCompleter = {
     q_sugg_var : "?suggestion_variable",
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
-    colorHash: new ColorHash(), 
+
     yasqe: null,
     suggestionsBuffer: null,
+    
+    // interface methods 
     get: function(yasqe, token) {
         if(this.suggestionsBuffer) {
             let ret = this.suggestionsBuffer;
@@ -26,30 +25,38 @@ export const CSCompleter = {
 
         try {
             return this.get_(yasqe, token);
-        }catch(error){
+        } catch(error) {
             return [];
         }
     },
+    
     isValidCompletionPosition: function (yasqe) {
-
-        if (!this.yasqe) this.yasqe = yasqe;
+        // Not very efficient because every key pressed procs this
+        // try {
+        //     this.suggestionsBuffer = this.get_(yasqe, null);
+        // }catch(error){
+        //     return false;
+        // }
+        this.yasqe = this.yasqe || yasqe;
 
         const queryTokens = this.getQueryTokens();
         const index = queryTokens.findIndex(tkn => tkn.isCurrentToken);
+        
+        // console.log(queryTokens)
 
         if (queryTokens[index] && queryTokens[index].type === "keyword") return false;
 
         try {
             const icptp = this.getIncompleteTriple(queryTokens, index);
             this.getACQueryTripleTokens(icptp.entities)
-        }catch(error){
+        } catch(error) {
             return false;
         }
-
+        
         return true;
     },
+    
     get_: function(yasqe, token) {
-
         // console.log(yasqe.getDoc().getCursor().line)
         // console.log(yasqe.getDoc().getCursor().ch)
 
@@ -84,31 +91,19 @@ export const CSCompleter = {
         return Promise.resolve(this.provideSuggestions(rawUrl, autocompletionQueryString, currentString));
     },
 
-    // AUTOCOMPLETION DISPLAY 
+    // RESULT DISPLAY 
 
     postprocessHints: function (_yasqe, hints) {
 
         const line = _yasqe.getDoc().getCursor().line;
         const ch  = _yasqe.getDoc().getCursor().ch;
         
-        const removeProvenanceDisplay = function(e){
-            Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
-                node.remove();
-            }); 
-        };
-
-        var x = new MutationObserver(function (e) {
-            const hints = document.getElementsByClassName("CodeMirror-hint");
-            if (hints.length === 0) removeProvenanceDisplay(null);
-        });
-
-        x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
-
         return hints.map(hint => {
-
-            const colorHash = new ColorHash();
-        
             hint.render = function(el, self, data){
+
+                // console.log("el", el)
+                // console.log("self", self)
+                // console.log("data", data)
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
                 const current = _yasqe.getTokenAt({line: line, ch: ch});
@@ -116,7 +111,7 @@ export const CSCompleter = {
                 data.to = {line: line, ch: Math.min(self.to.ch, ch)};
 
                 const suggestionObject = data.displayText;
-                const value = suggestionObject.value;
+                const binding = suggestionObject.value;
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -128,82 +123,38 @@ export const CSCompleter = {
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
                 const suggestionDiv = document.createElement("div");
-                suggestionDiv.className = "suggestion-div";
 
                 const suggestionValue = document.createElement("span");
-                suggestionValue.className = "suggestion-value"
-                suggestionValue.cssFloat = ""
-                suggestionValue.textContent = value || "";
+                suggestionValue.textContent = binding || "";
 
                 const suggestionScore = document.createElement("span");
-                suggestionScore.className = "suggestion-score"
-                suggestionScore.textContent = "Estimated cardinality : " + (score || "");
-                suggestionScore.style.cssFloat = "";
-
-                const suggestionWalks = document.createElement("span");
-                suggestionWalks.className = "suggestion-walks"
-                suggestionWalks.textContent = "Random walks : " + (walks || "");
-                suggestionWalks.style.cssFloat = "";
-
-                const suggestionProvenance = document.createElement("span");
-                suggestionProvenance.className = "suggestion-provenance"
-                suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
-                suggestionProvenance.style.cssFloat = "";
-
-                const sourceMarkerSection = document.createElement("section");
-                sourceMarkerSection.className = "source-marker-section";
-                for(const prov of finalProvenances){
-                    const sourceMarker = document.createElement("div");
-                    sourceMarker.className = "source-marker";
-                    sourceMarker.style.backgroundColor = prov.hex;
-                    sourceMarkerSection.appendChild(sourceMarker);
-                    sourceMarker.title = prov.source;
-                }
-
-                const suggestionProvenanceDetail = document.createElement("ul");
-                suggestionProvenanceDetail.className = "suggestion-provenance-detail";
-                finalProvenances.forEach(p => {
-                    const li = document.createElement("li");
-                    li.innerHTML = p.source;
-                    suggestionProvenanceDetail.appendChild(li);
-                });
-
-                const suggestionDetail = document.createElement("div");
-                suggestionDetail.className = "suggestion-detail CodeMirror-hints";
-
-                suggestionDetail.appendChild(suggestionScore);
-                suggestionDetail.appendChild(suggestionWalks);
-                suggestionDetail.appendChild(suggestionProvenance);
-                suggestionDetail.appendChild(suggestionProvenanceDetail);
+                suggestionScore.textContent = "  " + (score || "");
+                // This added space feels out of place, but it works. Used to prevent texts from suggestion and proba being directly next to each other.
+                suggestionScore.style.cssFloat = "right";
+                suggestionScore.style.color = "";
 
                 suggestionDiv.appendChild(suggestionValue);
-                suggestionDiv.appendChild(sourceMarkerSection);
+                suggestionDiv.appendChild(suggestionScore);
                 
                 el.appendChild(suggestionDiv);
 
-                const displayProvenanceDetail = function(e){
-                    removeProvenanceDisplay(e);
-        
-                    const yasguiElement = document.getElementsByClassName("yasgui").item(0);
+                suggestionDiv.onmouseover = function(e){
+                    // console.log(e);
+                    const display = document.createElement("div");
+                    display.className = "provenance";
+                    display.innerHTML = finalProvenances;
 
-                    const dim = el.getBoundingClientRect();
-        
-                    suggestionDetail.style.left = (dim.x + dim.width) + "px";
-                    suggestionDetail.style.top = (dim.top + window.scrollY) + "px";
-
-                    suggestionDetail.style.width = dim.width;
-                    suggestionDetail.style.height = dim.bottom - dim.top;
-        
-                    yasguiElement.appendChild(suggestionDetail);
+                    el.appendChild(display);
                 }
 
-                suggestionDiv.onmouseover = displayProvenanceDetail;
+                suggestionDiv.onmouseout = function(e){
+                    Array.prototype.forEach.call(document.getElementsByClassName("provenance"), function(node) {
+                        el.removeChild(node);
+                    });
 
-                // el.onclick = removeProvenanceDisplay;
+                }
 
-                // suggestionDiv.onmouseleave = removeProvenanceDisplay(e);
-
-                data.text = value;
+                data.text = binding;
             }
             return hint
         });
@@ -212,8 +163,7 @@ export const CSCompleter = {
 
     // PROVIDING SUGGESTION DATA 
 
-    provideSuggestions: async function(url, autocompletionQueryString, currentString){
-
+    provideSuggestions: async function(url, autocompletionQueryString, currentString) {
         const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
@@ -242,12 +192,11 @@ export const CSCompleter = {
                     value: this.typedStringify(suggestion.value, suggestion.type), 
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
-                    walks: suggestion.nbWalks,
                     suggestionVariableProvenances: suggestion.suggestionVariableProvenances}
                 }
             ) 
             // Higher up
-            .sort((a, b) => b.score - a.score) 
+            .sort((a, b) => a.score - b.score) 
     },
 
     formatBindings: function(bindings){
@@ -318,8 +267,8 @@ export const CSCompleter = {
     },
 
     aggregate: function(suggestionGroups, nbResultsQuery){
-        
-        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thank
+        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thanks
+
         const aggregated = [];
 
         for(const [key, val] of Object.entries(suggestionGroups)){
@@ -360,7 +309,6 @@ export const CSCompleter = {
                     this.cache[query] = {bindings: bindings};  
 
                 console.log(`Finished query with ${bindings.length} results`);
-                console.log(bindings);
 
             }
 
@@ -368,8 +316,8 @@ export const CSCompleter = {
             return this.cache[query].bindings;
 
         } catch (error) {
-
-            throw new Error("Query with cache failed for the following reason:", error);
+            // console.log(error)
+            throw new Error("Query with cache failed for the following reason:", )
         }
 
     },
@@ -404,7 +352,8 @@ export const CSCompleter = {
 
             return bindings
         } catch (error) {
-            throw new Error("Query failed : ", error)
+            // console.log(error)
+            throw new Error("Query failed")
         }
     },
 
@@ -1012,6 +961,7 @@ export const CSCompleter = {
 
         tokenArray = tokenArray.filter(tkn => tkn.type != "ws" || tkn.isCurrentToken);
 
+        if (tokenArray.length > 0) return tokenArray; // could be empty, so normal behavior
         while(tokenArray[0].string.toLowerCase() !== "select") tokenArray.shift(); // Remove everything until the first bracket (after the WHERE)
 
         return tokenArray;
@@ -1290,7 +1240,7 @@ export const CSCompleter = {
         return (line1 === line2 && ch1 < ch2) || line1 < line2;
     },
 
-    isPosAfterToken(line, ch, token){
+    isPosAfterToken: function(line, ch, token){
         return this.isAfter(line, ch, token.line || line, token.end)
     },
     
@@ -1302,7 +1252,7 @@ export const CSCompleter = {
         return this.isSamePosition(line, ch, token.line || line, token.start)
     },
 
-    isPosJustAfterToken(line, ch, token){
+    isPosJustAfterToken: function (line, ch, token){
         return this.isSamePosition(line, ch, token.line || line, token.end)
     },
 
