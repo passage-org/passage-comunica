@@ -1,0 +1,59 @@
+
+/*
+  Yasqe is based on codemirror for its editor. Therefore,
+  we simply need to modify the style of cm.
+*/
+
+.CodeMirror {
+    background-color: var(--background-color) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.CodeMirror-gutters {
+    background-color: var(--background-color) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.CodeMirror-cursor {
+  border-left: 1px solid var(--text-color) !important;
+}
+
+.cm-keyword { /* SELECT, GROUP, BY … */
+    color: var(--aurora-5) !important;
+}
+
+.cm-variable-3 { /* <http://…syntax_ns#> */
+    color: var(--aurora-4) !important;
+}
+
+.cm-string-2 { /* rdf:label */
+    color: var(--aurora-2) !important;
+}
+
+.cm-atom { /* ?s ?p ?o */
+    color: var(--frost-4) !important;
+}
+
+.cm-punc { /* (*) ( a */ 
+    color: var(--text-color) !important;
+}
+
+.cm-error { /* mistake */
+    /* nothing, we keep it red */
+}
+
+.cm-comment { /* # this is a comment */
+    color: var(--aurora-2) !important;
+}
+
+.cm-number { /* 42 */
+    color: var(--frost-1) !important;
+}
+
+.cm-string { /* "this is a string" */
+    color: var(--aurora-1) !important;
+}
+
+.cm-overlay { /* text highlighter because cursor is on */
+    background-color: var(--header-background-color) !important;
+}
