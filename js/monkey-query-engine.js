@@ -87,7 +87,7 @@ export class MonkeyQueryEngine {
 
             // TODO conditionally, when workers are not enabled, execute the query old-school with
             //      possible slows down when the query is big to optimize.
-            this.worker = new Worker("/js/workers/task-execute-query.js", { type: "module" });
+            this.worker = new Worker(new URL("/js/workers/task-execute-query.js", import.meta.url), { type: "module" });
             this.worker.postMessage(new MessageStart(query, requestConfig, shape));
 
             this.worker.onmessage = (event) => {

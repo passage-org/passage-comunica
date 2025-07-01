@@ -3,18 +3,16 @@
   <head>
     <meta charset="utf-8">
     <title>Passage</title>
-    <link href="./node_modules/@triply/yasgui/build/yasgui.min.css" rel="stylesheet" type="text/css" />
-    <link href="./css/style.css" rel="stylesheet" />
-    <link href="./css/physical-plan-style.css" rel="stylesheet" />
-    <link href="./css/editor.css" rel="stylesheet" />
-    <script type="module" src="./passage-comunica-engine.js"></script><!-- generated -->
+    <!-- <script type="module" src="./passage-comunica-engine.js"></script>--> <!-- generated -->
+    <script type="module" crossorigin src="/assets/index-0yesZPXg.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DGfiRWHa.css">
   </head>
   
   <body>
     <div class="global_container">
       <div class="header">
         <ul class='navigation-bar'>
-          <li><button class="logo"><img src="./res/lettrine_P.svg" title="passage" alt="passage" width="40px"/></button></li>
+          <li><button class="logo"><img src="/assets/lettrine_P-DubIQx5N.svg" title="passage" alt="passage" width="40px"/></button></li>
           <li class="dropdown">
             <button class="header_button" title="examples"><span class='underlined'>Examples</span></button>
             <ul class="dropdown_content">
@@ -81,63 +79,6 @@
       </footer>
     </div>
     
-    <script type="module">
-      import Yasgui from '@triply/yasgui';
-      import {OperatorsChoser} from './js/views/operators-choser.js';
-      import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
-      // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
-      import {CSCompleter} from './js/autocompleters/context-sensitive-completer.js';
-      import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
-      import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
-      import {YasguiConfig} from "./js/yasgui-config.js";
-      import {MonkeyQueryEngine} from './js/monkey-query-engine.js';
-      import {QueriesDialog} from './js/views/queries-dialog.js';
-      import {WDBenchQueries} from './queries/wdbench-queries.js';
-      import {FedShopQueries} from './queries/fedshop-queries.js';
-      import {WikidataQueries} from './queries/wikidata-queries.js';
-
-      // registering of plugins (must be done before Yasgui() ofc).
-      Yasqe.forkAutocompleter('variables', KeywordsCompleter);
-      // Yasqe.forkAutocompleter('variables', TPBasedCompleter);
-      Yasqe.forkAutocompleter('variables', CSCompleter);
-      Yasqe.defaults.autocompleters = [
-          'keywords-completer', 
-          // 'tp-based-completer', 
-          'context-sensitive-completer', 
-          'variables'
-      ];
-      Yasr.registerPlugin("Log", ComunicaConsolePlugin);
-      Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
-      
-      const yasgui = new Yasgui(document.getElementById("yasgui"), YasguiConfig);
-      const yasqe = yasgui.getTab().yasqe;
-      const yasr  = yasgui.getTab().yasr;
-
-      // we change the behavior of the execute button to execute with passage x comunica
-      const shaper = new OperatorsChoser(document.getElementsByClassName("tabMenu")[0]);
-      const engine = new MonkeyQueryEngine(yasqe, yasr, shaper);
-      
-      new QueriesDialog(
-          document.getElementById("header_wikidata"),
-          document.getElementById("wikidata_dialog"),
-          WikidataQueries,
-          yasqe);
-      
-      new QueriesDialog(
-          document.getElementById("header_wdbench"),
-          document.getElementById("wdbench_dialog"),
-          WDBenchQueries,
-          yasqe);
-      
-      new QueriesDialog(
-          document.getElementById("header_fedshop"),
-          document.getElementById("fedshop_dialog"),
-          FedShopQueries,
-      yasqe);
-
-
-      
-    </script>
   </body>
 
 </html>
