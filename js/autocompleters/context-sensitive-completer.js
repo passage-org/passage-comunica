@@ -84,9 +84,10 @@ export const CSCompleter = {
         console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
         const url = yasqe.config.requestConfig().endpoint;
-        // we assume some kind of endpoint url such as <protocol>://<authority>/…/<dataset-name>/<passage>
-        // so the dataset becomes suffixed by -raw/raw
-        const rawUrl = url.replace(/\/([^\/]+)\/(passage)$/, "/$1-raw/raw");
+        // we assume some kind of endpoint url such as:
+        // <protocol>://<authority>/…/<dataset-name>/<passage|sparql>
+        // so the dataset becomes suffixed by /raw
+        const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)$/, "/$1/raw");
 
         return Promise.resolve(this.provideSuggestions(rawUrl, autocompletionQueryString, currentString));
     },
