@@ -212,25 +212,62 @@ button.fold-unfold {
 ul.carousel-container {
     overflow-x: scroll;
     scroll-snap-type: x mandatory;
-    width: 50vw;
-    height: 300px;
-    padding: 20px;
+    width: 60vw;
+    height: 100%;
+    max-height: 500px;
     display: flex;
     gap: 2vw;
 }
 
 li.carousel-element {
-    /* max-width: 300px;*/ /* TODO */
+    max-width: 300px;
     scroll-snap-align: center;
     list-style-type: none;
     background-color: var(--header-background-color);
     border: 1px solid var(--border-color);
-    padding: 20px;
+    padding: 10px;
     
     flex: 0 0 30%;
     scroll-snap-align: center;
 }
 
-li.carousel-targeted { /* slightly special */
+li.carousel-element > div.card-container {
+    display: flex;
+    height: 100%;
+    width : 100%;
+    flex-direction: column;
+}
+
+li.carousel-element >*> pre.card-query {
+    overflow: auto;
+    border: 1px solid var(--border-color);
+}
+
+li.carousel-element >*>*> div.card-date {
+    background-color: var(--border-color);
+    text-align: center;
+    margin-top: auto; /* so it's pushed at the bottom */
+    color: var(--frost-4);
+}
+
+li.carousel-element >*>*> pre.card-error {
+    background-color : var(--border-color);
+    overflow: auto;
+    color: var(--aurora-1);
+    margin: 0;
+    margin-bottom: 10px;
+}
+
+li.carousel-element >*>*> pre.card-stats {
+    background-color : var(--border-color);
+    overflow: auto;
+    color: var(--text-color);
+}
+
+li.carousel-element > * > div.card-metadata {
+    margin-top: auto; /* so it's pushed at the bottom */
+}
+
+li.carousel-targeted >*> pre { /* slightly special */
     background-color: var(--aurora-5);
 }
