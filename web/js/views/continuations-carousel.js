@@ -58,11 +58,39 @@ export class ContinuationsCarousel {
     /// time, etc.
     createCard(service) {
         const card = document.createElement("li");
-        
         card.classList.add("carousel-element");
-        const pre = document.createElement("pre");
-        pre.textContent = service.metadata();
-        card.append(pre);
+
+        const container = document.createElement("div");
+        container.classList.add("card-container");
+        
+        const query = document.createElement("pre");
+        query.classList.add("card-query");
+        query.textContent = service.query();
+
+        const metadata = document.createElement("div");
+        metadata.classList.add("card-metadata");
+        
+        const stats = document.createElement("pre");
+        stats.classList.add("card-stats");
+        stats.textContent = service.stats();
+        
+        const error = document.createElement("pre");
+        error.classList.add("card-error");
+        error.textContent = service.error(); 
+            
+        const date = document.createElement("div");
+        date.classList.add("card-date");
+        date.innerHTML = "[" + service.formatedDate() + "]";
+        
+        container.append(query);
+        
+        metadata.append(stats);
+        metadata.append(error);
+        metadata.append(date);
+
+        container.append(metadata);
+        
+        card.append(container);
 
         return card;
     }

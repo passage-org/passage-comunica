@@ -32,6 +32,36 @@ export class PhysicalNode {
         return this.messages.at(0).date;
     }
 
+    formatedDate() {
+        return formatTime(this.date());
+    }
+
+    query() {
+        return this.messages && this.messages.filter((message) => message.m && message.m.query).at(0).m.query;
+    }
+
+    error() {
+        return (this.status() === "error" &&
+                this.messages.filter((message) => message.m.status === "error").at(0).m.message) ||
+            "";
+    }
+
+    stats() {
+        if (this.logical !== "service") { return; }
+        const tooltip = [];
+        const cardinality = this.messages.reduce((acc,curr) =>
+            acc + (curr.m && curr.m.cardinalityReal || 0), 0);
+        const timeElapsed = this.messages.reduce((acc,curr) =>
+            acc + (curr.m && curr.m.timeLife || 0), 0);
+        const timeFirstResult = this.messages.reduce((acc,curr) =>
+            acc + (curr.m && curr.m.timeFirstResult || 0), 0);
+        
+        this.status() !== "pending" && tooltip.push(`number of results: ${cardinality}`);
+        this.status() !== "pending" && tooltip.push(`execution time: ${formatDuration(timeElapsed)}`);
+        timeFirstResult > 0 && tooltip.push(`time for first result: ${formatDuration(timeFirstResult)}`);
+        return tooltip.join("\n");
+    }
+
     metadata() {
         switch (this.logical) {
         case "service":
