@@ -6,7 +6,8 @@
     "type": "module",
     "scripts": {
         "build" : "yarn install && vite build --base=/passage-comunica/ && cp -r js dist/ && cp passage-comunica-engine.js ./dist/ && cp favicon.ico dist/",
-        "server" : "vite preview --base=/passage-comunica/"
+        "server" : "vite preview --base=/passage-comunica/",
+        "server-dev" : "vite"
     },
     "author": "chat-wane <grumpy.chat.wane@gmail.com>",
     "license": "Apache-2.0",
