@@ -56,7 +56,6 @@ export const CSCompleter = {
 
         this.yasqe = yasqe;
 
-        const requestConfig = this.yasqe.config;
 
         // console.log("requestConfig", requestConfig)
 
@@ -78,14 +77,17 @@ export const CSCompleter = {
         console.log("Autocompletion Query", autocompletionQueryString);
         console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
-        const url = yasqe.config.requestConfig().endpoint;
+        const requestConfig = yasqe.config.requestConfig();
+
+        const url = requestConfig.endpoint;
         // we assume some kind of endpoint url such as:
         // <protocol>://<authority>/…/<dataset-name>/<passage|sparql>
         // so the dataset becomes suffixed by /raw
         const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)$/, "/$1/raw");
 
+        const args = requestConfig.args;
 
-        return Promise.resolve(this.provideSuggestions(rawUrl, autocompletionQueryString, currentString));
+        return Promise.resolve(this.provideSuggestions(rawUrl, args, autocompletionQueryString, currentString));
     },
 
     // AUTOCOMPLETION DISPLAY 
@@ -216,9 +218,9 @@ export const CSCompleter = {
 
     // PROVIDING SUGGESTION DATA 
 
-    provideSuggestions: async function(url, autocompletionQueryString, currentString){
+    provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
 
-        const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
+        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
     },
@@ -347,7 +349,7 @@ export const CSCompleter = {
 
     // AUTOCOMPLETION QUERY EXECUTION
 
-    queryWithCache: async function(url, query, currentString) {
+    queryWithCache: async function(url, args, query, currentString) {
 
         // console.log("currentString", currentString)
 
@@ -355,7 +357,7 @@ export const CSCompleter = {
 
             if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
                 // execute AC query 
-                const bindings = await Promise.resolve(this.query(url, query, currentString));
+                const bindings = await Promise.resolve(this.query(url, args, query));
 
                 // add to the cache if it already exists, otherwise create a new one
                 if(this.cache[query])
@@ -378,13 +380,14 @@ export const CSCompleter = {
 
     },
 
-    query: async function(url, query, currentString) {
+    query: async function(url, args, query) {
         try {
+            const headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            const budget = args.find(e => e.name === "budget");
+            if (budget) headers["budget"] = budget.value;
             const response = await fetch(url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
+                headers: headers,
                 body: new URLSearchParams({ "query" : query }),
             });
             
