@@ -1,7 +1,10 @@
 import Parser from 'sparqljs';
+import ColorHash from 'color-hash';
 
 /// Queries the endpoint to retrieve a few example of values
-/// from the current query being typed.
+/// from the current triple pattern being type. This is
+/// context-insensitive since it does not take into account the
+/// other operations of the SPARQL query.
 export const CSCompleter = {
     name: "context-sensitive-completer",
     autoShow: false,
@@ -11,11 +14,10 @@ export const CSCompleter = {
     q_sugg_var : "?suggestion_variable",
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
-
+    colorHash: new ColorHash(), 
     yasqe: null,
+    test: null,
     suggestionsBuffer: null,
-    
-    // interface methods 
     get: function(yasqe, token) {
         if(this.suggestionsBuffer) {
             let ret = this.suggestionsBuffer;
@@ -25,50 +27,42 @@ export const CSCompleter = {
 
         try {
             return this.get_(yasqe, token);
-        } catch(error) {
+        }catch(error){
             return [];
         }
     },
-    
     isValidCompletionPosition: function (yasqe) {
-        // Not very efficient because every key pressed procs this
-        // try {
-        //     this.suggestionsBuffer = this.get_(yasqe, null);
-        // }catch(error){
-        //     return false;
-        // }
-        this.yasqe = this.yasqe || yasqe;
+
+        if (!this.yasqe) this.yasqe = yasqe;
 
         const queryTokens = this.getQueryTokens();
         const index = queryTokens.findIndex(tkn => tkn.isCurrentToken);
-        
-        // console.log(queryTokens)
 
         if (queryTokens[index] && queryTokens[index].type === "keyword") return false;
 
         try {
             const icptp = this.getIncompleteTriple(queryTokens, index);
             this.getACQueryTripleTokens(icptp.entities)
-        } catch(error) {
+        }catch(error){
             return false;
         }
-        
+
         return true;
     },
-    
     get_: function(yasqe, token) {
+
         // console.log(yasqe.getDoc().getCursor().line)
         // console.log(yasqe.getDoc().getCursor().ch)
 
         this.yasqe = yasqe;
 
-        const requestConfig = this.yasqe.config;
 
         // console.log("requestConfig", requestConfig)
 
         let autocompletionQueryString, currentString;
+
         try {
-            let {acqs, cs} = this.getAutocompletionQuery();
+            let {acqs, cs} = this.getAutocompletionQuery();            
             autocompletionQueryString = acqs;
             currentString = cs;
         }catch(error){
@@ -83,28 +77,44 @@ export const CSCompleter = {
         console.log("Autocompletion Query", autocompletionQueryString);
         console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
-        const url = yasqe.config.requestConfig().endpoint;
+        const requestConfig = yasqe.config.requestConfig();
+
+        const url = requestConfig.endpoint;
         // we assume some kind of endpoint url such as:
         // <protocol>://<authority>/…/<dataset-name>/<passage|sparql>
         // so the dataset becomes suffixed by /raw
         const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)$/, "/$1/raw");
 
-        return Promise.resolve(this.provideSuggestions(rawUrl, autocompletionQueryString, currentString));
+        const args = requestConfig.args;
+
+        return Promise.resolve(this.provideSuggestions(rawUrl, args, autocompletionQueryString, currentString));
     },
 
-    // RESULT DISPLAY 
+    // AUTOCOMPLETION DISPLAY 
 
     postprocessHints: function (_yasqe, hints) {
 
         const line = _yasqe.getDoc().getCursor().line;
         const ch  = _yasqe.getDoc().getCursor().ch;
         
-        return hints.map(hint => {
-            hint.render = function(el, self, data){
+        const removeProvenanceDisplay = function(e){
+            Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
+                node.remove();
+            }); 
+        };
 
-                // console.log("el", el)
-                // console.log("self", self)
-                // console.log("data", data)
+        var x = new MutationObserver(function (e) {
+            const hints = document.getElementsByClassName("CodeMirror-hint");
+            if (hints.length === 0) removeProvenanceDisplay(null);
+        });
+
+        x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
+
+        return hints.map(hint => {
+
+            const colorHash = new ColorHash();
+        
+            hint.render = function(el, self, data){
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
                 const current = _yasqe.getTokenAt({line: line, ch: ch});
@@ -112,7 +122,7 @@ export const CSCompleter = {
                 data.to = {line: line, ch: Math.min(self.to.ch, ch)};
 
                 const suggestionObject = data.displayText;
-                const binding = suggestionObject.value;
+                const value = suggestionObject.value;
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -124,38 +134,82 @@ export const CSCompleter = {
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
                 const suggestionDiv = document.createElement("div");
+                suggestionDiv.className = "suggestion-div";
 
                 const suggestionValue = document.createElement("span");
-                suggestionValue.textContent = binding || "";
+                suggestionValue.className = "suggestion-value"
+                suggestionValue.cssFloat = ""
+                suggestionValue.textContent = value || "";
 
                 const suggestionScore = document.createElement("span");
-                suggestionScore.textContent = "  " + (score || "");
-                // This added space feels out of place, but it works. Used to prevent texts from suggestion and proba being directly next to each other.
-                suggestionScore.style.cssFloat = "right";
-                suggestionScore.style.color = "";
+                suggestionScore.className = "suggestion-score"
+                suggestionScore.textContent = "Estimated cardinality : " + (score || "");
+                suggestionScore.style.cssFloat = "";
+
+                const suggestionWalks = document.createElement("span");
+                suggestionWalks.className = "suggestion-walks"
+                suggestionWalks.textContent = "Random walks : " + (walks || "");
+                suggestionWalks.style.cssFloat = "";
+
+                const suggestionProvenance = document.createElement("span");
+                suggestionProvenance.className = "suggestion-provenance"
+                suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
+                suggestionProvenance.style.cssFloat = "";
+
+                const sourceMarkerSection = document.createElement("section");
+                sourceMarkerSection.className = "source-marker-section";
+                for(const prov of finalProvenances){
+                    const sourceMarker = document.createElement("div");
+                    sourceMarker.className = "source-marker";
+                    sourceMarker.style.backgroundColor = prov.hex;
+                    sourceMarkerSection.appendChild(sourceMarker);
+                    sourceMarker.title = prov.source;
+                }
+
+                const suggestionProvenanceDetail = document.createElement("ul");
+                suggestionProvenanceDetail.className = "suggestion-provenance-detail";
+                finalProvenances.forEach(p => {
+                    const li = document.createElement("li");
+                    li.innerHTML = p.source;
+                    suggestionProvenanceDetail.appendChild(li);
+                });
+
+                const suggestionDetail = document.createElement("div");
+                suggestionDetail.className = "suggestion-detail CodeMirror-hints";
+
+                suggestionDetail.appendChild(suggestionScore);
+                suggestionDetail.appendChild(suggestionWalks);
+                suggestionDetail.appendChild(suggestionProvenance);
+                suggestionDetail.appendChild(suggestionProvenanceDetail);
 
                 suggestionDiv.appendChild(suggestionValue);
-                suggestionDiv.appendChild(suggestionScore);
+                suggestionDiv.appendChild(sourceMarkerSection);
                 
                 el.appendChild(suggestionDiv);
 
-                suggestionDiv.onmouseover = function(e){
-                    // console.log(e);
-                    const display = document.createElement("div");
-                    display.className = "provenance";
-                    display.innerHTML = finalProvenances;
+                const displayProvenanceDetail = function(e){
+                    removeProvenanceDisplay(e);
+        
+                    const yasguiElement = document.getElementsByClassName("yasgui").item(0);
 
-                    el.appendChild(display);
+                    const dim = el.getBoundingClientRect();
+        
+                    suggestionDetail.style.left = (dim.x + dim.width) + "px";
+                    suggestionDetail.style.top = (dim.top + window.scrollY) + "px";
+
+                    suggestionDetail.style.width = dim.width;
+                    suggestionDetail.style.height = dim.bottom - dim.top;
+        
+                    yasguiElement.appendChild(suggestionDetail);
                 }
 
-                suggestionDiv.onmouseout = function(e){
-                    Array.prototype.forEach.call(document.getElementsByClassName("provenance"), function(node) {
-                        el.removeChild(node);
-                    });
+                suggestionDiv.onmouseover = displayProvenanceDetail;
 
-                }
+                // el.onclick = removeProvenanceDisplay;
 
-                data.text = binding;
+                // suggestionDiv.onmouseleave = removeProvenanceDisplay(e);
+
+                data.text = value;
             }
             return hint
         });
@@ -164,8 +218,9 @@ export const CSCompleter = {
 
     // PROVIDING SUGGESTION DATA 
 
-    provideSuggestions: async function(url, autocompletionQueryString, currentString) {
-        const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
+    provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
+
+        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
     },
@@ -193,11 +248,12 @@ export const CSCompleter = {
                     value: this.typedStringify(suggestion.value, suggestion.type), 
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
+                    walks: suggestion.nbWalks,
                     suggestionVariableProvenances: suggestion.suggestionVariableProvenances}
                 }
             ) 
             // Higher up
-            .sort((a, b) => a.score - b.score) 
+            .sort((a, b) => b.score - a.score) 
     },
 
     formatBindings: function(bindings){
@@ -268,8 +324,8 @@ export const CSCompleter = {
     },
 
     aggregate: function(suggestionGroups, nbResultsQuery){
-        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thanks
-
+        
+        // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thank
         const aggregated = [];
 
         for(const [key, val] of Object.entries(suggestionGroups)){
@@ -293,7 +349,7 @@ export const CSCompleter = {
 
     // AUTOCOMPLETION QUERY EXECUTION
 
-    queryWithCache: async function(url, query, currentString) {
+    queryWithCache: async function(url, args, query, currentString) {
 
         // console.log("currentString", currentString)
 
@@ -301,7 +357,7 @@ export const CSCompleter = {
 
             if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
                 // execute AC query 
-                const bindings = await Promise.resolve(this.query(url, query, currentString));
+                const bindings = await Promise.resolve(this.query(url, args, query));
 
                 // add to the cache if it already exists, otherwise create a new one
                 if(this.cache[query])
@@ -310,6 +366,7 @@ export const CSCompleter = {
                     this.cache[query] = {bindings: bindings};  
 
                 console.log(`Finished query with ${bindings.length} results`);
+                console.log(bindings);
 
             }
 
@@ -317,19 +374,20 @@ export const CSCompleter = {
             return this.cache[query].bindings;
 
         } catch (error) {
-            // console.log(error)
-            throw new Error("Query with cache failed for the following reason:", )
+
+            throw new Error("Query with cache failed for the following reason:", error);
         }
 
     },
 
-    query: async function(url, query, currentString) {
+    query: async function(url, args, query) {
         try {
+            const headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            const budget = args.find(e => e.name === "budget");
+            if (budget) headers["budget"] = budget.value;
             const response = await fetch(url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
+                headers: headers,
                 body: new URLSearchParams({ "query" : query }),
             });
             
@@ -353,8 +411,7 @@ export const CSCompleter = {
 
             return bindings
         } catch (error) {
-            // console.log(error)
-            throw new Error("Query failed")
+            throw new Error("Query failed : ", error)
         }
     },
 
@@ -417,6 +474,7 @@ export const CSCompleter = {
         var Par = Parser.Parser;
         var parser = new Par();
 
+
         try{
             var parsedQuery = parser.parse(string);
         }catch(error){
@@ -429,6 +487,12 @@ export const CSCompleter = {
                 throw new Error("Could not parse the autcompletion query.")
             }
         }
+
+        console.log(parsedQuery)
+
+        this.removeModifiers(parsedQuery);
+
+        console.log(parsedQuery);
 
         // Find triples relevant to the context
 
@@ -962,10 +1026,29 @@ export const CSCompleter = {
 
         tokenArray = tokenArray.filter(tkn => tkn.type != "ws" || tkn.isCurrentToken);
 
-        if (tokenArray.length > 0) return tokenArray; // could be empty, so normal behavior
         while(tokenArray[0].string.toLowerCase() !== "select") tokenArray.shift(); // Remove everything until the first bracket (after the WHERE)
 
         return tokenArray;
+    },
+
+    removeModifiers: function(parsedQueryTree){
+        switch(parsedQueryTree.type){
+            case "query":
+                parsedQueryTree.distinct = false;
+                parsedQueryTree.offset = 0;
+                delete parsedQueryTree.limit;
+                delete parsedQueryTree.group;
+                delete parsedQueryTree.order;
+            case "query":
+            case "union":
+            case "group":
+            case "graph":
+            case "optional":
+            case "bgp":
+            case "filter":
+            default :
+                {};
+        }
     },
 
     trim: function(parsedQueryTree){
@@ -1241,7 +1324,7 @@ export const CSCompleter = {
         return (line1 === line2 && ch1 < ch2) || line1 < line2;
     },
 
-    isPosAfterToken: function(line, ch, token){
+    isPosAfterToken(line, ch, token){
         return this.isAfter(line, ch, token.line || line, token.end)
     },
     
@@ -1253,7 +1336,7 @@ export const CSCompleter = {
         return this.isSamePosition(line, ch, token.line || line, token.start)
     },
 
-    isPosJustAfterToken: function (line, ch, token){
+    isPosJustAfterToken(line, ch, token){
         return this.isSamePosition(line, ch, token.line || line, token.end)
     },
 
@@ -1333,3 +1416,18 @@ SELECT ?s ?l ?probabilityOfRetrievingRestOfMapping WHERE {
     ?s owl:sameAs ?sa
   }
 } */
+
+
+
+//   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+//   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+//   PREFIX owl: <http://www.w3.org/2002/07/owl#>
+//   PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
+  
+//   SELECT * WHERE {
+//     ?s bsbm:productFeature <http://www.ratingsite18.fr/ProductFeature17447>.
+//     ?s rdf:type ?o.
+//     ?s owl:sameAs ?sa.
+//     ?z owl:sameAs ?sa.
+//     ?z 
+//   }
