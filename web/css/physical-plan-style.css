@@ -213,7 +213,7 @@ ul.carousel-container {
     overflow-x: scroll;
     scroll-snap-type: x mandatory;
     width: 60vw;
-    height: 100%;
+    height: 100vw;
     max-height: 500px;
     display: flex;
     gap: 2vw;
