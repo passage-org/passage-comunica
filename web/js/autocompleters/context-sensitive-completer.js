@@ -44,6 +44,7 @@ export const CSCompleter = {
             const icptp = this.getIncompleteTriple(queryTokens, index);
             this.getACQueryTripleTokens(icptp.entities)
         }catch(error){
+            // console.log(error)
             return false;
         }
 
@@ -233,7 +234,8 @@ export const CSCompleter = {
         const prefixes = this.yasqe.getPrefixesFromQuery();
         const filterString = currentString.toLowerCase();
 
-        const successfulWalks = acqResults.filter(mapping => mapping[this.proba_var].value > 0);
+        // No empty mappings, no mapping with probability of 0!
+        const successfulWalks = acqResults.filter(mapping => Object.keys(mapping).length !== 0).filter(mapping => mapping[this.proba_var].value > 0);
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
@@ -382,15 +384,20 @@ export const CSCompleter = {
 
     query: async function(url, args, query) {
         try {
-            const headers = {"Content-Type": "application/x-www-form-urlencoded"}
             const budget = args.find(e => e.name === "budget");
-            if (budget) headers["budget"] = budget.value;
+
+            const urlsp = new URLSearchParams({ "query" : query })
+
+            if(budget) urlsp.set("budget", budget.value);
+
             const response = await fetch(url, {
                 method: "POST",
-                headers: headers,
-                body: new URLSearchParams({ "query" : query }),
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: urlsp
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}`);
             }
@@ -617,6 +624,8 @@ export const CSCompleter = {
         let predicate = "?default_p";
         let object = "?default_o";
         let filter = "";
+
+        console.log(entities);
 
         if(entities.length === 3){
 
