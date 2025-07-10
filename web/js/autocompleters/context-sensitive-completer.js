@@ -63,7 +63,7 @@ export const CSCompleter = {
         let autocompletionQueryString, currentString;
 
         try {
-            let {acqs, cs} = this.getAutocompletionQuery();            
+            let {acqs, cs} = this.getAutocompletionQuery();
             autocompletionQueryString = acqs;
             currentString = cs;
         }catch(error){
@@ -129,7 +129,7 @@ export const CSCompleter = {
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
                       .map(source => source.split("http://").at(2)) // wanky but for now is ok
                       .filter(o => o !== undefined) // when there are no source , filter out
-                      .map(source => {console.log(source); return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
+                      .map(source => {/* console.log(source);  */return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
                       .sort((a, b) => a.hsl[0] - b.hsl[0]);
 
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
@@ -474,9 +474,10 @@ export const CSCompleter = {
         // console.log(context);
 
 
-        // Parse the query as is
+        // Parse the query as is (without the comments)
 
-        const string = this.getACQPrefixes().concat(context.map(tkn => tkn.string).join(" "));
+        const commentless = context.filter(tkn => tkn.type !== "comment");
+        const string = this.getACQPrefixes().concat(commentless.map(tkn => tkn.string).join(" "));
 
         var Par = Parser.Parser;
         var parser = new Par();
@@ -625,7 +626,7 @@ export const CSCompleter = {
         let object = "?default_o";
         let filter = "";
 
-        console.log(entities);
+        // console.log(entities);
 
         if(entities.length === 3){
 
