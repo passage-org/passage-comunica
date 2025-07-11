@@ -5,9 +5,9 @@
     <title>Passage</title>
     <link href="./node_modules/@triply/yasgui/build/yasgui.min.css" rel="stylesheet" type="text/css" />
     <link href="./css/style.css" rel="stylesheet" />
+    <link href="./css/physical-plan-style.css" rel="stylesheet" />
     <link href="./css/editor.css" rel="stylesheet" />
-    <script src="./node_modules/@triply/yasgui/build/yasgui.min.js"></script>
-    <script type="module" src="./passage-comunica-engine.js"></script><!-- generated -->
+    <!-- <script type="module" src="./passage-comunica-engine.js"></script>--> <!-- generated -->
   </head>
   
   <body>
@@ -66,12 +66,14 @@
       <dialog id="wikidata_dialog" class="examples_dialog"></dialog>
       <dialog id="wdbench_dialog" class="examples_dialog"></dialog>
       <dialog id="fedshop_dialog" class="examples_dialog"></dialog>
+
+      <dialog id="continuations_dialog" class="examples_dialog"></dialog>
       
       <div id="yasgui"></div>
-      
+
       <footer class="footer">
         <p class="text-center">
-          Ⓒ 2017–2025
+          Ⓒ 2017 – ∞
           <a href="https://sites.google.com/site/gddlina/">GDD Team</a>,
           <a href="https://www.ls2n.fr?lang=en">LS2N</a>,
           <a href="http://www.univ-nantes.fr/">University of Nantes</a>
@@ -80,13 +82,14 @@
     </div>
     
     <script type="module">
+      import Yasgui from '@triply/yasgui';
+      import {OperatorsChoser} from './js/views/operators-choser.js';
       import {KeywordsCompleter} from './js/autocompleters/keywords-completer.js';
-      import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
+      // import {TPBasedCompleter} from './js/autocompleters/tp-based-completer.js';
       import {CSCompleter} from './js/autocompleters/context-sensitive-completer.js';
-      import {CSCompleterImproved} from './js/autocompleters/context-sensitive-completer-improved.js';
       import {ComunicaConsolePlugin} from "./js/plugins/comunica-console-plugin.js";
       import {PhysicalPlanPlugin} from "./js/plugins/physical-plan-plugin.js";
-      import {YasguiConfig} from "./js/yasgui-config";
+      import {YasguiConfig} from "./js/yasgui-config.js";
       import {MonkeyQueryEngine} from './js/monkey-query-engine.js';
       import {QueriesDialog} from './js/views/queries-dialog.js';
       import {WDBenchQueries} from './queries/wdbench-queries.js';
@@ -95,15 +98,13 @@
 
       // registering of plugins (must be done before Yasgui() ofc).
       Yasqe.forkAutocompleter('variables', KeywordsCompleter);
-      Yasqe.forkAutocompleter('variables', TPBasedCompleter);
+      // Yasqe.forkAutocompleter('variables', TPBasedCompleter);
       Yasqe.forkAutocompleter('variables', CSCompleter);
-      Yasqe.forkAutocompleter('variables', CSCompleterImproved);
       Yasqe.defaults.autocompleters = [
-        'keywords-completer', 
-        // 'tp-based-completer', 
-        // 'context-sensitive-completer', 
-        'context-sensitive-completer-improved', 
-        'variables'
+          'keywords-completer', 
+          // 'tp-based-completer', 
+          'context-sensitive-completer', 
+          'variables'
       ];
       Yasr.registerPlugin("Log", ComunicaConsolePlugin);
       Yasr.registerPlugin("Plan", PhysicalPlanPlugin);
@@ -112,8 +113,9 @@
       const yasqe = yasgui.getTab().yasqe;
       const yasr  = yasgui.getTab().yasr;
 
-      // we change the behavior of the execute button to execute with passage x comunica      
-      const engine = new MonkeyQueryEngine(yasqe, yasr);
+      // we change the behavior of the execute button to execute with passage x comunica
+      const shaper = new OperatorsChoser(document.getElementsByClassName("tabMenu")[0]);
+      const engine = new MonkeyQueryEngine(yasqe, yasr, shaper);
       
       new QueriesDialog(
           document.getElementById("header_wikidata"),
@@ -131,7 +133,9 @@
           document.getElementById("header_fedshop"),
           document.getElementById("fedshop_dialog"),
           FedShopQueries,
-          yasqe);
+      yasqe);
+
+
       
     </script>
   </body>

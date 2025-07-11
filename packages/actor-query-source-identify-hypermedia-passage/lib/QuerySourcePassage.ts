@@ -94,7 +94,7 @@ export class QuerySourcePassage implements IQuerySource {
     }
 
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
-        return QuerySourcePassage.SELECTOR_SHAPE;
+        return this.context.get(new ActionContextKey("shape")) || QuerySourcePassage.SELECTOR_SHAPE;
     }
 
     public queryBindings(
@@ -114,15 +114,9 @@ export class QuerySourcePassage implements IQuerySource {
         }
 
         const bindings: BindingsStream = new TransformIterator(async() => {
-            // Prepare queries
             const operation = await operationPromise;
+            const selectQuery: string = QuerySourcePassage.toSelectQuery(context, operation, this.algebraFactory, options);
             const variables: RDF.Variable[] = Util.inScopeVariables(operation);
-            const queryString = context.get<string>(KeysInitQuery.queryString);
-            const selectQuery: string = !options?.joinBindings && queryString ?
-                queryString :
-                operation.type === Algebra.types.PROJECT ?
-                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
-                QuerySourceSparql.operationToSelectQuery(this.algebraFactory, operation, variables);
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
 
             Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
@@ -130,7 +124,7 @@ export class QuerySourcePassage implements IQuerySource {
             return this.queryBindingsRemote(operation, this.url, selectQuery, variables, context, undefVariables);
         }, { autoStart: false });
 
-        this.attachMetadata(bindings, context, operationPromise); // actually important…
+        this.attachMetadata(bindings, context, operationPromise, options); // actually important…
         
         return bindings;
     }
@@ -144,6 +138,7 @@ export class QuerySourcePassage implements IQuerySource {
         target: AsyncIterator<any>,
         context: IActionContext,
         operationPromise: Promise<Algebra.Operation>,
+        options?: IQueryBindingsOptions,
     ) : void {
         let variablesCount: MetadataVariable[] = [];
         new Promise<Algebra.Operation>(async(resolve, reject) => {
@@ -157,12 +152,7 @@ export class QuerySourcePassage implements IQuerySource {
             return resolve(operation);
         }).then((operation) => {
             // ugly, we reprocess the query that is sent.
-            const variables: RDF.Variable[] = Util.inScopeVariables(operation);
-            // const queryString = context.get<string>(KeysInitQuery.queryString);
-            const selectQuery: string =
-                operation.type === Algebra.types.PROJECT ?
-                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
-                QuerySourceSparql.operationToSelectQuery(this.algebraFactory, operation, variables);
+            const selectQuery: string = QuerySourcePassage.toSelectQuery(context, operation, this.algebraFactory, options);
 
             const metadata =  {
                 state: new MetadataValidationState(),
@@ -271,6 +261,20 @@ export class QuerySourcePassage implements IQuerySource {
     
     public toString(): string {
         return `QuerySourcePassage(${this.url})`;
+    }
+
+    static toSelectQuery(context: IActionContext,
+                         operation: Algebra.Operation,
+                         algebraFactory: Factory,
+                         options?: IQueryBindingsOptions): string {
+        const variables: RDF.Variable[] = Util.inScopeVariables(operation);
+        const queryString = context.get<string>(KeysInitQuery.queryString);
+        const selectQuery: string = !options?.joinBindings && queryString ?
+            queryString :
+            operation.type === Algebra.types.PROJECT || operation.type === Algebra.types.SLICE ?
+                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
+                QuerySourceSparql.operationToSelectQuery(algebraFactory, operation, variables);
+        return selectQuery;
     }
 
     /* ********************* METADATA RELATED FUNCTIONS ********************** */

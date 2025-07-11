@@ -1,9 +1,9 @@
-import { FragmentSelectorShape } from '@comunica/types';
-import { Algebra } from 'sparqlalgebrajs';
+import {FragmentSelectorShape} from '@comunica/types';
+import {Algebra} from 'sparqlalgebrajs';
 
 
 /**
- * Passage handle its own set of operators that is subset of SPARQL 1.1.
+ * Passage handles its own set of operators that is subset of SPARQL 1.1.
  * But it can also emulate other approaches such as TPF, and BRTPF.
  */
 export class Shapes {
@@ -80,10 +80,10 @@ export class Shapes {
                 type: 'operation',
                 operation: { operationType: 'type', type: Algebra.types.UNION },
             },
-            // { // TODO server must handle VALUES if they want to use binding-restricted
-            //     type: 'operation',
-            //     operation: { operationType: 'type', type: Algebra.types.VALUES },
-            // },
+            { // TODO server must handle VALUES if they want to use binding-restricted
+                 type: 'operation',
+                 operation: { operationType: 'type', type: Algebra.types.VALUES },
+            },
             {
                 type: 'operation',
                 operation: { operationType: 'type', type: Algebra.types.FILTER },

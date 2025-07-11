@@ -22,24 +22,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 23
 
       - name: Install Yarn
         run:  npm install -g yarn
           
-      - name: Build the engine Passage x Comunica
-        run:  yarn install 
-
-      - name: Install comunica's web page builder
-        run:  npm install -g @comunica/web-client-generator
+      - name: Build the engine Passage x Comunica and its web interface
+        run:  yarn install && yarn build:web
           
-      - name: Build the website
-        run:  comunica-web-client-generator engines/config-query-passage/config/config-default.json -s ui-settings.json -q queries
-
-      - name: Enlarge the debug output of the website
-        run:  sed -i -e 's/6.3em/80em/g' build/styles/ldf-client.css
-        
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build # output folder
+          folder: web/dist # output folder

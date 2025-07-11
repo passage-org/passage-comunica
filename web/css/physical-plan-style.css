@@ -1,0 +1,273 @@
+
+/** Style of the physical plan plugin that displays the Passage x Comunica
+ *  plan to better understand its execution behavior.
+ */
+
+li.node {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--header-background-color);
+    padding: 0;
+    margin: 0;
+    padding-left: 10px;
+    min-width: 0; /* so items are adapted to the width of screen */
+}
+
+span.node-label {
+    min-width: fit-content;
+}
+
+.node:hover {
+    background: var(--snow-storm-1); 
+    cursor: pointer;
+}
+
+ul.children {
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border-left: 1px solid var(--inversed-text-color);
+}
+
+.timestamp {
+    color: var(--frost-1);
+    font-family: monospace;
+    margin-right: 6px;
+}
+
+.event-inline {
+    display: flex;
+    margin-left: 10px;
+    min-width: 200px;
+    /* max-width: 500px;*/
+    /* width: 100%;*/
+    padding: 0;
+    /* overflow-x: scroll;*/
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.event-inline::-webkit-scrollbar {
+  display: none;
+  width: 0px;
+  background: transparent;
+}
+
+.service-box {
+    padding: 0;
+    border: 0;
+    border-top: 2px solid var(--header-background-color); 
+    border-bottom: 2px solid var(--header-background-color);
+    margin-left: 1px;
+}
+
+.service-box:hover {
+    background-color: var(--aurora-5);
+    color: var(--text-color);
+}
+
+.status-indicator {
+    display: inline-block;
+    margin-left: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: limegreen;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+
+#timeline-container {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    margin-top: 30px;
+    /* background: #f9f9f9; */
+    /* border: 1px solid #ccc; */
+}
+
+
+
+#timeline-line {
+    position: relative;
+    height: 4px;
+    background: red;
+    width: 90%;
+    margin: 0 auto;
+}
+
+.timeline-point.bumped{
+    top: 20px;
+}
+
+.arrowhead {
+    position: absolute;
+    right: 0;
+    top: -6px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid red;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+
+
+.timeline-point {
+    position: absolute;
+    top: -6px;
+    width: 16px;
+    height: 16px;
+    background-color: #0a0;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    border: 2px solid white;
+}
+
+
+
+.timeline-point.active-point {
+    background-color: #ff5722; 
+    box-shadow: 0 0 2px rgba(255, 87, 34, 0.7);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#debug-btn.processing {
+    background-color: darkred;
+    color: white;
+    position: relative;
+}
+
+#debug-btn:disabled {
+    cursor: not-allowed;  
+    opacity: 0.8;
+}
+
+ul.physical-plan-container {
+    font-size: 14px;
+    display: flex;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    min-width: 0;
+    background-color: var(--header-background-color);
+}
+
+/* li.physical-pending { color: var(--frost-2); }*/
+button.physical-pending {
+    background-color: var(--frost-2);
+    animation: pending 2s infinite;
+}
+
+@keyframes pending {
+    0% { background-color: var(--frost-1); }
+    50% { background-color: var(--frost-4); }
+    100% { background-color: var(--frost-1); }
+}
+
+/*li.physical-error { color: var(--aurora-1); }*/
+button.physical-error { background-color: var(--aurora-1); }
+
+/* li.physical-completed {color: var(--aurora-4);}*/
+button.physical-completed {background-color: var(--aurora-4);}
+
+.yasr_results:has(ul.physical-plan-container) {
+    background-color: var(--header-background-color);
+}
+
+button.fold-unfold {
+    border: 0px;
+    background-color: var(--inverted-text-color);
+    width: 16px; /* not content because + and - are not same size*/
+    height: 16px;
+}
+
+
+
+/** Carousel-related style **/
+
+ul.carousel-container {
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    width: 60vw;
+    height: 100vw;
+    max-height: 500px;
+    display: flex;
+    gap: 2vw;
+}
+
+li.carousel-element {
+    max-width: 300px;
+    scroll-snap-align: center;
+    list-style-type: none;
+    background-color: var(--header-background-color);
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    
+    flex: 0 0 30%;
+    scroll-snap-align: center;
+}
+
+li.carousel-element > div.card-container {
+    display: flex;
+    height: 100%;
+    width : 100%;
+    flex-direction: column;
+}
+
+li.carousel-element >*> pre.card-query {
+    overflow: auto;
+    border: 1px solid var(--border-color);
+}
+
+li.carousel-element >*>*> div.card-date {
+    background-color: var(--border-color);
+    text-align: center;
+    margin-top: auto; /* so it's pushed at the bottom */
+    color: var(--frost-4);
+}
+
+li.carousel-element >*>*> pre.card-error {
+    background-color : var(--border-color);
+    overflow: auto;
+    color: var(--aurora-1);
+    margin: 0;
+    margin-bottom: 10px;
+}
+
+li.carousel-element >*>*> pre.card-stats {
+    background-color : var(--border-color);
+    overflow: auto;
+    color: var(--text-color);
+}
+
+li.carousel-element > * > div.card-metadata {
+    margin-top: auto; /* so it's pushed at the bottom */
+}
+
+li.carousel-targeted >*> pre { /* slightly special */
+    background-color: var(--aurora-5);
+}

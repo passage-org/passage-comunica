@@ -8,7 +8,7 @@
 
     color-scheme: light dark; /* need this to be enabled for light dark */
     &:has(input[name="dark-light-toggle"]:checked) { color-scheme: dark; }; /* TODO toggle between 3 states */
-    &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; /* Force dark mode */ }
+    &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; } /* Force dark mode */ 
     
     --logo-color              : light-dark(var(--frost-1), var(--aurora-3));
     --background-color        : light-dark(white, var(--polar-night-1)); 
@@ -64,7 +64,7 @@
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
-    height:100%;
+    height: 100%;
     font-family: var(--base-font-family);
 }
 
@@ -107,6 +107,7 @@
 
 .dropdown:hover .dropdown_content {display: block;}
 
+.examples_dialog { z-index: 10; }
 .examples_dialog_content,
 .examples_dialog_content table,
 .examples_dialog_content tbody,
@@ -119,7 +120,7 @@
 
 .examples_dialog_button {
     background-color: var(--frost-3);
-    width:100%;
+    width: 100%;
     border: none;
     color: white;
     padding: 5px;
@@ -240,6 +241,12 @@ table.dataTable thead {
 
 table.dataTable tbody tr:nth-child(2n)   { background-color: var(--header-background-color); }
 table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-color); }
+
+.yasr_results {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
 
 .yasr .dataTables_wrapper .dataTable td pre {
     margin: 0px;
@@ -383,3 +390,4 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     width: var(--source-marker-size);
     border: 1px solid black;
 }
+
