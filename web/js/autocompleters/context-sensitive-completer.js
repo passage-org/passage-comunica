@@ -461,8 +461,6 @@ export const CSCompleter = {
         // console.log(endOfTriple);
         // console.log(shouldAddPeriod);
 
-        let variables = incompleteTriple.variables;
-
         context.splice(
             incompleteTriple.start, 
             incompleteTriple.end - incompleteTriple.start + 1, 
@@ -496,40 +494,23 @@ export const CSCompleter = {
             }
         }
 
-        console.log(parsedQuery)
-
         this.removeModifiers(parsedQuery);
-
-        console.log(parsedQuery);
 
         // Find triples relevant to the context
 
         const triples = this.getTriples(parsedQuery);
-        triples.forEach(t => t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.sugg_var)); // weird way to find the triple being worked on
-        triples.forEach(t => t.inContext = t.isCurrentTriple);
+        const filters = this.getFilters(parsedQuery);
 
-        let lastSize = 0;
+        triples.forEach(t => {
+            t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.sugg_var); // weird way to find the triple being worked on
+            t.inContext = t.isCurrentTriple;
+        }); 
 
-        while(lastSize !== variables.length){
-            lastSize = variables.length;
+        filters.forEach(f => f.inContext = false);
 
-            // Add all variables linked to the variables of the triple being written.
-            // TODO : find more efficient / elegant way to do this
-            for(const qt of triples){
-                for(const variable of this.getVarsFromParsedTriple(qt)){
-                    if(variables.includes(variable)){
-                        for(const tpVar of this.getVarsFromParsedTriple(qt)){
-                            if(!variables.includes(tpVar)){
-                                variables.push(tpVar);
-                            }
-                        }
-                        qt.inContext = true;
-                        break;
-                    }
-                }
-            }
-        }
+        let variables = incompleteTriple.variables;
 
+        this.markTriplesAndFilters(triples, filters, variables);
 
         // Remove parts of the query outside of context
 
@@ -1137,6 +1118,50 @@ export const CSCompleter = {
         return vars;
     },
 
+    getVarsFromParsedFilter: function(filter){
+        if(filter.type !== "filter") throw new Error("Not a filter");
+
+        return this.getVarsFromOperation(filter.expression)
+    },
+
+    getVarsFromOperation: function(operation){
+        if(operation.type !== "operation") throw new Error("Not an operation");
+
+        return operation.args.reduce(
+            (acc, val) => {
+                if(val.termType){
+                    if(val.termType === "Variable") return acc.concat([val.value]);
+                    return acc.concat([]);
+                }
+
+                if(val.type && val.type === "operation")
+                    return acc.concat(this.getVarsFromOperation(val));
+                
+                throw new Error("Unexpected object inside operation arguments");
+            },
+            []  
+        ); 
+    },
+
+    getVarsFromParsedElementWithVariables: function(element){
+        console.log("element", element)
+        if (this.isParsedTriple(element)) return this.getVarsFromParsedTriple(element);
+        console.log("ah")
+
+        if(element && element.type){
+            switch(element.type){
+                case "filter":
+                    console.log(this.getVarsFromParsedFilter(element))
+                    return this.getVarsFromParsedFilter(element);
+
+                default :
+                    throw new Error("Unsupported element type :", element.type);
+            }
+        }
+
+        throw new Error("Element is null or has no type; can't extract variables.");
+    },
+
     getTriples: function(parsedQueryTree){
         switch(parsedQueryTree.type){
             case "query":
@@ -1167,6 +1192,71 @@ export const CSCompleter = {
             
             default : // triple
                 return [parsedQueryTree];
+        }
+    },
+
+    getFilters: function(parsedQueryTree){
+        switch(parsedQueryTree.type){
+            case "query":
+                return parsedQueryTree.where.reduce(
+                        (acc, val) => acc.concat(this.getFilters(val)),
+                        []  
+                    ); 
+            
+            case "graph":
+            case "union":
+            case "group":
+                return parsedQueryTree.patterns.reduce(
+                    (acc, val) => acc.concat(this.getFilters(val)),
+                    []  
+                ); 
+
+            case "bgp":
+                return [];
+            
+            case "optional":
+                return parsedQueryTree.patterns.reduce(
+                    (acc, val) => acc.concat(this.getFilters(val)),
+                    []  
+                ); 
+
+            case "filter":
+                return [parsedQueryTree];
+            
+            default : // triple
+                return [];
+        }
+    },
+
+    markTriplesAndFilters: function(triples, filters, variables){
+        let lastSize = 0;
+
+        const triplesAndFilters = triples.concat(filters);
+        console.log(variables)
+
+        while(lastSize !== variables.length){
+            lastSize = variables.length;
+
+            // Add all variables linked to the variables of the triple being written.
+            // TODO : find more efficient / elegant way to do this
+            for(const element of triplesAndFilters){
+
+                for(const variable of this.getVarsFromParsedElementWithVariables(element)){
+
+                    if(variables.includes(variable)){
+
+                        for(const eltVar of this.getVarsFromParsedElementWithVariables(element)){
+
+                            if(!variables.includes(eltVar)){
+                                variables.push(eltVar);
+                            }
+                        }
+
+                        element.inContext = true;
+                        break;
+                    }
+                }
+            }
         }
     },
 
@@ -1211,9 +1301,7 @@ export const CSCompleter = {
                 )
                 break;
             
-            case "filter":
-                parsedQueryTree.inContext = true;
-
+            case "filter": // filter
             default : // triple
                 {} // nothing to do;
         }
@@ -1251,6 +1339,14 @@ export const CSCompleter = {
     },
 
     // UTILS
+
+    isParsedTriple: function(element){
+        try {
+            return element.subject.termType && element.predicate.termType && element.object.termType;
+        } catch(e) {
+            return false;
+        }
+    },
 
     getClosestCharBefore: function(tokenArray, index, char){
         while(index >= 0 && tokenArray[index] && tokenArray[index].string !== char){
