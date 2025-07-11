@@ -279,6 +279,7 @@ export class PhysicalTree {
     updateNode(node) {
         if (!this.container) {return ;} // not updating the dom node
         const dom = this.id2service.get(node.id);
+        if (!dom) { return; } // happens when aborting, but not often otherwise
         dom.title = node.metadata();
         dom.classList.replace("physical-pending", `physical-${node.status()}`);
         this.maxWidth = Math.max(this.maxWidth, node.getWidth(this.maxWidth));

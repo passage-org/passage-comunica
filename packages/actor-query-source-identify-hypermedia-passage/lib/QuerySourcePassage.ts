@@ -103,7 +103,6 @@ export class QuerySourcePassage implements IQuerySource {
         options?: IQueryBindingsOptions
     ): BindingsStream {
         // called twice: once to retrieve metadata; once to actually query
-        
         // If bindings are passed, modify the operations
         let operationPromise: Promise<Algebra.Operation>;
         if (options?.joinBindings) {
@@ -183,6 +182,15 @@ export class QuerySourcePassage implements IQuerySource {
             undefVariablesIndex.add(undefVariable.value);
         }
 
+        // early stop set by an external hand on the shared context.
+        const shouldStopShared : any = context.get(new ActionContextKey("abort"));
+        const shouldStop : boolean = shouldStopShared && shouldStopShared.value ;
+        if (shouldStop) {
+            QuerySourcePassage.logError(context, operation, "The query has been aborted early.");
+            return Promise.resolve(new EmptyIterator());
+        }
+
+
         this.lastSourceContext = this.context.merge(context);
         const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query)
             .then((rs) => {
@@ -228,9 +236,7 @@ export class QuerySourcePassage implements IQuerySource {
             const next : string|void = await nextPromise;
             QuerySourcePassage.updateDoneTime(context, operation)
             QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
-            const shouldStopShared : any = context.get(new ActionContextKey("abort"));
-            const shouldStop : boolean = shouldStopShared && shouldStopShared.value ;
-            if (!next || shouldStop) {
+            if (!next) {
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
                 return new EmptyIterator<RDF.Bindings>();
