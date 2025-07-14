@@ -18,6 +18,9 @@ export const CSCompleter = {
     yasqe: null,
     test: null,
     suggestionsBuffer: null,
+    regexHTTPS: new RegExp("^<https://", "i"),
+    regexHTTP: new RegExp("^<http://", "i"),
+    regexUriStart: new RegExp("^<", "i"),
     get: function(yasqe, token) {
         if(this.suggestionsBuffer) {
             let ret = this.suggestionsBuffer;
@@ -44,7 +47,7 @@ export const CSCompleter = {
             const icptp = this.getIncompleteTriple(queryTokens, index);
             this.getACQueryTripleTokens(icptp.entities)
         }catch(error){
-            // console.log(error)
+            console.log(error)
             return false;
         }
 
@@ -291,36 +294,43 @@ export const CSCompleter = {
 
     filterByString: function(mappingInfo, filterString, prefixes) {
 
-        // TODO: https 
-        const isUriStart = function(string){
-            return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
-        }
+        console.log(filterString)
 
         if(filterString === "") return true;
+
+        const isStringLiteralStart = function(string){
+            string.startsWith("\"");
+        }
+
+        // TODO: https 
+        const isUriStart = function(string){
+            return string.startsWith("<");
+        }
+
+        const getStringWithoutUriStart = function(string){
+            return string.replace(regexHTTPS, "").replace(regexHTTP, "").replace(regexUriStart, "");
+        }
 
         const toTest = mappingInfo.entity.value.toLowerCase();
         const type = mappingInfo.entity.type;
 
-        if(filterString.startsWith("\"")){
+        if(isStringLiteralStart(filterString)){
             if(type === "literal" && toTest.includes(filterString.slice(1))) return true;
         }
 
         // TODO: https 
-        if(isUriStart(filterString)){
-            if(filterString.includes("<http://"))
-                if(toTest.includes(filterString.replace("<http://", ""))) return true;
-            else
-                if(toTest.includes(currentString)) return true;
-        }
+        if(isUriStart(filterString))
+            if(toTest.includes(getStringWithoutUriStart(filterString))) return true;
+        else
+            if(toTest.includes(filterString)) return true;
 
         const split = filterString.split(":");
-        if(split.length === 1){
-            if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
-        }else
 
-        if(split.length === 2){
-            if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
-        }
+        if(split.length === 1)
+            if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
+        else
+            if(split.length === 2) 
+                if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
 
         return false;
     },
@@ -386,9 +396,13 @@ export const CSCompleter = {
         try {
             const budget = args.find(e => e.name === "budget");
 
+            console.log("sending with")
+            console.log(query)
             const urlsp = new URLSearchParams({ "query" : query })
 
             if(budget) urlsp.set("budget", budget.value);
+
+            console.log(urlsp)
 
             const response = await fetch(url, {
                 method: "POST",
@@ -572,7 +586,7 @@ export const CSCompleter = {
 
         const entities = this.getTokenGroupsOfTriple(tripleTokens);
 
-        // console.log("entities", entities);
+        console.log("entities", entities);
 
         if(entities.length > 3) throw new Error("Not a triple");
 
@@ -1075,19 +1089,28 @@ export const CSCompleter = {
                 return [parsedQueryTree]
 
             case "optional": 
-                parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
-                    p => p.inContext
-                )
-                .map(p => this.trim(p)) 
-                .flat();
+                // No optional : these clauses are not relevant in providing suggestions that lead to results.
+                // However, they drastically increase source selection processing time. 
+                // Thus, optional clauses are not worth keeping inside the auto completion query.
+                // Of course, we still have to keep the content of the optional clause containing the current triple, if there is such an optional clause.
+                // PS : Optional clauses still provide value, as they may help getting more accurate cardinality estimations.
+                
+                return this.hasCurrentTriple(parsedQueryTree) ? [...parsedQueryTree.patterns] : [];
 
-                // console.log([...parsedQueryTree.patterns]);
 
-                if(parsedQueryTree.patterns.length === 0) return [];
+                // parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
+                //     p => p.inContext
+                // )
+                // .map(p => this.trim(p)) 
+                // .flat();
 
-                if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
+                // // console.log([...parsedQueryTree.patterns]);
 
-                return [parsedQueryTree]
+                // if(parsedQueryTree.patterns.length === 0) return [];
+
+                // if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
+
+                // return [parsedQueryTree]
 
             case "bgp":
                 parsedQueryTree.triples = parsedQueryTree.triples.filter(
@@ -1144,14 +1167,11 @@ export const CSCompleter = {
     },
 
     getVarsFromParsedElementWithVariables: function(element){
-        console.log("element", element)
         if (this.isParsedTriple(element)) return this.getVarsFromParsedTriple(element);
-        console.log("ah")
 
         if(element && element.type){
             switch(element.type){
                 case "filter":
-                    console.log(this.getVarsFromParsedFilter(element))
                     return this.getVarsFromParsedFilter(element);
 
                 default :
@@ -1232,7 +1252,6 @@ export const CSCompleter = {
         let lastSize = 0;
 
         const triplesAndFilters = triples.concat(filters);
-        console.log(variables)
 
         while(lastSize !== variables.length){
             lastSize = variables.length;
