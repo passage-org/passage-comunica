@@ -134,9 +134,10 @@ export class PhysicalNode {
     }
 
     getOriginalService (caller) { // caller is a service
-        // TODO improve this, we don't want to enumerate all operators
+        // TODO improve this, we don't want to enumerate all operators; this is
+        //      so ugly :s
         if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice" || this.logical === "orderby"
-           || this.logical === "join") {
+           || this.logical === "join" || this.logical === "leftjoin") {
         // if (this.logical === caller.parent.logical) {
             const services = this.children.filter(c => c.logical === "service");
             if (services.length === 1) {
