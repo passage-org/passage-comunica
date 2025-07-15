@@ -11,6 +11,7 @@
     &:not(:has(input[name="dark-light-toggle"]:checked)) { color-scheme: light; } /* Force dark mode */ 
     
     --logo-color              : light-dark(var(--frost-1), var(--aurora-3));
+    --inverted-logo-color     : light-dark(var(--aurora-3), var(--frost-1));
     --background-color        : light-dark(white, var(--polar-night-1)); 
     --header-background-color : light-dark(var(--snow-storm-3), var(--polar-night-3));
     --text-color              : light-dark(var(--polar-night-1), var(--snow-storm-3));
@@ -45,15 +46,20 @@
     height: 100%;
 }
 
+
 .logo {
     background: var(--logo-color);
     border: none;
     padding-left: 4px;
     padding-right: 4px;
+    padding-top: 1px;
+    padding-bottom: 1px;
     text-decoration: none;
     display: inline-block;
-    height: 100%; 
+    height: 100%;
 }
+
+.logo:hover { background-color: var(--inverted-logo-color); }
 
 .header_button {
     background-color: var(--header-background-color);
@@ -107,7 +113,7 @@
 
 .dropdown:hover .dropdown_content {display: block;}
 
-.examples_dialog { z-index: 10; }
+.examples_dialog { z-index: 10; max-width:60vw; }
 .examples_dialog_content,
 .examples_dialog_content table,
 .examples_dialog_content tbody,
@@ -184,8 +190,8 @@ a:visited, .yasr a:visited, .yasr a.iri:visited { color: var(--aurora-5) !import
     width: auto;
     height: 100%;
     margin: 0 auto;
-    border-left: solid 1px var(--border-color);
-    border-right: solid 1px var(--border-color);
+    /* border-left: solid 1px var(--border-color); */
+    /* border-right: solid 1px var(--border-color); */
 }
 
 .tabsList { /* Hide the different tabulations */

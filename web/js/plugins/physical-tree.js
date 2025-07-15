@@ -123,6 +123,9 @@ export class PhysicalTree {
         if (node.logical === "service" && node.parent.getOriginalService(node) !== node) {
             // look for the parent dom that will contain it
             const parentNode = node.parent.getOriginalService(node);
+            if (!parentNode) {
+                console.log(node);
+            }
             if (this.id2dom.has(parentNode.id)) {
                 this.id2dom.set(node.id, this.id2dom.get(parentNode.id));
             }
