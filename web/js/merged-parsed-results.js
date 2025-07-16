@@ -10,7 +10,6 @@ export default class MergedParsedResults {
         this.stopAt = null;
         this.vars = [];
         this.bindings = [];
-        this.lastAppend = Date.now();
         this.refresh = null;
     }
 
@@ -19,7 +18,13 @@ export default class MergedParsedResults {
         const vars = response.vars;
         const bindings = response.bindings;
         this.vars = Array.from(new Set(this.vars.concat(vars)));
-        this.bindings = this.bindings.concat(bindings);
+        // this.bindings = this.bindings.concat(bindings);
+        if (Array.isArray(bindings)) {
+            // complexity O(|bindings|)
+            for (const binding of bindings) {this.bindings.push(binding);}
+        } else {
+            this.bindings.push(bindings); // complexity O(1)
+        }
     }
 
     stop() {

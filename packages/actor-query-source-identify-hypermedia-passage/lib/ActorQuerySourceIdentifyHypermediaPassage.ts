@@ -39,7 +39,7 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
     ): Promise<TestResult<IActorQuerySourceIdentifyHypermediaTest>> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
             !(this.checkUrlSuffix && action.url.endsWith('/passage'))) {
-            return failTest(`Actor ${this.name} could not detect a sage service description or URL ending on /passage.`);
+            return failTest(`Actor ${this.name} could not detect a passage service description or URL ending on /passage.`);
         }
         return passTest({ filterFactor: 1 });
     }
@@ -66,7 +66,7 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
 
 }
 
-// Tried multiple times to extends arguments from Sparql's actor, couldnot make it…
+// Tried multiple times to extend arguments from Sparql's actor, could not make it…
 export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQuerySourceIdentifyHypermediaArgs {
     /**
      * SPARQL queries returns by passage can be parsed again, then executed again.
