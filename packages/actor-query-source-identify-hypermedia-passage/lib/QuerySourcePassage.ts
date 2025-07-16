@@ -1,4 +1,4 @@
-import type {BindingsFactory} from '@comunica/utils-bindings-factory';
+import {BindingsFactory} from '@comunica/utils-bindings-factory';
 import type {MediatorHttp} from '@comunica/bus-http';
 import {KeysInitQuery} from '@comunica/context-entries';
 import {ActionContextKey, Actor} from '@comunica/core';
@@ -10,7 +10,6 @@ import type {
     IActionContext,
     IPhysicalQueryPlanLogger,
     IQueryBindingsOptions,
-    IQueryOperationResultBindings,
     IQuerySource,
     MetadataVariable,
 } from '@comunica/types';
@@ -21,7 +20,7 @@ import {LRUCache} from 'lru-cache';
 import {Algebra, Factory, Util} from 'sparqlalgebrajs';
 import type {BindMethod} from '@comunica/actor-query-source-identify-hypermedia-sparql';
 import {QuerySourceSparql} from '@comunica/actor-query-source-identify-hypermedia-sparql';
-import type {IActorQueryProcessOutput, MediatorQueryProcess} from '@comunica/bus-query-process';
+import type {MediatorQueryProcess} from '@comunica/bus-query-process';
 import {Shapes} from './Shapes';
 
 /**
@@ -190,7 +189,6 @@ export class QuerySourcePassage implements IQuerySource {
             return Promise.resolve(new EmptyIterator());
         }
 
-
         this.lastSourceContext = this.context.merge(context);
         const rawStream = await this.endpointFetcher.fetchBindings(endpoint, query)
             .then((rs) => {
@@ -230,27 +228,33 @@ export class QuerySourcePassage implements IQuerySource {
                 resolve();
             });
         });
-        
+
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
-        const itbis: BindingsStream = new TransformIterator( async() => {
-            const next : string|void = await nextPromise;
-            QuerySourcePassage.updateDoneTime(context, operation)
+        // const nextIt: BindingsStream = new TransformIterator(async ()=> {
+        //    const next = await nextPromise;
+        const nextIt: BindingsStream = wrap(nextPromise.then(next=> {
+            // const next : string|void = await nextPromise;
+            QuerySourcePassage.updateDoneTime(context, operation);
             QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
             if (!next) {
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
                 return new EmptyIterator<RDF.Bindings>();
             }
-            // we are here to execute, not to explain, so we remove the key from the context.
-            // In explain mode, only the root is allowed to explain.
-            const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({
-                context,
-                query: next});
-            const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
-            return results.bindingsStream; // subqueries must create binding streams for now.
-        }, { autoStart: false });
 
-        return it.append(itbis);
+            // TODO For now, we know that the endpoint sends continuation queries that
+            //      are fully handled by itself. So we don't go full recursive by calling
+            //      the full mediatorQueryProcess: this is much slower. Instead we recursively
+            //      call this function: much simpler.
+            return this.queryBindingsRemote(operation, endpoint, next, variables, context, undefVariables);
+            // const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({
+            //     context,
+            //     query: next});
+            // const results: IQueryOperationResultBindings = output.result as IQueryOperationResultBindings;
+            // return results.bindingsStream; // subqueries must create binding streams for now.
+        }));
+
+        return it.append(nextIt);
     }
 
     public queryQuads(operation: Algebra.Operation, context: IActionContext): AsyncIterator<RDF.Quad> {
