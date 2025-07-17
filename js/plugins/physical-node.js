@@ -41,7 +41,7 @@ export class PhysicalNode {
     }
 
     error() {
-        return (this.status() === "error" &&
+        return (this.status() === "error" || this.status() === "aborted" &&
                 this.messages.filter((message) => message.m.status === "error").at(0).m.message) ||
             "";
     }
@@ -90,19 +90,28 @@ export class PhysicalNode {
         };
     }
     
-    status() { // null, "pending", "error", "completed"
+    status() { // null, "pending", "error", "completed", "aborted", "downloaded"
         if (this.logical !== "service") { return null; };
         // all init should have their corresponding completed field to be complete
         const nbInits = this.messages.filter((e) => e.type === "MessagePhysicalPlanInit").length;
         const nbDones = this.messages.filter((e) => e.m && e.m.doneAt).length;
-        const nbErrors = this.messages.filter((e) => e.m && e.m.status &&  e.m.status === "error").length;
+        const errors = this.messages.filter((e) => e.m && e.m.status &&  e.m.status === "error");
+        const nbDownloaded = this.messages.filter((e) => e.m && e.m.firstResultAt).length;
 
-        if (nbErrors > 0) {
-            return "error";
+        if (errors.length > 0) {
+            if (errors.some(e => e.m.message.includes("aborted early"))) {
+                return "aborted";
+            } else {
+                return "error";
+            }
         } else if (nbDones > 0) {
             return "completed";
         } else {
-            return "pending";
+            if (nbDownloaded > 0) {
+                return "downloaded";
+            } else {
+                return "pending";
+            }
         }
     }
 

@@ -285,7 +285,9 @@ export class PhysicalTree {
         const dom = this.id2service.get(node.id);
         if (!dom) { return; } // happens when aborting, but not often otherwise
         dom.title = node.metadata();
-        dom.classList.replace("physical-pending", `physical-${node.status()}`);
+        dom.classList.remove("physical-pending");
+        dom.classList.remove("physical-downloaded");
+        dom.classList.add(`physical-${node.status()}`);
         this.maxWidth = Math.max(this.maxWidth, node.getWidth(this.maxWidth));
         dom.style.width = `${node.getWidth(this.maxWidth)}px`;
     }

@@ -15,6 +15,11 @@ export class ContinuationsCarousel {
         this.container = document.createElement("ul");
         this.container.classList.add("carousel-container");
 
+        this.container.addEventListener('click', (event) => {
+            // so it does not close the dialog that wraps it
+            event.stopPropagation();
+        });
+        
         const allPrevious = node.allPrevious();
         const allNext = node.allNext();
 
@@ -37,7 +42,6 @@ export class ContinuationsCarousel {
         
         requestAnimationFrame(() => { // < need this otherwise offsetLeft is 0
             // center the carousel on the targeted item
-
             const targetOffset = target.offsetLeft;
             const targetWidth = target.offsetWidth;
             const containerWidth = this.container.offsetWidth;
