@@ -188,7 +188,19 @@ button.physical-pending {
     100% { background-color: var(--frost-1); }
 }
 
-/*li.physical-error { color: var(--aurora-1); }*/
+button.physical-downloaded {
+    background-color: var(--aurora-4);
+    animation: downloaded 2s infinite;
+}
+
+@keyframes downloaded {
+    0% { background-color: var(--aurora-4); }
+    50% { background-color: var(--frost-4); }
+    100% { background-color: var(--aurora-4); }
+}
+
+
+button.physical-aborted { background-color: var(--aurora-2); }*/
 button.physical-error { background-color: var(--aurora-1); }
 
 /* li.physical-completed {color: var(--aurora-4);}*/
