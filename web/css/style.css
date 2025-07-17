@@ -113,7 +113,7 @@
 
 .dropdown:hover .dropdown_content {display: block;}
 
-.examples_dialog { z-index: 10; max-width:60vw; }
+.examples_dialog { z-index: 10; max-width:90vw; }
 .examples_dialog_content,
 .examples_dialog_content table,
 .examples_dialog_content tbody,

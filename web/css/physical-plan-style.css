@@ -212,7 +212,7 @@ button.fold-unfold {
 ul.carousel-container {
     overflow-x: scroll;
     scroll-snap-type: x mandatory;
-    width: 60vw;
+    /* width: 80vw;*/
     height: 100vw;
     max-height: 500px;
     display: flex;
@@ -220,7 +220,7 @@ ul.carousel-container {
 }
 
 li.carousel-element {
-    max-width: 300px;
+    max-width: 30vw;
     scroll-snap-align: center;
     list-style-type: none;
     background-color: var(--header-background-color);
@@ -241,6 +241,10 @@ li.carousel-element > div.card-container {
 li.carousel-element >*> pre.card-query {
     overflow: auto;
     border: 1px solid var(--border-color);
+    font-size: 0.75em;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
 }
 
 li.carousel-element >*>*> div.card-date {
