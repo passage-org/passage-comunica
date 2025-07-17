@@ -189,13 +189,14 @@ export class PhysicalTree {
         if (node.logical !== "service") {throw new Error("The node should be a service");}
 
         const original = node.parent.getOriginalService(node);
-        if (node !== original) {
-            // all services are encapsulated in a parent node, but we
-            // don't want to print them after the first one. so we
-            // delete them
-            const parentDom = this.id2dom.get(node.parent.id);
-            parentDom.remove();
-        }
+        // TODO should be kept only for big recurse
+        // if (node !== original) {
+        //     // all services are encapsulated in a parent node, but we
+        //     // don't want to print them after the first one. so we
+        //     // delete them
+        //     const parentDom = this.id2dom.get(node.parent.id);
+        //     parentDom.remove();
+        // }
         
         const containerDom = this.id2dom.get(node.id);
         const containerEventSpan = containerDom.getElementsByClassName("event-inline")[0];
