@@ -186,7 +186,7 @@ export class QuerySourcePassage implements IQuerySource {
         const shouldStop : boolean = shouldStopShared && shouldStopShared.value ;
         if (shouldStop) {
             QuerySourcePassage.logError(context, operation, "The query has been aborted early.");
-            return Promise.resolve(new EmptyIterator());
+            return wrap<any>(new EmptyIterator());
         }
 
         this.lastSourceContext = this.context.merge(context);
@@ -216,37 +216,61 @@ export class QuerySourcePassage implements IQuerySource {
             });
 
         const nextPromise: Promise<string|void> = new Promise(resolve => {
-            rawStream.on('error', async e => {
-                QuerySourcePassage.logError(context, operation, e.message); // error during the streaming itself, logged then done
-                resolve();
-            });
+            // it and rawStream are handled differently. The metadata field
+            // is only existing in the rawStream. But we consider the stream
+            // done only when the wrapping stream is done.
             rawStream.on('metadata', async m => {
                 Actor.getContextLogger(this.context)?.info(`Next query to get complete result:\n${m.next}`);
                 resolve(m.next);
             });
             rawStream.on('end', async m => {
                 resolve();
+            })
+            it.on('error', async e => {
+                QuerySourcePassage.logError(context, operation, e.message); // error during the streaming itself, logged then done
+                resolve();
+            });
+            it.on('end', async m => {
+                QuerySourcePassage.updateDoneTime(context, operation);
+                QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
             });
         });
 
         // comes from <https://www.npmjs.com/package/sparqljson-parse#advanced-metadata-entries>
         // const nextIt: BindingsStream = new TransformIterator(async ()=> {
         //    const next = await nextPromise;
-        const nextIt: BindingsStream = wrap(nextPromise.then(next=> {
+        const nextIt: BindingsStream = wrap(nextPromise.then(next => {
             // const next : string|void = await nextPromise;
-            QuerySourcePassage.updateDoneTime(context, operation);
-            QuerySourcePassage.updateNbResults(context, operation, it.getProperty("nbResults") || 0);
             if (!next) {
+                // resolved once, if metadata exists, it triggers on it
                 // next trigger on 'end', and not on 'metadata', therefore there are no next
                 // query. The stream should end, so we put an empty binding iterator in queue.
-                return new EmptyIterator<RDF.Bindings>();
+                nextIt.close();
+                return new EmptyIterator();
+            }
+
+
+
+            // we create a new operation to log it properly, even though it's the same
+            const nextOperation = this.algebraFactory.createService(operation, this.dataFactory.namedNode(endpoint), false);
+            QuerySourcePassage.initializeLogger(context, nextOperation, next);
+
+            // TODO move this elsewhere, it exists in two locations in this function,
+            //      which is one too many.
+            // early stop set by an external hand on the shared context.
+            const shouldStopShared : any = context.get(new ActionContextKey("abort"));
+            const shouldStop : boolean = shouldStopShared && shouldStopShared.value ;
+            if (shouldStop) {
+                QuerySourcePassage.logError(context, nextOperation, "The query has been aborted early.");
+                nextIt.close()
+                return new EmptyIterator();
             }
 
             // TODO For now, we know that the endpoint sends continuation queries that
             //      are fully handled by itself. So we don't go full recursive by calling
             //      the full mediatorQueryProcess: this is much slower. Instead we recursively
             //      call this function: much simpler.
-            return this.queryBindingsRemote(operation, endpoint, next, variables, context, undefVariables);
+            return this.queryBindingsRemote(nextOperation, endpoint, next, variables, context, undefVariables);
             // const output : IActorQueryProcessOutput = await this.mediatorQueryProcess.mediate({
             //     context,
             //     query: next});
