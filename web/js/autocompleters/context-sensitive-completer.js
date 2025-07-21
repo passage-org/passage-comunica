@@ -16,19 +16,12 @@ export const CSCompleter = {
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
     colorHash: new ColorHash(), 
     yasqe: null,
-    test: null,
-    suggestionsBuffer: null,
     regexHTTPS: new RegExp("^<https://", "i"),
     regexHTTP: new RegExp("^<http://", "i"),
     regexUriStart: new RegExp("^<", "i"),
 
     get: function(yasqe, token) {
-        if(this.suggestionsBuffer) {
-            let ret = this.suggestionsBuffer;
-            this.suggestionsBuffer = null;
-            return ret;
-        }
-
+        this.autocompleteStartFeedback();
         try {
             return this.get_(yasqe, token);
         }catch(error){
@@ -99,6 +92,57 @@ export const CSCompleter = {
 
     // AUTOCOMPLETION DISPLAY 
 
+    autocompleteStartFeedback: function(){
+        console.log("start autocompletion ...");
+        const yasguiElement = document.getElementsByClassName("yasgui").item(0);
+        const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
+
+        const loader = document.createElement("div");
+        loader.classList.add("loader-icon");
+
+        const dim = cursor.getBoundingClientRect();
+        
+        loader.style.left = (dim.x + dim.width) + "px";
+        loader.style.top = (dim.top + window.scrollY) + "px";
+
+        yasguiElement.appendChild(loader);
+    },
+
+    autocompleteEndFeedback: function(hints){
+        const loader = document.getElementsByClassName("loader-icon").item(0);
+        loader.remove();
+
+        console.log("end of autocompletion!");
+        if(hints.length === 0) {
+            console.log("Autcompletion query didn't return any results.");
+
+            const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
+            const yasguiElement = document.getElementsByClassName("yasgui").item(0);
+
+            yasguiElement
+            const error = document.createElement("div");
+            error.classList.add("error-icon");
+
+            const dim = cursor.getBoundingClientRect();
+        
+            // error.style.top = ((dim.top + dim.bottom) / 2) + window.scrollY + "px";
+            error.style.left = (dim.x + dim.width) + "px";
+            error.style.top = (dim.top + window.scrollY) + "px";
+            // error.style.bottom = (dim.bottom + window.scrollY) + "px";
+
+            error.innerHTML = "&#10005;";
+
+            yasguiElement.appendChild(error);
+        }
+
+        else if(hints.filter(hint => (hint.probabilityOfRetrievingRestOfMapping && hint.probabilityOfRetrievingRestOfMapping.value) !== 0).length === 0)
+            console.log("Autocompletion query returned results, but none of them have probability != 0")
+
+        else
+            console.log("Successfuly retrieved suggestions!")
+        
+    },
+
     postprocessHints: function (_yasqe, hints) {
 
         const line = _yasqe.getDoc().getCursor().line;
@@ -118,9 +162,7 @@ export const CSCompleter = {
 
         x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
 
-        return hints.map(hint => {
-
-            const colorHash = new ColorHash();
+        const renderableHints = hints.map(hint => {
 
             hint.render = function(el, self, data){
 
@@ -222,6 +264,10 @@ export const CSCompleter = {
 
             return hint
         });
+
+        this.autocompleteEndFeedback(renderableHints);
+        
+        return renderableHints;
     },
 
 
