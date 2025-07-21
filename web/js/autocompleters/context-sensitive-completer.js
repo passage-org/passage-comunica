@@ -1476,22 +1476,25 @@ export const CSCompleter = {
         return line1 === line2 && ch1 === ch2;
     },
 
-    typedStringify: function(entity, type) {
+    typedStringify: function(entity) {
 
-        switch(type) {
+        const entityValue = entity.value;
+
+        switch(entity.type) {
             case 'iri':
             case 'uri':
                 for(const [key, val] of Object.entries(this.yasqe.getPrefixesFromQuery())){
-                    if(entity.includes(val)) {
-                        return entity.replace(val, key+":")
+                    if(entityValue.includes(val)) {
+                        return entityValue.replace(val, key+":")
                     }
                 }
 
-                return "<" + entity + ">"
+                return "<" + entityValue + ">"
             case 'literal':
-                return "\"" + entity + "\""
+                const lang = entity["xml:lang"] ? `@${entity["xml:lang"]}` : "";
+                return "\"" + entityValue + "\"" + lang
             default:
-                return "UNKNOWN TYPE : " + entity
+                return "UNKNOWN TYPE : " + entityValue
         }
     },
 
