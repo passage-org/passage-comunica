@@ -200,7 +200,7 @@ button.physical-downloaded {
 }
 
 
-button.physical-aborted { background-color: var(--aurora-2); }*/
+button.physical-aborted { background-color: var(--aurora-2); }
 button.physical-error { background-color: var(--aurora-1); }
 
 /* li.physical-completed {color: var(--aurora-4);}*/
