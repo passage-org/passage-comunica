@@ -318,7 +318,7 @@ export const CSCompleter = {
             return string.replace(regexHTTPS, "").replace(regexHTTP, "").replace(regexUriStart, "");
         }
 
-        const toTest = mappingInfo.entity.value.toLowerCase();
+        const toTest = mappingInfo.id.toLowerCase();
         const type = mappingInfo.entity.type;
 
         if(isStringLiteralStart(filterString)){
