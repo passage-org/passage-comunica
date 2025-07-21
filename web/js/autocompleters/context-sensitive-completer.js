@@ -21,6 +21,7 @@ export const CSCompleter = {
     regexHTTPS: new RegExp("^<https://", "i"),
     regexHTTP: new RegExp("^<http://", "i"),
     regexUriStart: new RegExp("^<", "i"),
+
     get: function(yasqe, token) {
         if(this.suggestionsBuffer) {
             let ret = this.suggestionsBuffer;
@@ -34,6 +35,7 @@ export const CSCompleter = {
             return [];
         }
     },
+
     isValidCompletionPosition: function (yasqe) {
 
         if (!this.yasqe) this.yasqe = yasqe;
@@ -45,14 +47,15 @@ export const CSCompleter = {
 
         try {
             const icptp = this.getIncompleteTriple(queryTokens, index);
-            this.getACQueryTripleTokens(icptp.entities)
+            this.getACQueryTripleTokens(icptp.entities);
         }catch(error){
-            console.log(error)
+            // console.log(error)
             return false;
         }
 
         return true;
     },
+
     get_: function(yasqe, token) {
 
         // console.log(yasqe.getDoc().getCursor().line)
@@ -100,6 +103,7 @@ export const CSCompleter = {
 
         const line = _yasqe.getDoc().getCursor().line;
         const ch  = _yasqe.getDoc().getCursor().ch;
+        const _colorHash = this.colorHash;
         
         const removeProvenanceDisplay = function(e){
             Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
@@ -117,7 +121,7 @@ export const CSCompleter = {
         return hints.map(hint => {
 
             const colorHash = new ColorHash();
-        
+
             hint.render = function(el, self, data){
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
@@ -132,7 +136,7 @@ export const CSCompleter = {
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
                       .map(source => source.split("http://").at(2)) // wanky but for now is ok
                       .filter(o => o !== undefined) // when there are no source , filter out
-                      .map(source => {/* console.log(source);  */return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
+                      .map(source => {/* console.log(source);  */return {source: source, hsl: _colorHash.hsl(source), hex: _colorHash.hex(source)}})
                       .sort((a, b) => a.hsl[0] - b.hsl[0]);
 
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
@@ -141,22 +145,22 @@ export const CSCompleter = {
                 suggestionDiv.className = "suggestion-div";
 
                 const suggestionValue = document.createElement("span");
-                suggestionValue.className = "suggestion-value"
-                suggestionValue.cssFloat = ""
+                suggestionValue.className = "suggestion-value";
+                suggestionValue.cssFloat = "";
                 suggestionValue.textContent = value || "";
 
                 const suggestionScore = document.createElement("span");
-                suggestionScore.className = "suggestion-score"
+                suggestionScore.className = "suggestion-score";
                 suggestionScore.textContent = "Estimated cardinality : " + (score || "");
                 suggestionScore.style.cssFloat = "";
 
                 const suggestionWalks = document.createElement("span");
-                suggestionWalks.className = "suggestion-walks"
+                suggestionWalks.className = "suggestion-walks";
                 suggestionWalks.textContent = "Random walks : " + (walks || "");
                 suggestionWalks.style.cssFloat = "";
 
                 const suggestionProvenance = document.createElement("span");
-                suggestionProvenance.className = "suggestion-provenance"
+                suggestionProvenance.className = "suggestion-provenance";
                 suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
                 suggestionProvenance.style.cssFloat = "";
 
@@ -215,6 +219,7 @@ export const CSCompleter = {
 
                 data.text = value;
             }
+
             return hint
         });
     },
@@ -238,7 +243,9 @@ export const CSCompleter = {
         const filterString = currentString.toLowerCase();
 
         // No empty mappings, no mapping with probability of 0!
-        const successfulWalks = acqResults.filter(mapping => Object.keys(mapping).length !== 0).filter(mapping => mapping[this.proba_var].value > 0);
+        const successfulWalks = acqResults
+            .filter(mapping => Object.keys(mapping).length !== 0)
+            .filter(mapping => mapping[this.proba_var].value > 0);
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
@@ -294,7 +301,7 @@ export const CSCompleter = {
 
     filterByString: function(mappingInfo, filterString, prefixes) {
 
-        console.log(filterString)
+        // console.log(filterString)
 
         if(filterString === "") return true;
 
@@ -344,7 +351,6 @@ export const CSCompleter = {
             aggregated.push(
                 {
                     value : key,
-                    type : val[0].entity.type,
                     score : (val.reduce((acc, curr) => {return acc + (curr.probability > 0 ? 1/curr.probability : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
                     nbWalks : val.length,
 
@@ -396,13 +402,13 @@ export const CSCompleter = {
         try {
             const budget = args.find(e => e.name === "budget");
 
-            console.log("sending with")
-            console.log(query)
+            // console.log("sending with")
+            // console.log(query)
             const urlsp = new URLSearchParams({ "query" : query })
 
             if(budget) urlsp.set("budget", budget.value);
 
-            console.log(urlsp)
+            // console.log(urlsp)
 
             const response = await fetch(url, {
                 method: "POST",
@@ -586,7 +592,7 @@ export const CSCompleter = {
 
         const entities = this.getTokenGroupsOfTriple(tripleTokens);
 
-        console.log("entities", entities);
+        // console.log("entities", entities);
 
         if(entities.length > 3) throw new Error("Not a triple");
 
@@ -1044,6 +1050,7 @@ export const CSCompleter = {
                 delete parsedQueryTree.limit;
                 delete parsedQueryTree.group;
                 delete parsedQueryTree.order;
+                delete parsedQueryTree.having;
             case "query":
             case "union":
             case "group":
