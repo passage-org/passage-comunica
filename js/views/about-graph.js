@@ -8,6 +8,7 @@ export class AboutGraph {
     graph = [
         ['<client>',           '<software>', '<yasgui>'],
         ['<client>',           '<software>', '<passage-communica>'],
+        ['<client>',           '<resources>','<svg>'],
         ['<comunica>',         '<version>',  '4.2.0'],
         ['<comunica>',         '<webpage>',  '<https://comunica.dev/>'],
         ['<passage>',          '<version>',  '0.2.0'],
@@ -15,6 +16,12 @@ export class AboutGraph {
         ['<passage-comunica>', '<extend>',   '<comunica>'],
         ['<passage-comunica>', '<webpage>',  '<https://passage-org.github.io/passage-comunica/>'],
         ['<server>',           '<software>', '<passage>'],
+        ['<svg>',              '<name>',     '<svg-bug-bold>'],
+        ['<svg>',              '<name>',     '<svg-question-bold>'],
+        ['<svg>',              '<name>',     '<svg-moon-bold>'],
+        ['<svg-bug-bold>',     '<author>',   '<phosphore>'],
+        ['<svg-moon-bold>',    '<author>',   '<phosphore>'],
+        ['<svg-question-bold>','<author>',   '<phosphore>'],        
         ['<yasgui>',           '<webpage>',  'https://yasgui.triply.cc/'],
     ];
     
