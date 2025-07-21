@@ -41,7 +41,7 @@ export class PhysicalNode {
     }
 
     error() {
-        return (this.status() === "error" &&
+        return (this.status() === "error" || this.status() === "aborted" &&
                 this.messages.filter((message) => message.m.status === "error").at(0).m.message) ||
             "";
     }
@@ -90,19 +90,28 @@ export class PhysicalNode {
         };
     }
     
-    status() { // null, "pending", "error", "completed"
+    status() { // null, "pending", "error", "completed", "aborted", "downloaded"
         if (this.logical !== "service") { return null; };
         // all init should have their corresponding completed field to be complete
         const nbInits = this.messages.filter((e) => e.type === "MessagePhysicalPlanInit").length;
         const nbDones = this.messages.filter((e) => e.m && e.m.doneAt).length;
-        const nbErrors = this.messages.filter((e) => e.m && e.m.status &&  e.m.status === "error").length;
+        const errors = this.messages.filter((e) => e.m && e.m.status &&  e.m.status === "error");
+        const nbDownloaded = this.messages.filter((e) => e.m && e.m.firstResultAt).length;
 
-        if (nbErrors > 0) {
-            return "error";
+        if (errors.length > 0) {
+            if (errors.some(e => e.m.message.includes("aborted early"))) {
+                return "aborted";
+            } else {
+                return "error";
+            }
         } else if (nbDones > 0) {
             return "completed";
         } else {
-            return "pending";
+            if (nbDownloaded > 0) {
+                return "downloaded";
+            } else {
+                return "pending";
+            }
         }
     }
 
@@ -133,31 +142,41 @@ export class PhysicalNode {
         return false;
     }
 
-    getOriginalService (caller) { // caller is a service
-        // TODO improve this, we don't want to enumerate all operators
-        if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice" || this.logical === "orderby"
-           || this.logical === "join") {
-        // if (this.logical === caller.parent.logical) {
-            const services = this.children.filter(c => c.logical === "service");
-            if (services.length === 1) {
-                const service = this.parent && this.parent.getOriginalService(caller); // maybe go higher
-                return service || services.at(0); // if not, return this service
-            }
-        }
-        return null;
+    getOriginalService (caller) { // caller is a service, "this" is the parent of the caller
+        const services = this.children.filter(c => c.logical==="service");
+        return services && services.at(0);
+        // TODO remove the following, or put it conditionally depending on the kind
+        //      recursive call.
+        
+        // TODO improve this, we don't want to enumerate all operators; this is
+        //      so ugly :s
+        // if (this.logical === "pattern" || this.logical === "project" || this.logical === "slice" || this.logical === "orderby"
+        //    || this.logical === "join" || this.logical === "leftjoin") {
+        // // if (this.logical === caller.parent.logical) {
+        //     const services = this.children.filter(c => c.logical === "service");
+        //     if (services.length === 1) {
+        //         const service = this.parent && this.parent.getOriginalService(caller); // maybe go higher
+        //         return service || services.at(0); // if not, return this service
+        //     }
+        // }
+        // return null;
     }
 
     previous() {
-        if (this.logical !== "service") {return ;}
-        const grandParent = this.parent && this.parent.parent;
-        if (!grandParent) {return ;}
-        if (grandParent.logical === "pattern" || grandParent.logical === "project" ||
-            grandParent.logical === "slice" || grandParent.logical === "orderby" ||
-            grandParent.logical === "join") {
-            const services = grandParent.children.filter(c => c.logical === "service");
-            return services.length === 1 && services.at(0) || null;
-        }
-        return null;
+        if (this.logical !== "service" || !this.parent) {return ;}
+        const services = this.parent.children.filter(c => c.logical==="service");
+        const index = services && services.indexOf(this);
+        return ((index-1 >= 0) && services.at(index-1)) || null;
+        
+        // const grandParent = this.parent && this.parent.parent;
+        // if (!grandParent) {return ;}
+        // if (grandParent.logical === "pattern" || grandParent.logical === "project" ||
+        //     grandParent.logical === "slice" || grandParent.logical === "orderby" ||
+        //     grandParent.logical === "join") {
+        //     const services = grandParent.children.filter(c => c.logical === "service");
+        //     return services.length === 1 && services.at(0) || null;
+        // }
+        // return null;
     }
     
     allPrevious() {
@@ -172,12 +191,17 @@ export class PhysicalNode {
     }
 
     next() {
-        if (this.logical !== "service") {return ;}
-        const siblings = this.parent && this.parent.children.filter(c => c.logical !== "service");
-        if (!siblings || siblings.length <= 0) { return null;}
-        const sibling = siblings.at(0);
-        const services = sibling.children.filter(c => c.logical === "service");
-        return services.length === 1 && services.at(0) || null;
+        if (this.logical !== "service" || !this.parent) {return ;}
+        const services = this.parent.children.filter(c => c.logical==="service");
+        const index = services && services.indexOf(this);
+        return ((index+1 < services.length) && services.at(index+1)) || null;
+
+        // if (this.logical !== "service") {return ;}
+        // const siblings = this.parent && this.parent.children.filter(c => c.logical !== "service");
+        // if (!siblings || siblings.length <= 0) { return null;}
+        // const sibling = siblings.at(0);
+        // const services = sibling.children.filter(c => c.logical === "service");
+        // return services.length === 1 && services.at(0) || null;
     }
 
     allNext() {

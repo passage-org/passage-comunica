@@ -1,3 +1,5 @@
+import {Parser, Generator} from "sparqljs";
+import {YasguiConfig} from "/js/yasgui-config"
 
 /// A carousel to better visualize SPARQL continuation queries. Since
 /// continuation queries most often form a line of continuations, the
@@ -13,19 +15,18 @@ export class ContinuationsCarousel {
         this.container = document.createElement("ul");
         this.container.classList.add("carousel-container");
 
-        // console.log(node);
-        // console.log(node.previous());
-        // console.log(node.allPrevious());
-
+        this.container.addEventListener('click', (event) => {
+            // so it does not close the dialog that wraps it
+            event.stopPropagation();
+        });
+        
         const allPrevious = node.allPrevious();
         const allNext = node.allNext();
 
         let allServices = [];
-        // previous && allServices.push(previous);
-        allServices = allServices.concat(allPrevious);
+        allPrevious && allServices.push(...allPrevious);
         allServices.push(node);
-        allServices = allServices.concat(allNext);
-        // next && allServices.push(next);
+        allNext && allServices.push(...allNext);
 
         const id2dom = new Map();
         for (let service of allServices) {
@@ -41,7 +42,6 @@ export class ContinuationsCarousel {
         
         requestAnimationFrame(() => { // < need this otherwise offsetLeft is 0
             // center the carousel on the targeted item
-
             const targetOffset = target.offsetLeft;
             const targetWidth = target.offsetWidth;
             const containerWidth = this.container.offsetWidth;
@@ -65,7 +65,13 @@ export class ContinuationsCarousel {
         
         const query = document.createElement("pre");
         query.classList.add("card-query");
-        query.textContent = service.query();
+
+        const parser = new Parser({prefixes: YasguiConfig.yasr.prefixes});
+        const parsed = parser.parse(service.query());
+        const generator = new Generator();
+        const generated = generator.stringify(parsed);
+        query.textContent = generated;
+        // query.textContent = service.query();
 
         const metadata = document.createElement("div");
         metadata.classList.add("card-metadata");
