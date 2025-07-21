@@ -243,14 +243,14 @@ export const CSCompleter = {
 
         const formatted = this.formatBindings(successfulWalks);
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString, prefixes));
-        const grouped = this.groupBy(filtered, 'entity', 'value');
+        const grouped = this.groupBy(filtered, 'id');
         const aggregated = this.aggregate(grouped, nbResultsQuery);
 
         return aggregated
             // building the item containing the data needed for display
             .map(suggestion => {
                 return {
-                    value: this.typedStringify(suggestion.value, suggestion.type), 
+                    value: suggestion.value, 
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
                     walks: suggestion.nbWalks,
@@ -285,7 +285,7 @@ export const CSCompleter = {
                     formatted.probability = val.value;
                 } else 
                 
-                if(key.includes(this.sugg_var)) formatted.entity = val;
+                if(key.includes(this.sugg_var)) formatted.id = this.typedStringify(val)
             }
 
             return formatted;
