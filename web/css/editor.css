@@ -57,3 +57,7 @@
 .cm-overlay { /* text highlighter because cursor is on */
     background-color: var(--header-background-color) !important;
 }
+
+.cm-meta { /* this is a lang tag such as "string"@lang-tag */
+    color: var(--aurora-1) !important;
+}
