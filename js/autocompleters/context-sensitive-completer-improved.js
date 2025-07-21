@@ -5,8 +5,8 @@ import ColorHash from 'color-hash';
 /// from the current triple pattern being type. This is
 /// context-insensitive since it does not take into account the
 /// other operations of the SPARQL query.
-export const CSCompleter = {
-    name: "context-sensitive-completer",
+export const CSCompleterImproved = {
+    name: "context-sensitive-completer-improved",
     autoShow: false,
     bulk: false,
     cache: new Object(),
@@ -16,19 +16,20 @@ export const CSCompleter = {
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
     colorHash: new ColorHash(), 
     yasqe: null,
-    regexHTTPS: new RegExp("^<https://", "i"),
-    regexHTTP: new RegExp("^<http://", "i"),
-    regexUriStart: new RegExp("^<", "i"),
-
+    suggestionsBuffer: null,
     get: function(yasqe, token) {
-        this.autocompleteStartFeedback();
+        if(this.suggestionsBuffer) {
+            let ret = this.suggestionsBuffer;
+            this.suggestionsBuffer = null;
+            return ret;
+        }
+
         try {
             return this.get_(yasqe, token);
         }catch(error){
             return [];
         }
     },
-
     isValidCompletionPosition: function (yasqe) {
 
         if (!this.yasqe) this.yasqe = yasqe;
@@ -40,15 +41,13 @@ export const CSCompleter = {
 
         try {
             const icptp = this.getIncompleteTriple(queryTokens, index);
-            this.getACQueryTripleTokens(icptp.entities);
+            this.getACQueryTripleTokens(icptp.entities)
         }catch(error){
-            // console.log(error)
             return false;
         }
 
         return true;
     },
-
     get_: function(yasqe, token) {
 
         // console.log(yasqe.getDoc().getCursor().line)
@@ -56,11 +55,11 @@ export const CSCompleter = {
 
         this.yasqe = yasqe;
 
+        const requestConfig = this.yasqe.config;
 
         // console.log("requestConfig", requestConfig)
 
         let autocompletionQueryString, currentString;
-
         try {
             let {acqs, cs} = this.getAutocompletionQuery();
             autocompletionQueryString = acqs;
@@ -77,77 +76,17 @@ export const CSCompleter = {
         console.log("Autocompletion Query", autocompletionQueryString);
         console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
 
-        const requestConfig = yasqe.config.requestConfig();
+        const url = yasqe.config.requestConfig().endpoint
 
-        const url = requestConfig.endpoint;
-        // we assume some kind of endpoint url such as:
-        // <protocol>://<authority>/…/<dataset-name>/<passage|sparql>
-        // so the dataset becomes suffixed by /raw
-        const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)$/, "/$1/raw");
-
-        const args = requestConfig.args;
-
-        return Promise.resolve(this.provideSuggestions(rawUrl, args, autocompletionQueryString, currentString));
+        return Promise.resolve(this.provideSuggestions(url, autocompletionQueryString, currentString))
     },
 
     // AUTOCOMPLETION DISPLAY 
-
-    autocompleteStartFeedback: function(){
-        console.log("start autocompletion ...");
-        const yasguiElement = document.getElementsByClassName("yasgui").item(0);
-        const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
-
-        const loader = document.createElement("div");
-        loader.classList.add("loader-icon");
-
-        const dim = cursor.getBoundingClientRect();
-        
-        loader.style.left = (dim.x + dim.width) + "px";
-        loader.style.top = (dim.top + window.scrollY) + "px";
-
-        yasguiElement.appendChild(loader);
-    },
-
-    autocompleteEndFeedback: function(hints){
-        const loader = document.getElementsByClassName("loader-icon").item(0);
-        loader.remove();
-
-        console.log("end of autocompletion!");
-        if(hints.length === 0) {
-            console.log("Autcompletion query didn't return any results.");
-
-            const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
-            const yasguiElement = document.getElementsByClassName("yasgui").item(0);
-
-            yasguiElement
-            const error = document.createElement("div");
-            error.classList.add("error-icon");
-
-            const dim = cursor.getBoundingClientRect();
-        
-            // error.style.top = ((dim.top + dim.bottom) / 2) + window.scrollY + "px";
-            error.style.left = (dim.x + dim.width) + "px";
-            error.style.top = (dim.top + window.scrollY) + "px";
-            // error.style.bottom = (dim.bottom + window.scrollY) + "px";
-
-            error.innerHTML = "&#10005;";
-
-            yasguiElement.appendChild(error);
-        }
-
-        else if(hints.filter(hint => (hint.probabilityOfRetrievingRestOfMapping && hint.probabilityOfRetrievingRestOfMapping.value) !== 0).length === 0)
-            console.log("Autocompletion query returned results, but none of them have probability != 0")
-
-        else
-            console.log("Successfuly retrieved suggestions!")
-        
-    },
 
     postprocessHints: function (_yasqe, hints) {
 
         const line = _yasqe.getDoc().getCursor().line;
         const ch  = _yasqe.getDoc().getCursor().ch;
-        const _colorHash = this.colorHash;
         
         const removeProvenanceDisplay = function(e){
             Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
@@ -162,8 +101,10 @@ export const CSCompleter = {
 
         x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
 
-        const renderableHints = hints.map(hint => {
+        return hints.map(hint => {
 
+            const colorHash = new ColorHash();
+        
             hint.render = function(el, self, data){
 
                 // Adjusting where to insert the completed entity, in order to prevent eating characters right before or after. WIP
@@ -176,10 +117,9 @@ export const CSCompleter = {
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
-                      .map(source => source.split("http://").at(2)) // wanky but for now is ok
-                      .filter(o => o !== undefined) // when there are no source , filter out
-                      .map(source => {/* console.log(source);  */return {source: source, hsl: _colorHash.hsl(source), hex: _colorHash.hex(source)}})
-                      .sort((a, b) => a.hsl[0] - b.hsl[0]);
+                    .map(source => source.split("http://").at(2)) // wanky but for now is ok
+                    .map(source => {return {source: source, hsl: colorHash.hsl(source), hex: colorHash.hex(source)}})
+                    .sort((a, b) => a.hsl[0] - b.hsl[0]);
 
                 // We store an object in the displayTextField. Definitely not as intented, but works (...?)
 
@@ -187,22 +127,22 @@ export const CSCompleter = {
                 suggestionDiv.className = "suggestion-div";
 
                 const suggestionValue = document.createElement("span");
-                suggestionValue.className = "suggestion-value";
-                suggestionValue.cssFloat = "";
+                suggestionValue.className = "suggestion-value"
+                suggestionValue.cssFloat = ""
                 suggestionValue.textContent = value || "";
 
                 const suggestionScore = document.createElement("span");
-                suggestionScore.className = "suggestion-score";
+                suggestionScore.className = "suggestion-score"
                 suggestionScore.textContent = "Estimated cardinality : " + (score || "");
                 suggestionScore.style.cssFloat = "";
 
                 const suggestionWalks = document.createElement("span");
-                suggestionWalks.className = "suggestion-walks";
+                suggestionWalks.className = "suggestion-walks"
                 suggestionWalks.textContent = "Random walks : " + (walks || "");
                 suggestionWalks.style.cssFloat = "";
 
                 const suggestionProvenance = document.createElement("span");
-                suggestionProvenance.className = "suggestion-provenance";
+                suggestionProvenance.className = "suggestion-provenance"
                 suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
                 suggestionProvenance.style.cssFloat = "";
 
@@ -261,21 +201,16 @@ export const CSCompleter = {
 
                 data.text = value;
             }
-
             return hint
         });
-
-        this.autocompleteEndFeedback(renderableHints);
-        
-        return renderableHints;
     },
 
 
     // PROVIDING SUGGESTION DATA 
 
-    provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
+    provideSuggestions: async function(url, autocompletionQueryString, currentString){
 
-        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
+        const acqResults = await this.queryWithCache(url, autocompletionQueryString, currentString);
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
     },
@@ -288,22 +223,19 @@ export const CSCompleter = {
         const prefixes = this.yasqe.getPrefixesFromQuery();
         const filterString = currentString.toLowerCase();
 
-        // No empty mappings, no mapping with probability of 0!
-        const successfulWalks = acqResults
-            .filter(mapping => Object.keys(mapping).length !== 0)
-            .filter(mapping => mapping[this.proba_var].value > 0);
+        const successfulWalks = acqResults.filter(mapping => mapping[this.proba_var].value > 0);
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString, prefixes));
-        const grouped = this.groupBy(filtered, 'id');
+        const grouped = this.groupBy(filtered, 'entity', 'value');
         const aggregated = this.aggregate(grouped, nbResultsQuery);
 
         return aggregated
             // building the item containing the data needed for display
             .map(suggestion => {
                 return {
-                    value: suggestion.value, 
+                    value: this.typedStringify(suggestion.value, suggestion.type), 
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
                     walks: suggestion.nbWalks,
@@ -338,7 +270,7 @@ export const CSCompleter = {
                     formatted.probability = val.value;
                 } else 
                 
-                if(key.includes(this.sugg_var)) formatted.id = this.typedStringify(val)
+                if(key.includes(this.sugg_var)) formatted.entity = val;
             }
 
             return formatted;
@@ -347,43 +279,36 @@ export const CSCompleter = {
 
     filterByString: function(mappingInfo, filterString, prefixes) {
 
-        // console.log(filterString)
+        // TODO: https 
+        const isUriStart = function(string){
+            return string.startsWith("<") || "http://".includes(string) || string.includes("http://")
+        }
 
         if(filterString === "") return true;
 
-        const isStringLiteralStart = function(string){
-            string.startsWith("\"");
-        }
-
-        // TODO: https 
-        const isUriStart = function(string){
-            return string.startsWith("<");
-        }
-
-        const getStringWithoutUriStart = function(string){
-            return string.replace(regexHTTPS, "").replace(regexHTTP, "").replace(regexUriStart, "");
-        }
-
-        const toTest = mappingInfo.id.toLowerCase();
+        const toTest = mappingInfo.entity.value.toLowerCase();
         const type = mappingInfo.entity.type;
 
-        if(isStringLiteralStart(filterString)){
+        if(filterString.startsWith("\"")){
             if(type === "literal" && toTest.includes(filterString.slice(1))) return true;
         }
 
         // TODO: https 
-        if(isUriStart(filterString))
-            if(toTest.includes(getStringWithoutUriStart(filterString))) return true;
-        else
-            if(toTest.includes(filterString)) return true;
+        if(isUriStart(filterString)){
+            if(filterString.includes("<http://"))
+                if(toTest.includes(filterString.replace("<http://", ""))) return true;
+            else
+                if(toTest.includes(currentString)) return true;
+        }
 
         const split = filterString.split(":");
-
-        if(split.length === 1)
+        if(split.length === 1){
             if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
-        else
-            if(split.length === 2) 
-                if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
+        }else
+
+        if(split.length === 2){
+            if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
+        }
 
         return false;
     },
@@ -397,6 +322,7 @@ export const CSCompleter = {
             aggregated.push(
                 {
                     value : key,
+                    type : val[0].entity.type,
                     score : (val.reduce((acc, curr) => {return acc + (curr.probability > 0 ? 1/curr.probability : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
                     nbWalks : val.length,
 
@@ -413,7 +339,7 @@ export const CSCompleter = {
 
     // AUTOCOMPLETION QUERY EXECUTION
 
-    queryWithCache: async function(url, args, query, currentString) {
+    queryWithCache: async function(url, query, currentString) {
 
         // console.log("currentString", currentString)
 
@@ -421,7 +347,7 @@ export const CSCompleter = {
 
             if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
                 // execute AC query 
-                const bindings = await Promise.resolve(this.query(url, args, query));
+                const bindings = await Promise.resolve(this.query(url, query, currentString));
 
                 // add to the cache if it already exists, otherwise create a new one
                 if(this.cache[query])
@@ -438,32 +364,21 @@ export const CSCompleter = {
             return this.cache[query].bindings;
 
         } catch (error) {
-
             throw new Error("Query with cache failed for the following reason:", error);
         }
 
     },
 
-    query: async function(url, args, query) {
+    query: async function(url, query, currentString) {
         try {
-            const budget = args.find(e => e.name === "budget");
-
-            // console.log("sending with")
-            // console.log(query)
-            const urlsp = new URLSearchParams({ "query" : query })
-
-            if(budget) urlsp.set("budget", budget.value);
-
-            // console.log(urlsp)
-
             const response = await fetch(url, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
-                body: urlsp
+                body: new URLSearchParams({ "query" : query }),
             });
-
+            
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}`);
             }
@@ -527,6 +442,8 @@ export const CSCompleter = {
         // console.log(endOfTriple);
         // console.log(shouldAddPeriod);
 
+        let variables = incompleteTriple.variables;
+
         context.splice(
             incompleteTriple.start, 
             incompleteTriple.end - incompleteTriple.start + 1, 
@@ -538,14 +455,12 @@ export const CSCompleter = {
         // console.log(context);
 
 
-        // Parse the query as is (without the comments)
+        // Parse the query as is
 
-        const commentless = context.filter(tkn => tkn.type !== "comment");
-        const string = this.getACQPrefixes().concat(commentless.map(tkn => tkn.string).join(" "));
+        const string = this.getACQPrefixes().concat(context.map(tkn => tkn.string).join(" "));
 
         var Par = Parser.Parser;
         var parser = new Par();
-
 
         try{
             var parsedQuery = parser.parse(string);
@@ -560,23 +475,34 @@ export const CSCompleter = {
             }
         }
 
-        this.removeModifiers(parsedQuery);
-
         // Find triples relevant to the context
 
         const triples = this.getTriples(parsedQuery);
-        const filters = this.getFilters(parsedQuery);
+        triples.forEach(t => t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.sugg_var)); // weird way to find the triple being worked on
+        triples.forEach(t => t.inContext = t.isCurrentTriple);
 
-        triples.forEach(t => {
-            t.isCurrentTriple = this.getVarsFromParsedTriple(t).includes(this.sugg_var); // weird way to find the triple being worked on
-            t.inContext = t.isCurrentTriple;
-        }); 
+        let lastSize = 0;
 
-        filters.forEach(f => f.inContext = false);
+        while(lastSize !== variables.length){
+            lastSize = variables.length;
 
-        let variables = incompleteTriple.variables;
+            // Add all variables linked to the variables of the triple being written.
+            // TODO : find more efficient / elegant way to do this
+            for(const qt of triples){
+                for(const variable of this.getVarsFromParsedTriple(qt)){
+                    if(variables.includes(variable)){
+                        for(const tpVar of this.getVarsFromParsedTriple(qt)){
+                            if(!variables.includes(tpVar)){
+                                variables.push(tpVar);
+                            }
+                        }
+                        qt.inContext = true;
+                        break;
+                    }
+                }
+            }
+        }
 
-        this.markTriplesAndFilters(triples, filters, variables);
 
         // Remove parts of the query outside of context
 
@@ -672,8 +598,6 @@ export const CSCompleter = {
         let predicate = "?default_p";
         let object = "?default_o";
         let filter = "";
-
-        // console.log(entities);
 
         if(entities.length === 3){
 
@@ -1088,27 +1012,6 @@ export const CSCompleter = {
         return tokenArray;
     },
 
-    removeModifiers: function(parsedQueryTree){
-        switch(parsedQueryTree.type){
-            case "query":
-                parsedQueryTree.distinct = false;
-                parsedQueryTree.offset = 0;
-                delete parsedQueryTree.limit;
-                delete parsedQueryTree.group;
-                delete parsedQueryTree.order;
-                delete parsedQueryTree.having;
-            case "query":
-            case "union":
-            case "group":
-            case "graph":
-            case "optional":
-            case "bgp":
-            case "filter":
-            default :
-                {};
-        }
-    },
-
     trim: function(parsedQueryTree){
         switch(parsedQueryTree.type){
             case "query":
@@ -1142,28 +1045,19 @@ export const CSCompleter = {
                 return [parsedQueryTree]
 
             case "optional": 
-                // No optional : these clauses are not relevant in providing suggestions that lead to results.
-                // However, they drastically increase source selection processing time. 
-                // Thus, optional clauses are not worth keeping inside the auto completion query.
-                // Of course, we still have to keep the content of the optional clause containing the current triple, if there is such an optional clause.
-                // PS : Optional clauses still provide value, as they may help getting more accurate cardinality estimations.
-                
-                return this.hasCurrentTriple(parsedQueryTree) ? [...parsedQueryTree.patterns] : [];
+                parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
+                    p => p.inContext
+                )
+                .map(p => this.trim(p)) 
+                .flat();
 
+                // console.log([...parsedQueryTree.patterns]);
 
-                // parsedQueryTree.patterns = parsedQueryTree.patterns.filter(
-                //     p => p.inContext
-                // )
-                // .map(p => this.trim(p)) 
-                // .flat();
+                if(parsedQueryTree.patterns.length === 0) return [];
 
-                // // console.log([...parsedQueryTree.patterns]);
+                if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
 
-                // if(parsedQueryTree.patterns.length === 0) return [];
-
-                // if(this.hasCurrentTriple(parsedQueryTree)) return [...parsedQueryTree.patterns];
-
-                // return [parsedQueryTree]
+                return [parsedQueryTree]
 
             case "bgp":
                 parsedQueryTree.triples = parsedQueryTree.triples.filter(
@@ -1192,47 +1086,6 @@ export const CSCompleter = {
         triple.object.termType === "Variable" ? vars.push(triple.object.value) : {} ;
 
         return vars;
-    },
-
-    getVarsFromParsedFilter: function(filter){
-        if(filter.type !== "filter") throw new Error("Not a filter");
-
-        return this.getVarsFromOperation(filter.expression)
-    },
-
-    getVarsFromOperation: function(operation){
-        if(operation.type !== "operation") throw new Error("Not an operation");
-
-        return operation.args.reduce(
-            (acc, val) => {
-                if(val.termType){
-                    if(val.termType === "Variable") return acc.concat([val.value]);
-                    return acc.concat([]);
-                }
-
-                if(val.type && val.type === "operation")
-                    return acc.concat(this.getVarsFromOperation(val));
-                
-                throw new Error("Unexpected object inside operation arguments");
-            },
-            []  
-        ); 
-    },
-
-    getVarsFromParsedElementWithVariables: function(element){
-        if (this.isParsedTriple(element)) return this.getVarsFromParsedTriple(element);
-
-        if(element && element.type){
-            switch(element.type){
-                case "filter":
-                    return this.getVarsFromParsedFilter(element);
-
-                default :
-                    throw new Error("Unsupported element type :", element.type);
-            }
-        }
-
-        throw new Error("Element is null or has no type; can't extract variables.");
     },
 
     getTriples: function(parsedQueryTree){
@@ -1265,70 +1118,6 @@ export const CSCompleter = {
             
             default : // triple
                 return [parsedQueryTree];
-        }
-    },
-
-    getFilters: function(parsedQueryTree){
-        switch(parsedQueryTree.type){
-            case "query":
-                return parsedQueryTree.where.reduce(
-                        (acc, val) => acc.concat(this.getFilters(val)),
-                        []  
-                    ); 
-            
-            case "graph":
-            case "union":
-            case "group":
-                return parsedQueryTree.patterns.reduce(
-                    (acc, val) => acc.concat(this.getFilters(val)),
-                    []  
-                ); 
-
-            case "bgp":
-                return [];
-            
-            case "optional":
-                return parsedQueryTree.patterns.reduce(
-                    (acc, val) => acc.concat(this.getFilters(val)),
-                    []  
-                ); 
-
-            case "filter":
-                return [parsedQueryTree];
-            
-            default : // triple
-                return [];
-        }
-    },
-
-    markTriplesAndFilters: function(triples, filters, variables){
-        let lastSize = 0;
-
-        const triplesAndFilters = triples.concat(filters);
-
-        while(lastSize !== variables.length){
-            lastSize = variables.length;
-
-            // Add all variables linked to the variables of the triple being written.
-            // TODO : find more efficient / elegant way to do this
-            for(const element of triplesAndFilters){
-
-                for(const variable of this.getVarsFromParsedElementWithVariables(element)){
-
-                    if(variables.includes(variable)){
-
-                        for(const eltVar of this.getVarsFromParsedElementWithVariables(element)){
-
-                            if(!variables.includes(eltVar)){
-                                variables.push(eltVar);
-                            }
-                        }
-
-                        element.inContext = true;
-                        break;
-                    }
-                }
-            }
         }
     },
 
@@ -1373,7 +1162,9 @@ export const CSCompleter = {
                 )
                 break;
             
-            case "filter": // filter
+            case "filter":
+                parsedQueryTree.inContext = true;
+
             default : // triple
                 {} // nothing to do;
         }
@@ -1411,14 +1202,6 @@ export const CSCompleter = {
     },
 
     // UTILS
-
-    isParsedTriple: function(element){
-        try {
-            return element.subject.termType && element.predicate.termType && element.object.termType;
-        } catch(e) {
-            return false;
-        }
-    },
 
     getClosestCharBefore: function(tokenArray, index, char){
         while(index >= 0 && tokenArray[index] && tokenArray[index].string !== char){
@@ -1522,25 +1305,22 @@ export const CSCompleter = {
         return line1 === line2 && ch1 === ch2;
     },
 
-    typedStringify: function(entity) {
+    typedStringify: function(entity, type) {
 
-        const entityValue = entity.value;
-
-        switch(entity.type) {
+        switch(type) {
             case 'iri':
             case 'uri':
                 for(const [key, val] of Object.entries(this.yasqe.getPrefixesFromQuery())){
-                    if(entityValue.includes(val)) {
-                        return entityValue.replace(val, key+":")
+                    if(entity.includes(val)) {
+                        return entity.replace(val, key+":")
                     }
                 }
 
-                return "<" + entityValue + ">"
+                return "<" + entity + ">"
             case 'literal':
-                const lang = entity["xml:lang"] ? `@${entity["xml:lang"]}` : "";
-                return "\"" + entityValue + "\"" + lang
+                return "\"" + entity + "\""
             default:
-                return "UNKNOWN TYPE : " + entityValue
+                return "UNKNOWN TYPE : " + entity
         }
     },
 
@@ -1597,18 +1377,3 @@ SELECT ?s ?l ?probabilityOfRetrievingRestOfMapping WHERE {
     ?s owl:sameAs ?sa
   }
 } */
-
-
-
-//   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-//   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-//   PREFIX owl: <http://www.w3.org/2002/07/owl#>
-//   PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>
-  
-//   SELECT * WHERE {
-//     ?s bsbm:productFeature <http://www.ratingsite18.fr/ProductFeature17447>.
-//     ?s rdf:type ?o.
-//     ?s owl:sameAs ?sa.
-//     ?z owl:sameAs ?sa.
-//     ?z 
-//   }
