@@ -5,6 +5,11 @@ ensure completeness of query results, it already includes actors such
 as quad pattern fragments (qpf), or brqpf. We provide one for SPARQL
 *continuation* queries [1].
 
+** Query Editor
+Passage-Comunica comes with a query editor implements autocompletion features relying on 
+sampling-based query services, like ones using the federated sampling
+engine [[https://github.com/GDD-Nantes/HeFQUIN-FRAW.git][HeFQUIN-FRAW]].
+
 ** Principle
 
 Comunica decomposes the query: Comunica is in charge of everything but
