@@ -22,11 +22,15 @@ export const CSCompleter = {
 
     get: function(yasqe, token) {
         this.autocompleteStartFeedback();
-        try {
-            return this.get_(yasqe, token);
-        }catch(error){
-            return [];
-        }
+        return this.get_(yasqe, token)
+            .then((hints) => {
+                this.autocompleteEndFeedback(hints);
+                return hints;
+            })
+            .catch((e) => {
+                this.autocompleteEndFeedback([]);
+                return [];
+            });
     },
 
     isValidCompletionPosition: function (yasqe) {
@@ -75,7 +79,7 @@ export const CSCompleter = {
         }
 
         console.log("Autocompletion Query", autocompletionQueryString);
-        console.log(currentString ? `Fitlering with: ${currentString}` : "No filter");
+        console.log(currentString ? `Filtering with: ${currentString}` : "No filter");
 
         const requestConfig = yasqe.config.requestConfig();
 
@@ -264,8 +268,6 @@ export const CSCompleter = {
 
             return hint
         });
-
-        this.autocompleteEndFeedback(renderableHints);
         
         return renderableHints;
     },
@@ -275,7 +277,10 @@ export const CSCompleter = {
 
     provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
 
-        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
+        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString)
+            .catch((e) => {
+                throw e;
+            });
 
         return Promise.resolve(this.processACQResults(acqResults, currentString));
     },
@@ -347,7 +352,7 @@ export const CSCompleter = {
 
     filterByString: function(mappingInfo, filterString, prefixes) {
 
-        // console.log(filterString)
+        console.log(filterString)
 
         if(filterString === "") return true;
 
@@ -421,7 +426,10 @@ export const CSCompleter = {
 
             if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
                 // execute AC query 
-                const bindings = await Promise.resolve(this.query(url, args, query));
+                const bindings = await Promise.resolve(this.query(url, args, query))
+                .catch((e) => {
+                    throw e
+                });
 
                 // add to the cache if it already exists, otherwise create a new one
                 if(this.cache[query])
@@ -438,7 +446,6 @@ export const CSCompleter = {
             return this.cache[query].bindings;
 
         } catch (error) {
-
             throw new Error("Query with cache failed for the following reason:", error);
         }
 
