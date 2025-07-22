@@ -140,6 +140,7 @@ export const CSCompleter = {
         this.clearIcons();
 
         console.log("end of autocompletion!");
+
         if(hints.length === 0) {
             console.log("Autcompletion query didn't return any results.");
 
@@ -308,7 +309,7 @@ export const CSCompleter = {
 
     processACQResults: async function(acqResults, currentString){
 
-        const prefixes = this.yasqe.getPrefixesFromQuery();
+        // console.log("currentString", currentString)
         const filterString = currentString.toLowerCase();
 
         // No empty mappings, no mapping with probability of 0!
@@ -318,7 +319,7 @@ export const CSCompleter = {
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
-        const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString, prefixes));
+        const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString));
         const grouped = this.groupBy(filtered, 'id');
         const aggregated = this.aggregate(grouped, nbResultsQuery);
 
@@ -368,9 +369,9 @@ export const CSCompleter = {
         })
     },
 
-    filterByString: function(mappingInfo, filterString, prefixes) {
+    filterByString: function(mappingInfo, filterString) {
 
-        console.log(filterString)
+        // console.log(filterString)
 
         if(filterString === "") return true;
 
@@ -394,19 +395,11 @@ export const CSCompleter = {
             if(type === "literal" && toTest.includes(filterString.slice(1))) return true;
         }
 
-        // TODO: https 
-        if(isUriStart(filterString))
+        if(isUriStart(filterString)){
             if(toTest.includes(getStringWithoutUriStart(filterString))) return true;
-        else
+        } else {
             if(toTest.includes(filterString)) return true;
-
-        const split = filterString.split(":");
-
-        if(split.length === 1)
-            if(toTest.includes(prefixes[split[0]]) || toTest.includes(split[0])) return true;
-        else
-            if(split.length === 2) 
-                if(toTest.includes(prefixes[split[0]]) && toTest.includes(split[1])) return true;
+        }
 
         return false;
     },
@@ -519,7 +512,7 @@ export const CSCompleter = {
 
     getAutocompletionQuery: function() {
 
-        // Generate a complete query, i.e. take the query as is a replace only the current (incomplete) triple by a corresponding complete triple. 
+        // Generate a complete query, i.e. take the query as is and replace only the current (incomplete) triple by a corresponding complete triple. 
 
         const tokens = this.getQueryTokens();
         const context = [...tokens];
@@ -584,6 +577,8 @@ export const CSCompleter = {
                 throw new Error("Could not parse the autcompletion query.")
             }
         }
+        
+        // console.log("parsedQuery", parsedQuery)
 
         this.removeModifiers(parsedQuery);
 
@@ -849,29 +844,6 @@ export const CSCompleter = {
         };
     },
 
-    // getTriple: function(tokenArray, index){
-    //     const before = this.getTripleBefore(tokenArray, index);
-    //     const after = this.getTripleAfter(tokenArray, index + 1);
-
-    //     const tripleTokens = before.concat(after);
-
-    //     const entities = this.getTokenGroupsOfTriple(tripleTokens);
-
-    //     if(entities.length === 0 || entities.length > 3) throw new Error("Not a triple");
-        
-    //     return {
-    //         start: index - before.length,
-    //         end: index + after.length,
-    //         subject: this.stringifyTokenGroup(entities[0]),
-    //         predicate: this.stringifyTokenGroup(entities[1]),
-    //         object: this.stringifyTokenGroup(entities[2]),
-    //         tokens: tripleTokens,
-    //         type: "triple",
-    //         incomplete: true,
-    //         variables: tripleTokens.filter(elt => elt.type === "atom").map(elt => elt.string.replace("?","")),
-    //     };
-    // },
-
     getTokenGroupsOfTriple: function(tokenArray) {
         const entities = [];
         let idx = 0;
@@ -881,6 +853,7 @@ export const CSCompleter = {
             let token = tokenArray[idx];
 
             switch (token.type) {
+                case "meta": // language tag or such
                 case "variable-3": // uri
                 case "string-2": // blank node or prefix:entity
                 case "atom": // variable
@@ -957,7 +930,7 @@ export const CSCompleter = {
                 
                 case "ws":
                     break;
-
+                
                 default:
                     return [];
             }
