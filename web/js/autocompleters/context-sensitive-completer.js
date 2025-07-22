@@ -96,13 +96,37 @@ export const CSCompleter = {
 
     // AUTOCOMPLETION DISPLAY 
 
+    getOrCreateLoaderIcon: function(){
+        const loader = document.getElementsByClassName("loader-icon").item(0) ?? document.createElement("div");
+        loader.classList.add("loader-icon");
+
+        return loader;
+    },
+
+    getOrCreateErrorIcon: function(){
+        const error = document.getElementsByClassName("error-icon").item(0) ?? document.createElement("div");
+        error.classList.add("error-icon");
+
+        return error;
+    },
+
+    clearIcons: function(){
+        const loader = document.getElementsByClassName("loader-icon").item(0);
+        if(loader) loader.remove();
+
+        const error = document.getElementsByClassName("error-icon").item(0);
+        if(error) error.remove();
+    },
+
     autocompleteStartFeedback: function(){
+        this.clearIcons();
+
         console.log("start autocompletion ...");
+
         const yasguiElement = document.getElementsByClassName("yasgui").item(0);
         const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
 
-        const loader = document.createElement("div");
-        loader.classList.add("loader-icon");
+        const loader = this.getOrCreateLoaderIcon();
 
         const dim = cursor.getBoundingClientRect();
         
@@ -113,8 +137,7 @@ export const CSCompleter = {
     },
 
     autocompleteEndFeedback: function(hints){
-        const loader = document.getElementsByClassName("loader-icon").item(0);
-        loader.remove();
+        this.clearIcons();
 
         console.log("end of autocompletion!");
         if(hints.length === 0) {
@@ -122,17 +145,12 @@ export const CSCompleter = {
 
             const cursor = document.getElementsByClassName("CodeMirror-cursor").item(0);
             const yasguiElement = document.getElementsByClassName("yasgui").item(0);
-
-            yasguiElement
-            const error = document.createElement("div");
-            error.classList.add("error-icon");
+            const error = this.getOrCreateErrorIcon();
 
             const dim = cursor.getBoundingClientRect();
-        
-            // error.style.top = ((dim.top + dim.bottom) / 2) + window.scrollY + "px";
+    
             error.style.left = (dim.x + dim.width) + "px";
             error.style.top = (dim.top + window.scrollY) + "px";
-            // error.style.bottom = (dim.bottom + window.scrollY) + "px";
 
             error.innerHTML = "&#10005;";
 
