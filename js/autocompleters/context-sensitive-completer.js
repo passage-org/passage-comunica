@@ -1081,7 +1081,7 @@ export const CSCompleter = {
 
         tokenArray = tokenArray.filter(tkn => tkn.type != "ws" || tkn.isCurrentToken);
 
-        while(tokenArray[0].string.toLowerCase() !== "select") tokenArray.shift(); // Remove everything until the first bracket (after the WHERE)
+        while(tokenArray[0] && tokenArray[0].string.toLowerCase() !== "select") tokenArray.shift(); // Remove everything until the first bracket (after the WHERE)
 
         return tokenArray;
     },
