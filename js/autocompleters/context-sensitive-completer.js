@@ -53,7 +53,7 @@ export const CSCompleter = {
         return true;
     },
 
-    get_: function(yasqe, token) {
+    get_: async function(yasqe, token) {
 
         // console.log(yasqe.getDoc().getCursor().line)
         // console.log(yasqe.getDoc().getCursor().ch)
@@ -86,7 +86,7 @@ export const CSCompleter = {
 
         const args = requestConfig.args;
 
-        return Promise.resolve(this.provideSuggestions(rawUrl, args, autocompletionQueryString, currentString));
+        return await this.provideSuggestions(rawUrl, args, autocompletionQueryString, currentString);
     },
 
     // AUTOCOMPLETION DISPLAY 
@@ -292,17 +292,15 @@ export const CSCompleter = {
     provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
 
         const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString)
-            .catch((e) => {
-                throw e;
-            });
+        console.log("acqResults", acqResults)
 
-        return Promise.resolve(this.processACQResults(acqResults, currentString));
+        return this.processACQResults(acqResults, currentString);
     },
 
 
     // AUTOCOMPLETION QUERY RESULTS POST PROCESSING
 
-    processACQResults: async function(acqResults, currentString){
+    processACQResults: function(acqResults, currentString){
 
         // console.log("currentString", currentString)
         const filterString = currentString.toLowerCase();
@@ -428,33 +426,23 @@ export const CSCompleter = {
 
         // console.log("currentString", currentString)
 
-        try {
+        if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
+            // execute AC query 
+            const bindings = await this.query(url, args, query);
 
-            if((this.cache[query] && this.cache[query].lastString === currentString) || !this.cache[query]){
-                // execute AC query 
-                const bindings = await Promise.resolve(this.query(url, args, query))
-                .catch((e) => {
-                    throw e
-                });
+            // add to the cache if it already exists, otherwise create a new one
+            if(this.cache[query])
+                this.cache[query].bindings = this.cache[query].bindings.concat(bindings)
+            else
+                this.cache[query] = {bindings: bindings};  
 
-                // add to the cache if it already exists, otherwise create a new one
-                if(this.cache[query])
-                    this.cache[query].bindings = this.cache[query].bindings.concat(bindings)
-                else
-                    this.cache[query] = {bindings: bindings};  
+            console.log(`Finished query with ${bindings.length} results`);
+            console.log(bindings);
 
-                console.log(`Finished query with ${bindings.length} results`);
-                console.log(bindings);
-
-            }
-
-            this.cache[query].lastString = currentString;
-            return this.cache[query].bindings;
-
-        } catch (error) {
-            throw new Error("Query with cache failed for the following reason:", error);
         }
 
+        this.cache[query].lastString = currentString;
+        return this.cache[query].bindings;
     },
 
     query: async function(url, args, query) {
@@ -675,60 +663,10 @@ export const CSCompleter = {
         let subject = "?default_s";
         let predicate = "?default_p";
         let object = "?default_o";
-        let filter = "";
-
-        // console.log(entities);
-
-        if(entities.length === 3){
-
-            // console.log(entities)
 
             const currentToken = entities.flat().find(tkn => tkn.isCurrentToken);
             const idx = entities.findIndex(entity => entity.find(tkn => tkn == currentToken));
-
-            if(idx === -1 &&
-                ["variable-3", // uri
-                "atom", // variable
-                "error", // possible first unfinished string of entity like pre:id
-                "number", // number
-                "string"] // literal
-                .includes(currentToken.type)
-            ) {
-                throw new Error("Subject, Predicate and Object found. Triple already written.");
-            }
-            
-            // console.log("idx", idx);
-            // const incompleteUriIndex = entities.findIndex(entity => entity.find(tkn => tkn.type === "incomplete-uri"));
-            
-            // TODO : verify this condition. Should a period, semicolon, etc. also throw ?
-            // if (currentToken.type === "ws") 
-
-            // console.log("incompleteUriIndex", incompleteUriIndex)
-            switch (idx) {
-                case 0:
-                    subject = this.q_sugg_var;
-                    predicate = this.stringifyTokenGroup(entities[1]);
-                    object = this.stringifyTokenGroup(entities[2]);
-                    break;
-
-                case 1:
-                    subject = this.stringifyTokenGroup(entities[0]);
-                    predicate = this.q_sugg_var;
-                    object = this.stringifyTokenGroup(entities[2]);
-                    break;
-
-                case 2:
-                    subject = this.stringifyTokenGroup(entities[0]);
-                    predicate = this.stringifyTokenGroup(entities[1]);
-                    object = this.q_sugg_var;
-                    break;
-            
-                default:
-                    throw new Error(`Triple to complete has 3 entities, but the index of the incomplete entity is incorrect : ${incompleteUriIndex} `);
-            }
-
-            filter = entities[idx].map(tkn => tkn.string).join("");
-        } 
+        filter = idx !== -1 ? entities[idx].map(tkn => tkn.string).join("") : "";
 
         // console.log(entities);
 
@@ -739,6 +677,13 @@ export const CSCompleter = {
         }
 
         if(entities.length === 1) {
+
+            if(this.isPosJustAfterToken(line, ch, entities[0][0])){
+                // [[entity]]x
+                subject = this.q_sugg_var;
+                predicate = "?predicate_placeholder";
+                object = "?object_placeholder";
+            }
             
             if(this.isPosBeforeToken(line, ch, entities[0][0])){
                 // console.log("before")
@@ -795,9 +740,6 @@ export const CSCompleter = {
                 subject = this.q_sugg_var;
                 predicate = this.stringifyTokenGroup(entities[1]);
                 object = "?object_placeholder";
-
-                // filter = `FILTER REGEX (${this.suggestion_variable}, \"^${entities[0].map(tkn => tkn.string).join("").slice(1, -1)}\")`;
-                filter = entities[0].map(tkn => tkn.string).join("");
             }
 
             // if(this.isPosJustBeforeToken(line, ch, entities[1][0])){
@@ -814,10 +756,47 @@ export const CSCompleter = {
                 subject = this.stringifyTokenGroup(entities[0]);
                 predicate = this.q_sugg_var;
                 object = "?object_placeholder";
-
-                // filter = `FILTER REGEX (${this.suggestion_variable}, \"^${entities[1].map(tkn => tkn.string).join("").slice(1, -1)}\")`;
-                filter = entities[1].map(tkn => tkn.string).join("");
             }
+        }
+
+        if(entities.length === 3){
+
+            // console.log(entities)
+
+            if(idx === -1 &&
+                ["variable-3", // uri
+                "atom", // variable
+                "error", // possible first unfinished string of entity like pre:id
+                "number", // number
+                "string"] // literal
+                .includes(currentToken.type)
+            ) {
+                throw new Error("Subject, Predicate and Object found. Triple already written.");
+            }
+            
+            switch (idx) {
+                case 0:
+                    subject = this.q_sugg_var;
+                    predicate = this.stringifyTokenGroup(entities[1]);
+                    object = this.stringifyTokenGroup(entities[2]);
+                    break;
+
+                case 1:
+                    subject = this.stringifyTokenGroup(entities[0]);
+                    predicate = this.q_sugg_var;
+                    object = this.stringifyTokenGroup(entities[2]);
+                    break;
+
+                case 2:
+                    subject = this.stringifyTokenGroup(entities[0]);
+                    predicate = this.stringifyTokenGroup(entities[1]);
+                    object = this.q_sugg_var;
+                    break;
+            
+                default:
+                    throw new Error(`Triple to complete has 3 entities, but the index of the incomplete entity is incorrect : ${incompleteUriIndex} `);
+            }
+
         }
 
         return {
