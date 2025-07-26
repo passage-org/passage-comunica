@@ -70,12 +70,7 @@ export const CSCompleter = {
             autocompletionQueryString = acqs;
             currentString = cs;
         }catch(error){
-            // console.log(error)
-            throw new Error("Could not generate an autocompletion query.");
-            // console.error("Could not generate an autocompletion query.")
-            // console.log(error);
-
-            // return Promise.resolve([]);
+            throw new Error("Could not generate an autocompletion query");
         }
 
         console.log("Autocompletion Query", autocompletionQueryString);
@@ -87,7 +82,7 @@ export const CSCompleter = {
         // we assume some kind of endpoint url such as:
         // <protocol>://<authority>/…/<dataset-name>/<passage|sparql>
         // so the dataset becomes suffixed by /raw
-        const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)$/, "/$1/raw");
+        const rawUrl = url.replace(/\/([^\/]+)\/(passage|sparql)(\?default-graph-uri=.*)?$/, "/$1/raw$3");
 
         const args = requestConfig.args;
 
@@ -226,7 +221,7 @@ export const CSCompleter = {
 
                 const suggestionProvenance = document.createElement("span");
                 suggestionProvenance.className = "suggestion-provenance";
-                suggestionProvenance.textContent = finalProvenances ? "Sources : " + (finalProvenances.length ?? "") : "";
+                suggestionProvenance.textContent = finalProvenances && finalProvenances.length !== 0 ? "Sources : " + (finalProvenances.length ?? "") : "";
                 suggestionProvenance.style.cssFloat = "";
 
                 const sourceMarkerSection = document.createElement("section");
@@ -487,18 +482,7 @@ export const CSCompleter = {
             }
 
             const json = await response.json();
-            const bindings = Array.from(
-                new Set(
-                    json["results"]["bindings"]
-                    // .filter(b => b[this.suggestion_variable_name]) // safety measure, in case something goes wrong and bindings don't have mapping for suggestion_variable
-                    // .map(b => {
-                    //     return {sugg: b[this.suggestion_variable_name]["value"], 
-                    //             proba: b[this.proba_var]["value"] || 0,
-                    //             type: b[this.suggestion_variable_name]["type"],
-                    //         } 
-                    //     })
-                )
-            )
+            const bindings = json["results"]["bindings"];
 
             return bindings
         } catch (error) {
