@@ -291,8 +291,7 @@ export const CSCompleter = {
 
     provideSuggestions: async function(url, args, autocompletionQueryString, currentString){
 
-        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString)
-        console.log("acqResults", acqResults)
+        const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
 
         return this.processACQResults(acqResults, currentString);
     },
