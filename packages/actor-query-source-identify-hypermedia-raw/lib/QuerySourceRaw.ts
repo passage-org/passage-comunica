@@ -10,18 +10,17 @@ import type {
     IActionContext,
     IPhysicalQueryPlanLogger,
     IQueryBindingsOptions,
-    IQueryOperationResultBindings,
     IQuerySource,
     MetadataVariable,
 } from '@comunica/types';
 import type * as RDF from '@rdfjs/types';
-import {AsyncIterator, EmptyIterator, TransformIterator, wrap} from 'asynciterator';
+import {AsyncIterator, TransformIterator, wrap} from 'asynciterator';
 import {SparqlEndpointFetcher} from 'fetch-sparql-endpoint';
 import {LRUCache} from 'lru-cache';
 import {Algebra, Factory, Util} from 'sparqlalgebrajs';
 import type {BindMethod} from '@comunica/actor-query-source-identify-hypermedia-sparql';
 import {QuerySourceSparql} from '@comunica/actor-query-source-identify-hypermedia-sparql';
-import type {IActorQueryProcessOutput, MediatorQueryProcess} from '@comunica/bus-query-process';
+import type {MediatorQueryProcess} from '@comunica/bus-query-process';
 import {Shapes} from './Shapes';
 
 /**
@@ -30,14 +29,7 @@ import {Shapes} from './Shapes';
  */
 export class QuerySourceRaw implements IQuerySource {
 
-    protected static readonly SELECTOR_SHAPE: FragmentSelectorShape =
-        process.env.SHAPE && process.env.SHAPE === 'tpf' ?
-        Shapes.TPF : 
-        process.env.SHAPE && process.env.SHAPE === 'brtpf' ?
-        Shapes.BRTPF :
-        process.env.SHAPE && process.env.SHAPE === 'no-union' ?
-        Shapes.PASSAGE_NO_UNION : 
-        Shapes.PASSAGE; // default
+    protected static readonly SELECTOR_SHAPE: FragmentSelectorShape = Shapes.ALL; // default
 
     public readonly referenceValue: string;
     private readonly url: string;

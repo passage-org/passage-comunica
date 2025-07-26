@@ -41,7 +41,7 @@ export class PhysicalNode {
     }
 
     error() {
-        return (this.status() === "error" || this.status() === "aborted" &&
+        return ((this.status() === "error" || this.status() === "aborted") &&
                 this.messages.filter((message) => message.m.status === "error").at(0).m.message) ||
             "";
     }
