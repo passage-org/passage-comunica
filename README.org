@@ -5,11 +5,6 @@ ensure completeness of query results, it already includes actors such
 as quad pattern fragments (qpf), or brqpf. We provide one for SPARQL
 *continuation* queries [1].
 
-** Query Editor
-Passage-Comunica comes with a query editor that implements autocompletion features relying on 
-sampling-based query services. A sampling-based query engine can be found at [[https://github.com/passage-org/passage][Passage]].
-[[https://github.com/GDD-Nantes/HeFQUIN-FRAW.git][HeFQUIN-FRAW]] is a federated engine that also enables federated sampling.
-
 ** Principle
 
 Comunica decomposes the query: Comunica is in charge of everything but
@@ -19,10 +14,7 @@ with that of a SPARQL continuation query if it exists (sent by the
 server in a ~metadata.next~ field like for the qpf actor), via
 recursive calls to Comunica's engine.
 
-/Passage does not handle full SPARQL 1.1. The recursive calls to
-Comunica's engine allows returning continuation queries with operators
-that are not handled yet: Comunica will handle them while sending the
-rest to Passage./
+/Passage does not handle full SPARQL 1.1. The recursive calls to Comunica's engine allows returning continuation queries with operators that are not handled yet: Comunica will handle them while sending the rest to Passage./
 
 ** Build and Run
 
@@ -40,12 +32,17 @@ rest to Passage./
 
 ** Web Server
 
+Passage-Comunica comes with a [[https://passage-org.github.io/passage-comunica/][web query editor]]! Of course, it provides
+complete and correct results despite timeouts [1]; but also autocompletion
+features relying on sampling-based query services for both [[https://github.com/passage-org/passage/tree/main/raw][single
+endpoints]], and [[https://github.com/GDD-Nantes/HeFQUIN-FRAW][federations of endpoints]].
+
 #+BEGIN_SRC shell :session build_server :async
   yarn install && yarn build:web
 #+END_SRC
 
 #+BEGIN_SRC shell :session server :async
-  ## Typically starts a server on http://localhost:5173
+  ## Typically starts a server on http://localhost:4173/passage-comunica/
   yarn server
 #+END_SRC
 
