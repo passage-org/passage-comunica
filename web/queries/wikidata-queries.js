@@ -3,6 +3,39 @@
 /// These are slightly modified to remove SERVICE that are
 /// specific to wikidata, i.e., outside of the standard.
 export const WikidataQueries = [
+    { name: "cite",
+      description: "Articles from the journal PLOS One that cite each other.",
+      query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+
+# The query times out on the official Wikidata endpoint since
+# the search space is huge.
+# Using the passage endpoint, it should take at most ~40 minutes.
+# You can check this estimate by inspecting the continuation
+# queries and the progress of offsets during the query execution.
+SELECT ?article1 ?article2 WHERE {
+  ?article1 wdt:P1433 wd:Q564954. # |PLOS One| = 252130
+  ?article1 wdt:P2860 ?article2 . # |cites| = 286193302
+  ?article2 wdt:P2860 ?article1 .
+  FILTER(?article1 != ?article2)
+}`},
+    { name: 'stars',
+      description: 'Top 10 of the brightest stars.',
+      query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+
+# This query comes from the Wikidata's official examples,
+# and actually times out… Of course, there are a lot
+# of stars. It took 1300s for us.
+SELECT DISTINCT ?star ?images ?apparent_magnitude WHERE {
+  ?star wdt:P31/wdt:P279* wd:Q523; # is a star!
+        wdt:P1215 ?apparent_magnitude;
+        wdt:P18 ?images .
+  FILTER(?apparent_magnitude < 1)
+}
+ORDER BY (?apparent_magnitude)
+LIMIT 10
+` },
     { name: "cats",
       description: "Retrieves all cats with their name.",
       query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -36,21 +69,5 @@ SELECT DISTINCT ?horse ?horseLabel ?mother ?motherLabel ?father ?fatherLabel ?bi
   OPTIONAL{?horse wdt:P21 ?gender .}     # sex or gender
 }
 ORDER BY ?horse `},
-    { name: 'stars',
-      description: 'Top 10 of the brightest stars.',
-      query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-PREFIX wd: <http://www.wikidata.org/entity/>
 
-# This query comes from the Wikidata's official examples,
-# and actually times out… Of course, there are a lot
-# of stars. It took 1300s for us.
-SELECT DISTINCT ?star ?images ?apparent_magnitude WHERE {
-  ?star wdt:P31/wdt:P279* wd:Q523; # is a star!
-        wdt:P1215 ?apparent_magnitude;
-        wdt:P18 ?images .
-  FILTER(?apparent_magnitude < 1)
-}
-ORDER BY (?apparent_magnitude)
-LIMIT 10
-` },
 ];
