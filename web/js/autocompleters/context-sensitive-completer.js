@@ -11,7 +11,9 @@ export const CSCompleter = {
     bulk: false,
     cache: new Object(),
     sugg_var: "suggestion_variable",
+    sugg_var_label: "suggestion_variable",
     q_sugg_var : "?suggestion_variable",
+    label_optional : `OPTIONAL { ?suggestion_variable <http://www.w3.org/2000/01/rdf-schema#label> ?suggestion_variable_label }`,
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
     colorHash: new ColorHash(), 
@@ -520,7 +522,8 @@ export const CSCompleter = {
             incompleteTriple.start, 
             incompleteTriple.end - incompleteTriple.start + 1, 
             acqTriple.subject, acqTriple.predicate, acqTriple.object,
-            {type:"fake", string: shouldAddPeriod ? "." : ""});
+            {type:"fake", string: shouldAddPeriod ? "." : ""}, 
+            acqTriple.label_optional);
 
 
         // console.log(acqTriple);
@@ -556,6 +559,7 @@ export const CSCompleter = {
         // Find triples relevant to the context
 
         const triples = this.getTriples(parsedQuery);
+        console.log(triples)
         const filters = this.getFilters(parsedQuery);
 
         triples.forEach(t => {
@@ -802,6 +806,7 @@ export const CSCompleter = {
             subject: {string: subject, type: "fake"}, 
             predicate: {string: predicate, type: "fake"}, 
             object: {string: object, type: "fake"},
+            label_optional: {string: this.label_optional, type: "fake"},
             filter: filter,
         };
     },
@@ -1107,7 +1112,10 @@ export const CSCompleter = {
                 // Thus, optional clauses are not worth keeping inside the auto completion query.
                 // Of course, we still have to keep the content of the optional clause containing the current triple, if there is such an optional clause.
                 // PS : Optional clauses still provide value, as they may help getting more accurate cardinality estimations.
-                
+
+                console.log(this.isLabelOptional(parsedQueryTree))
+                if (this.isLabelOptional(parsedQueryTree)) return parsedQueryTree;
+
                 return this.hasCurrentTriple(parsedQueryTree) ? [...parsedQueryTree.patterns] : [];
 
 
@@ -1368,6 +1376,13 @@ export const CSCompleter = {
             default : // triple
                 return parsedQueryTree.isCurrentTriple;
         }
+    },
+
+    isLabelOptional: function(parsedQueryTree){
+        if(!this.isParsedTriple(parsedQueryTree.patterns[0].triples[0])) return false;
+        var variables = this.getVarsFromParsedTriple(parsedQueryTree.patterns[0].triples[0]);
+
+        return variables.includes(this.sugg_var) && variables.includes(this.sugg_var_label)
     },
 
     // UTILS
