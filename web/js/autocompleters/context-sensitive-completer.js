@@ -14,6 +14,7 @@ export const CSCompleter = {
     label_var: "label_variable",
     q_sugg_var : "?suggestion_variable",
     label_optional : `OPTIONAL { ?suggestion_variable <http://www.w3.org/2000/01/rdf-schema#label> ?label_variable }`,
+    lang : navigator.language,
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
     colorHash: new ColorHash(), 
@@ -193,7 +194,9 @@ export const CSCompleter = {
 
                 const suggestionObject = data.displayText;
                 const value = suggestionObject.value;
-                const displayed = suggestionObject.label !== "" ? suggestionObject.label : suggestionObject.value;
+                const displayed = suggestionObject.label !== "" ? 
+                    (suggestionObject.labelLang ? `(${suggestionObject.labelLang}) ` + suggestionObject.label : suggestionObject.label)
+                    : suggestionObject.value;
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -302,6 +305,7 @@ export const CSCompleter = {
 
         // console.log("currentString", currentString)
         const filterString = currentString.toLowerCase();
+        const filterLang = this.lang;
 
         // No empty mappings, no mapping with probability of 0!
         const successfulWalks = acqResults
@@ -310,7 +314,10 @@ export const CSCompleter = {
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
-        const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString));
+        console.log("formatted", formatted);
+        const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString))
+                                    .filter(mappingInfo => this.filterByLang(mappingInfo, filterLang));
+        console.log("filtered", filtered);
         const grouped = this.groupBy(filtered, 'id');
         console.log("grouped", grouped);
         const aggregated = this.aggregate(grouped, nbResultsQuery);
@@ -323,6 +330,7 @@ export const CSCompleter = {
                 return {
                     value: suggestion.value, 
                     label: suggestion.label,
+                    labelLang: suggestion.labelLang,
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
                     walks: suggestion.nbWalks,
@@ -338,9 +346,10 @@ export const CSCompleter = {
             let formatted = {
                 suggestionVariableProvenance: "",
                 label: "",
+                labelLang: "",
                 provenances: [],
                 probability: 0,
-                entity: "",
+                id: ""
             };
 
             for(const [key, val] of Object.entries(b)){
@@ -358,8 +367,13 @@ export const CSCompleter = {
                     formatted.probability = val.value;
                 } else 
                 
-                if(key.includes(this.sugg_var)) formatted.id = this.typedStringify(val);
-                if(key.includes(this.label_var)) formatted.label = val.value;
+                if(key === this.sugg_var) formatted.id = this.typedStringify(val);
+                if(key === this.label_var) {
+                    formatted.label = val.value;
+                    if(val["xml:lang"]) formatted.labelLang = val["xml:lang"];
+                    // TODO : check if the language tag can present in "val" under another form that a disignated "xml:lang" property.
+                    // for instance, could it be part of the string itself, like '"label"@en'?
+                }
             }
 
             return formatted;
@@ -402,18 +416,40 @@ export const CSCompleter = {
         return false;
     },
 
+    filterByLang: function(mappingInfo, filterLang){
+
+        const labelLang = mappingInfo.labelLang.toLowerCase().split("-")[0];
+        const filterLangShort = filterLang.split("-")[0];
+
+        if (labelLang === "") return true;
+
+        return filterLangShort === labelLang;
+    },
+
     aggregate: function(suggestionGroups, nbResultsQuery){
         
         // We could recompute nbResultsQuerys here, but it would extra and inefficient work, so no thank
         const aggregated = [];
 
         for(const [key, val] of Object.entries(suggestionGroups)){
+            const firstWithLabel = val.find(elt => elt.label);
+
+            const groupLabel = firstWithLabel ? firstWithLabel.label : "";
+            const groupLabelLang = firstWithLabel ? firstWithLabel.labelLang : "";
+
+            // What if the same entity (key) has multiple labels accross the elements of this group?
+            // What if the first element with a label doesn't have a language tag, but another element with the same label did?
+            
+            // By this point, each element should have no label or one label, and that label should have only one value accross the whole group. 
+            // For example {"fr", "", "fr", "fr"}
+
             aggregated.push(
                 {
                     value : key,
                     score : (val.reduce((acc, curr) => {return acc + (curr.probability > 0 ? 1/curr.probability : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
                     nbWalks : val.length,
-                    label : (val[0].label),
+                    label : groupLabel,
+                    labelLang : groupLabelLang, 
 
                     // TODO : percentage?
                     provenances : Array.from(new Set(val.map(val => val.provenances).flat())),
