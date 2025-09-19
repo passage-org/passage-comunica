@@ -11,9 +11,9 @@ export const CSCompleter = {
     bulk: false,
     cache: new Object(),
     sugg_var: "suggestion_variable",
-    sugg_var_label: "suggestion_variable",
+    label_var: "label_variable",
     q_sugg_var : "?suggestion_variable",
-    label_optional : `OPTIONAL { ?suggestion_variable <http://www.w3.org/2000/01/rdf-schema#label> ?suggestion_variable_label }`,
+    label_optional : `OPTIONAL { ?suggestion_variable <http://www.w3.org/2000/01/rdf-schema#label> ?label_variable }`,
     proba_var: "probabilityOfRetrievingRestOfMapping",
     q_proba_var: "?probabilityOfRetrievingRestOfMapping",
     colorHash: new ColorHash(), 
@@ -193,6 +193,7 @@ export const CSCompleter = {
 
                 const suggestionObject = data.displayText;
                 const value = suggestionObject.value;
+                const displayed = suggestionObject.label !== "" ? suggestionObject.label : suggestionObject.value;
                 const score = suggestionObject.score;
                 const walks = suggestionObject.walks;
                 const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -209,7 +210,7 @@ export const CSCompleter = {
                 const suggestionValue = document.createElement("span");
                 suggestionValue.className = "suggestion-value";
                 suggestionValue.cssFloat = "";
-                suggestionValue.textContent = value || "";
+                suggestionValue.textContent = displayed || "";
 
                 const suggestionScore = document.createElement("span");
                 suggestionScore.className = "suggestion-score";
@@ -275,10 +276,6 @@ export const CSCompleter = {
 
                 suggestionDiv.onmouseover = displayProvenanceDetail;
 
-                // el.onclick = removeProvenanceDisplay;
-
-                // suggestionDiv.onmouseleave = removeProvenanceDisplay(e);
-
                 data.text = value;
             }
 
@@ -315,13 +312,17 @@ export const CSCompleter = {
         const formatted = this.formatBindings(successfulWalks);
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString));
         const grouped = this.groupBy(filtered, 'id');
+        console.log("grouped", grouped);
         const aggregated = this.aggregate(grouped, nbResultsQuery);
+
+        console.log("aggregated", aggregated);
 
         return aggregated
             // building the item containing the data needed for display
             .map(suggestion => {
                 return {
                     value: suggestion.value, 
+                    label: suggestion.label,
                     score: Math.round(suggestion.score), 
                     provenances: suggestion.provenances, 
                     walks: suggestion.nbWalks,
@@ -336,6 +337,7 @@ export const CSCompleter = {
         return bindings.map(b => {
             let formatted = {
                 suggestionVariableProvenance: "",
+                label: "",
                 provenances: [],
                 probability: 0,
                 entity: "",
@@ -356,7 +358,8 @@ export const CSCompleter = {
                     formatted.probability = val.value;
                 } else 
                 
-                if(key.includes(this.sugg_var)) formatted.id = this.typedStringify(val)
+                if(key.includes(this.sugg_var)) formatted.id = this.typedStringify(val);
+                if(key.includes(this.label_var)) formatted.label = val.value;
             }
 
             return formatted;
@@ -383,16 +386,17 @@ export const CSCompleter = {
         }
 
         const toTest = mappingInfo.id.toLowerCase();
+        const label = mappingInfo.label.toLowerCase();
         const type = mappingInfo.entity.type;
 
         if(isStringLiteralStart(filterString)){
-            if(type === "literal" && toTest.includes(filterString.slice(1))) return true;
+            if(type === "literal" && (toTest.includes(filterString.slice(1)) || label.includes(filterString.slice(1)))) return true;
         }
 
         if(isUriStart(filterString)){
-            if(toTest.includes(getStringWithoutUriStart(filterString))) return true;
+            if(toTest.includes(getStringWithoutUriStart(filterString)) || label.includes(getStringWithoutUriStart(filterString))) return true;
         } else {
-            if(toTest.includes(filterString)) return true;
+            if(toTest.includes(filterString) || label.includes(filterString)) return true;
         }
 
         return false;
@@ -409,6 +413,7 @@ export const CSCompleter = {
                     value : key,
                     score : (val.reduce((acc, curr) => {return acc + (curr.probability > 0 ? 1/curr.probability : 0)}, 0.0) / val.length) * (val.length / nbResultsQuery),
                     nbWalks : val.length,
+                    label : (val[0].label),
 
                     // TODO : percentage?
                     provenances : Array.from(new Set(val.map(val => val.provenances).flat())),
@@ -1382,7 +1387,7 @@ export const CSCompleter = {
         if(!this.isParsedTriple(parsedQueryTree.patterns[0].triples[0])) return false;
         var variables = this.getVarsFromParsedTriple(parsedQueryTree.patterns[0].triples[0]);
 
-        return variables.includes(this.sugg_var) && variables.includes(this.sugg_var_label)
+        return variables.includes(this.sugg_var) && variables.includes(this.label_var)
     },
 
     // UTILS
