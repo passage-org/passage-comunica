@@ -314,15 +314,10 @@ export const CSCompleter = {
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
-        console.log("formatted", formatted);
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString))
                                     .filter(mappingInfo => this.filterByLang(mappingInfo, filterLang));
-        console.log("filtered", filtered);
         const grouped = this.groupBy(filtered, 'id');
-        console.log("grouped", grouped);
         const aggregated = this.aggregate(grouped, nbResultsQuery);
-
-        console.log("aggregated", aggregated);
 
         return aggregated
             // building the item containing the data needed for display
@@ -349,7 +344,8 @@ export const CSCompleter = {
                 labelLang: "",
                 provenances: [],
                 probability: 0,
-                id: ""
+                id: "",
+                type: ""
             };
 
             for(const [key, val] of Object.entries(b)){
@@ -367,7 +363,10 @@ export const CSCompleter = {
                     formatted.probability = val.value;
                 } else 
                 
-                if(key === this.sugg_var) formatted.id = this.typedStringify(val);
+                if(key === this.sugg_var) {
+                    formatted.id = this.typedStringify(val);
+                    formatted.type = val.type;
+                }
                 if(key === this.label_var) {
                     formatted.label = val.value;
                     if(val["xml:lang"]) formatted.labelLang = val["xml:lang"];
@@ -387,7 +386,7 @@ export const CSCompleter = {
         if(filterString === "") return true;
 
         const isStringLiteralStart = function(string){
-            string.startsWith("\"");
+            return string.startsWith("\"");
         }
 
         // TODO: https 
@@ -401,7 +400,7 @@ export const CSCompleter = {
 
         const toTest = mappingInfo.id.toLowerCase();
         const label = mappingInfo.label.toLowerCase();
-        const type = mappingInfo.entity.type;
+        const type = mappingInfo.type;
 
         if(isStringLiteralStart(filterString)){
             if(type === "literal" && (toTest.includes(filterString.slice(1)) || label.includes(filterString.slice(1)))) return true;
@@ -600,7 +599,7 @@ export const CSCompleter = {
         // Find triples relevant to the context
 
         const triples = this.getTriples(parsedQuery);
-        console.log(triples)
+        // console.log(triples)
         const filters = this.getFilters(parsedQuery);
 
         triples.forEach(t => {
@@ -1154,7 +1153,6 @@ export const CSCompleter = {
                 // Of course, we still have to keep the content of the optional clause containing the current triple, if there is such an optional clause.
                 // PS : Optional clauses still provide value, as they may help getting more accurate cardinality estimations.
 
-                console.log(this.isLabelOptional(parsedQueryTree))
                 if (this.isLabelOptional(parsedQueryTree)) return parsedQueryTree;
 
                 return this.hasCurrentTriple(parsedQueryTree) ? [...parsedQueryTree.patterns] : [];
