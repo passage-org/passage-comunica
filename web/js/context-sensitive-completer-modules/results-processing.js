@@ -14,7 +14,6 @@ export const results_processing = {
         const nbResultsQuery = successfulWalks.length;
 
         const formatted = this.formatBindings(successfulWalks);
-        console.log(formatted)
 
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString))
                                     .filter(mappingInfo => this.filterByLang(mappingInfo, filterLang));
@@ -68,14 +67,12 @@ export const results_processing = {
                 if(key === constants.sugg_var) {
                     formatted.id = this.typedStringify(val);
 
-                    // in case we're dealing with a tagged literal, we also extract the label (itself) and the language
+                    // in case we're dealing with a tagged literal, we also extract a label (itself) and the language
                     const langTagRegex = /\"@.*$/g
                     if(formatted.id.match(langTagRegex)) {
-                        console.log("MATCHED");
                         var split = formatted.id.split("@");
                         formatted.label = split.slice(0, -1).join("");
                         formatted.labelLang = split.at(-1);
-                        console.log(formatted);
                     }
 
                     formatted.type = val.type;
@@ -83,8 +80,6 @@ export const results_processing = {
                 if(key === constants.label_var) {
                     formatted.label = val.value;
                     if(val["xml:lang"]) formatted.labelLang = val["xml:lang"];
-                    // TODO : check if the language tag can present in "val" under another form that a disignated "xml:lang" property.
-                    // for instance, could it be part of the string itself, like '"label"@en'?
                 }
             }
 
