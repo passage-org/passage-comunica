@@ -207,7 +207,7 @@ export const CSCompleter = {
             incompleteTriple.end - incompleteTriple.start + 1, 
             acqTriple.subject, acqTriple.predicate, acqTriple.object,
             {type:"fake", string: shouldAddPeriod ? "." : ""}, 
-            acqTriple.label_optional);
+            /*acqTriple.label_optional*/);
 
 
         // Parse the query as is (without the comments)

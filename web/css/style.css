@@ -374,6 +374,13 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     max-width: 400px;
 }
 
+.CodeMirror-hint {
+    white-space:unset;
+    max-height: 100px;
+    overflow-y: hidden;
+    padding-bottom: 2%;
+}
+
 .source-marker-section {
     overflow-x: scroll;
     display: flex;

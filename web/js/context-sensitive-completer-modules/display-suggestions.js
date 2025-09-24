@@ -85,9 +85,9 @@ export const display_suggestions = {
     
             const suggestionObject = data.displayText;
             const value = suggestionObject.value;
-            const displayed = suggestionObject.label !== "" ? 
-                (suggestionObject.labelLang ? `(${suggestionObject.labelLang}) ` + suggestionObject.label : suggestionObject.label)
-                : suggestionObject.value;
+            const displayed = (suggestionObject.label !== "" ? 
+                value + " : " + (suggestionObject.labelLang ? `(${suggestionObject.labelLang}) ` + suggestionObject.label : suggestionObject.label)
+                : value);
             const score = suggestionObject.score;
             const walks = suggestionObject.walks;
             const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -101,7 +101,7 @@ export const display_suggestions = {
             const suggestionDiv = document.createElement("div");
             suggestionDiv.className = "suggestion-div";
     
-            const suggestionValue = document.createElement("span");
+            const suggestionValue = document.createElement("div");
             suggestionValue.className = "suggestion-value";
             suggestionValue.cssFloat = "";
             suggestionValue.textContent = displayed || "";
