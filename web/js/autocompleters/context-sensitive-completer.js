@@ -2,7 +2,7 @@ import Parser from 'sparqljs';
 import { results_processing } from '../context-sensitive-completer-modules/results-processing'
 import { parsed_operations } from '../context-sensitive-completer-modules/parsed-operations';
 import { display_suggestions } from '../context-sensitive-completer-modules/display-suggestions';
-import { constants } from '../context-sensitive-completer-modules/constants';
+import { constants, NotHandledError } from '../context-sensitive-completer-modules/constants';
 
 /// Queries the endpoint to retrieve a few example of values
 /// from the current triple pattern being type. This is
@@ -232,28 +232,34 @@ export const CSCompleter = {
             }
         }
 
-        parsed_operations.removeModifiers(parsedQuery);
+        var trimmed;
+        try {
+            parsed_operations.removeModifiers(parsedQuery);
 
-        // Find triples relevant to the context
+            // Find triples relevant to the context
 
-        const triples = parsed_operations.getTriples(parsedQuery);
-        const filters = parsed_operations.getFilters(parsedQuery);
+            const triples = parsed_operations.getTriples(parsedQuery);
+            const filters = parsed_operations.getFilters(parsedQuery);
 
-        triples.forEach(t => {
-            t.isCurrentTriple = parsed_operations.getVarsFromParsedTriple(t).includes(constants.sugg_var); // weird way to find the triple being worked on
-            t.inContext = t.isCurrentTriple;
-        }); 
+            triples.forEach(t => {
+                t.isCurrentTriple = parsed_operations.getVarsFromParsedTriple(t).includes(constants.sugg_var); // weird way to find the triple being worked on
+                t.inContext = t.isCurrentTriple;
+            }); 
 
-        filters.forEach(f => f.inContext = false);
+            filters.forEach(f => f.inContext = false);
 
-        let variables = incompleteTriple.variables;
+            let variables = incompleteTriple.variables;
 
-        parsed_operations.markTriplesAndFilters(triples, filters, variables);
+            parsed_operations.markTriplesAndFilters(triples, filters, variables);
 
-        // Remove parts of the query outside of context
+            // Remove parts of the query outside of context
 
-        parsed_operations.markRelevantNodes(parsedQuery);
-        const trimmed = parsed_operations.trim(parsedQuery);
+            parsed_operations.markRelevantNodes(parsedQuery);
+            trimmed = parsed_operations.trim(parsedQuery);
+        } catch (error) {
+            if(error instanceof NotHandledError) console.log(error.type + " is not handled");
+            throw new Error("Couldn't handle parsed query");
+        }
 
         
         // Generate the AC query string 

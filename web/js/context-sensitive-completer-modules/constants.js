@@ -13,3 +13,12 @@ export const constants = {
     regexUriStart: new RegExp("^<", "i"),
     colorHash: new ColorHash(), 
 }
+
+export class NotHandledError extends Error {
+    type;
+
+    constructor(type, message, ...params){
+        super(message, params);
+        this.type = type;
+    }
+}
