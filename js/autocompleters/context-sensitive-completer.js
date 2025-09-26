@@ -2,7 +2,8 @@ import Parser from 'sparqljs';
 import { results_processing } from '../context-sensitive-completer-modules/results-processing'
 import { parsed_operations } from '../context-sensitive-completer-modules/parsed-operations';
 import { display_suggestions } from '../context-sensitive-completer-modules/display-suggestions';
-import { constants } from '../context-sensitive-completer-modules/constants';
+import { constants, NotHandledError } from '../context-sensitive-completer-modules/constants';
+import { YasguiConfig } from '../yasgui-config';
 
 /// Queries the endpoint to retrieve a few example of values
 /// from the current triple pattern being type. This is
@@ -83,16 +84,41 @@ export const CSCompleter = {
     postprocessHints: function (_yasqe, hints) {
 
         const _colorHash = constants.colorHash;
-        
+
         const removeProvenanceDisplay = function(e){
             Array.prototype.forEach.call(document.getElementsByClassName("suggestion-detail"), function(node) {
                 node.remove();
             }); 
         };
 
+        const updatePrefixes = function(e){
+            // matches more than it should (like "https:" from URIs), but we never add a prefix that's not amongst the list
+            // of predefined prefixes so it's never an issue.
+            const regex = /[a-zA-Z]*\:/g;
+            const matches = _yasqe.getValue().match(regex);
+
+            const existingPrefixes = _yasqe.getPrefixesFromQuery();
+            const hiddenPrefixes = YasguiConfig.yasr.prefixes;
+
+            const existingPrefixLabels = Object.keys(existingPrefixes);
+            const hiddenPrefixLabels = Object.keys(hiddenPrefixes);
+
+            matches.forEach(match => {
+                const label = match.slice(0, -1);
+
+                if(!existingPrefixLabels.includes(label) && hiddenPrefixLabels.includes(label)) {
+                    var prefixObj = {[label]: hiddenPrefixes[label]};
+                    _yasqe.addPrefixes(prefixObj);
+                }
+            });
+        }
+
         var x = new MutationObserver(function (e) {
             const hints = document.getElementsByClassName("CodeMirror-hint");
-            if (hints.length === 0) removeProvenanceDisplay(null);
+            if (hints.length === 0) {
+                removeProvenanceDisplay(null);
+                updatePrefixes(e);
+            };
         });
 
         x.observe(document.getElementsByClassName("yasgui").item(0), { childList: true });
@@ -114,7 +140,9 @@ export const CSCompleter = {
 
         const acqResults = await this.queryWithCache(url, args, autocompletionQueryString, currentString);
 
-        return results_processing.processACQResults(acqResults, currentString, this.lang);
+        const prefixes = this.mergePrefixesFromQueryAndConfig(this.yasqe.getPrefixesFromQuery(), YasguiConfig.yasr.prefixes)
+
+        return results_processing.processACQResults(acqResults, currentString, this.lang, prefixes);
     },
 
 
@@ -218,7 +246,6 @@ export const CSCompleter = {
         var Par = Parser.Parser;
         var parser = new Par();
 
-
         try{
             var parsedQuery = parser.parse(string);
         }catch(error){
@@ -232,34 +259,40 @@ export const CSCompleter = {
             }
         }
 
-        parsed_operations.removeModifiers(parsedQuery);
+        var trimmed;
+        try {
+            parsed_operations.removeModifiers(parsedQuery);
 
-        // Find triples relevant to the context
+            // Find triples relevant to the context
 
-        const triples = parsed_operations.getTriples(parsedQuery);
-        const filters = parsed_operations.getFilters(parsedQuery);
+            const triples = parsed_operations.getTriples(parsedQuery);
+            const filters = parsed_operations.getFilters(parsedQuery);
 
-        triples.forEach(t => {
-            t.isCurrentTriple = parsed_operations.getVarsFromParsedTriple(t).includes(constants.sugg_var); // weird way to find the triple being worked on
-            t.inContext = t.isCurrentTriple;
-        }); 
+            triples.forEach(t => {
+                t.isCurrentTriple = parsed_operations.getVarsFromParsedTriple(t).includes(constants.sugg_var); // weird way to find the triple being worked on
+                t.inContext = t.isCurrentTriple;
+            }); 
 
-        filters.forEach(f => f.inContext = false);
+            filters.forEach(f => f.inContext = false);
 
-        let variables = incompleteTriple.variables;
+            let variables = incompleteTriple.variables;
 
-        parsed_operations.markTriplesAndFilters(triples, filters, variables);
+            parsed_operations.markTriplesAndFilters(triples, filters, variables);
 
-        // Remove parts of the query outside of context
+            // Remove parts of the query outside of context
 
-        parsed_operations.markRelevantNodes(parsedQuery);
-        const trimmed = parsed_operations.trim(parsedQuery);
+            parsed_operations.markRelevantNodes(parsedQuery);
+            trimmed = parsed_operations.trim(parsedQuery);
+        } catch (error) {
+            if(error instanceof NotHandledError) console.log(error.type + " is not handled");
+            throw new Error("Couldn't handle parsed query");
+        }
 
         
         // Generate the AC query string 
         parsedQuery.variables = [{termType: "Wildcard", value: "*"}];
 
-        parsedQuery.prefixes = this.yasqe.getPrefixesFromQuery();
+        parsedQuery.prefixes = this.mergePrefixesFromQueryAndConfig(this.yasqe.getPrefixesFromQuery(), YasguiConfig.yasr.prefixes);
 
         var Gen = Parser.Generator;
         var generator = new Gen();
@@ -270,7 +303,7 @@ export const CSCompleter = {
 
 
     getACQPrefixes: function(){
-        const prefixes = this.yasqe.getPrefixesFromQuery();
+        const prefixes = this.mergePrefixesFromQueryAndConfig(this.yasqe.getPrefixesFromQuery(), YasguiConfig.yasr.prefixes);
         const prefixStrings = [];
 
         for (const [key, value] of Object.entries(prefixes)){
@@ -812,9 +845,24 @@ export const CSCompleter = {
         return line1 === line2 && ch1 === ch2;
     },
 
-    
-
     removeWhiteSpacetokens: function(tokenArray){
         return tokenArray.filter(tkn => tkn.type != "ws");
     },
+
+    mergePrefixesFromQueryAndConfig: function(prefixesQuery, prefixesConfig){
+        let merged = {...prefixesConfig, ...prefixesQuery}; // query's prefixes overrides configs'.
+
+        return merged;
+    },
+
+    // addPrefixesToQuery: function(prefixes){
+    //     const prefixStrings = [];
+
+    //     for (const [key, value] of Object.entries(prefixes)){
+    //         prefixStrings.push(`PREFIX ${key}: <${value}>`);
+    //     }
+
+    //     const toAdd = prefixStrings.join("\n");
+    //     this.yasqe.setValue(toAdd + "\n" + this.yasqe.getValue())
+    // }
 };

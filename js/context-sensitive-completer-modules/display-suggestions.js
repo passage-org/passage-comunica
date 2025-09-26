@@ -85,9 +85,6 @@ export const display_suggestions = {
     
             const suggestionObject = data.displayText;
             const value = suggestionObject.value;
-            const displayed = (suggestionObject.label !== "" ? 
-                value + " : " + (suggestionObject.labelLang ? `(${suggestionObject.labelLang}) ` + suggestionObject.label : suggestionObject.label)
-                : value);
             const score = suggestionObject.score;
             const walks = suggestionObject.walks;
             const finalProvenances = suggestionObject.suggestionVariableProvenances
@@ -97,30 +94,50 @@ export const display_suggestions = {
                     .sort((a, b) => a.hsl[0] - b.hsl[0]);
     
             // We store an object in the displayTextField. Definitely not as intented, but works (...?)
-    
+
+
+            // MAIN INFO / LIST ELEMENT
+
+            // main div (label - id - description (wip) - provenance squares)
             const suggestionDiv = document.createElement("div");
             suggestionDiv.className = "suggestion-div";
     
+            // suggestion content (label - id - description (wip))
             const suggestionValue = document.createElement("div");
             suggestionValue.className = "suggestion-value";
             suggestionValue.cssFloat = "";
-            suggestionValue.textContent = displayed || "";
-    
-            const suggestionScore = document.createElement("span");
-            suggestionScore.className = "suggestion-score";
-            suggestionScore.textContent = "Estimated cardinality : " + (score || "");
-            suggestionScore.style.cssFloat = "";
-    
-            const suggestionWalks = document.createElement("span");
-            suggestionWalks.className = "suggestion-walks";
-            suggestionWalks.textContent = "Random walks : " + (walks || "");
-            suggestionWalks.style.cssFloat = "";
-    
-            const suggestionProvenance = document.createElement("span");
-            suggestionProvenance.className = "suggestion-provenance";
-            suggestionProvenance.textContent = finalProvenances && finalProvenances.length !== 0 ? "Sources : " + (finalProvenances.length ?? "") : "";
-            suggestionProvenance.style.cssFloat = "";
-    
+
+            // suggestion label (label - id)
+            const suggestionPrimary = document.createElement("div");
+
+            // label 
+            const labelSpan = document.createElement("span");
+            labelSpan.className = "suggestion-label";
+            labelSpan.textContent = suggestionObject.label;
+
+            // id
+            const idSpan = document.createElement("span");
+            idSpan.className = suggestionObject.label ? "suggestion-id with-label" : "suggestion-id";
+            idSpan.textContent = suggestionObject.value;
+
+            if(suggestionObject.label) suggestionPrimary.appendChild(labelSpan); // no label span if there is no label
+            suggestionPrimary.appendChild(idSpan);
+
+            // description (wip)
+            const suggestionDescription = document.createElement("div");
+
+            const descriptionSpan = document.createElement("span");
+            descriptionSpan.className = "suggestion-description";
+            // descriptionSpan.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam fermentum purus dapibus lacus fringilla, at aliquam libero luctus. Fusce laoreet mattis molestie. Vestibulum non magna eget nisl varius pellentesque. Cras eleifend dui vel sem gravida iaculis non fringilla orci. Proin venenatis risus neque, eu accumsan diam volutpat id. Duis a nibh hendrerit, elementum lorem non, elementum dolor. Quisque feugiat fringilla nunc ut rhoncus. Aliquam accumsan accumsan justo. ";
+            descriptionSpan.textContent = "";
+
+            suggestionDescription.appendChild(descriptionSpan);
+
+            suggestionValue.appendChild(suggestionPrimary);
+            suggestionValue.appendChild(suggestionDescription);
+            
+
+            // provenance squares
             const sourceMarkerSection = document.createElement("section");
             sourceMarkerSection.className = "source-marker-section";
             for(const prov of finalProvenances){
@@ -130,7 +147,33 @@ export const display_suggestions = {
                 sourceMarkerSection.appendChild(sourceMarker);
                 sourceMarker.title = prov.source;
             }
+
+
+            // ADDITIONAL INFO
+
+            // detail div (score - number of walks - number of sources - provenance)
+            const suggestionDetail = document.createElement("div");
+            suggestionDetail.className = "suggestion-detail CodeMirror-hints";
     
+            // score
+            const suggestionScore = document.createElement("span");
+            suggestionScore.className = "suggestion-score";
+            suggestionScore.textContent = "Estimated cardinality : " + (score || "");
+            suggestionScore.style.cssFloat = "";
+    
+            // number of walks
+            const suggestionWalks = document.createElement("span");
+            suggestionWalks.className = "suggestion-walks";
+            suggestionWalks.textContent = "Random walks : " + (walks || "");
+            suggestionWalks.style.cssFloat = "";
+    
+            // number of sources
+            const suggestionProvenance = document.createElement("span");
+            suggestionProvenance.className = "suggestion-provenance";
+            suggestionProvenance.textContent = finalProvenances && finalProvenances.length !== 0 ? "Sources : " + (finalProvenances.length ?? "") : "";
+            suggestionProvenance.style.cssFloat = "";
+    
+            // source list / provenance
             const suggestionProvenanceDetail = document.createElement("ul");
             suggestionProvenanceDetail.className = "suggestion-provenance-detail";
             finalProvenances.forEach(p => {
@@ -138,9 +181,6 @@ export const display_suggestions = {
                 li.innerHTML = p.source;
                 suggestionProvenanceDetail.appendChild(li);
             });
-    
-            const suggestionDetail = document.createElement("div");
-            suggestionDetail.className = "suggestion-detail CodeMirror-hints";
     
             suggestionDetail.appendChild(suggestionScore);
             suggestionDetail.appendChild(suggestionWalks);
@@ -151,7 +191,7 @@ export const display_suggestions = {
             suggestionDiv.appendChild(sourceMarkerSection);
             
             el.appendChild(suggestionDiv);
-    
+
             const displayProvenanceDetail = function(e){
                 removeProvenanceDisplay(e);
     
