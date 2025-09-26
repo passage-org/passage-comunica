@@ -3,7 +3,7 @@ import { constants } from "../context-sensitive-completer-modules/constants";
 export const results_processing = {
     // AUTOCOMPLETION QUERY RESULTS POST PROCESSING
 
-    processACQResults: function(acqResults, currentString, filterLang){
+    processACQResults: function(acqResults, currentString, filterLang, prefixes){
 
         const filterString = currentString.toLowerCase();
 
@@ -13,7 +13,7 @@ export const results_processing = {
             .filter(mapping => mapping[constants.proba_var].value > 0);
         const nbResultsQuery = successfulWalks.length;
 
-        const formatted = this.formatBindings(successfulWalks);
+        const formatted = this.formatBindings(successfulWalks, prefixes);
 
         const filtered = formatted.filter(mappingInfo => this.filterByString(mappingInfo, filterString))
                                     .filter(mappingInfo => this.filterByLang(mappingInfo, filterLang));
@@ -37,7 +37,7 @@ export const results_processing = {
             .sort((a, b) => b.score - a.score) 
     },
 
-    formatBindings: function(bindings){
+    formatBindings: function(bindings, prefixes){
         return bindings.map(b => {
             let formatted = {
                 suggestionVariableProvenance: "",
@@ -65,13 +65,13 @@ export const results_processing = {
                 } else 
                 
                 if(key === constants.sugg_var) {
-                    formatted.id = this.typedStringify(val);
+                    formatted.id = this.typedStringify(val, prefixes);
 
                     // in case we're dealing with a tagged literal, we also extract a label (itself) and the language
                     const langTagRegex = /\"@.*$/g
                     if(formatted.id.match(langTagRegex)) {
                         var split = formatted.id.split("@");
-                        formatted.label = split.slice(0, -1).join("");
+                        // formatted.label = split.slice(0, -1).join("");
                         formatted.labelLang = split.at(-1);
                     }
 
@@ -174,20 +174,30 @@ export const results_processing = {
         }, {});
     },
 
-    typedStringify: function(entity) {
+    typedStringify: function(entity, prefixes) {
 
         const entityValue = entity.value;
 
         switch(entity.type) {
             case 'iri':
             case 'uri':
-                for(const [key, val] of Object.entries(this.yasqe.getPrefixesFromQuery())){
-                    if(entityValue.includes(val)) {
-                        return entityValue.replace(val, key+":")
-                    }
+                // Replace part of a suggestion with the longest matching prefix
+                const replaceEntry = Object.entries(prefixes)
+                .filter(([key, val]) => {
+                    return entityValue.includes(val); // matching
+                })
+                .sort(([key1, val1], [key2, val2]) => {
+                    return val1.length > val2.length; // longest
+                })
+                .pop();
+
+                if(replaceEntry) {
+                    const [replaceKey, replaceVal] = replaceEntry;
+                    return entityValue.replace(replaceVal, replaceKey+":");
                 }
 
-                return "<" + entityValue + ">"
+                // otherwise it's the URI as is
+                return "<" + entityValue + ">";
             case 'literal':
                 const lang = entity["xml:lang"] ? `@${entity["xml:lang"]}` : "";
                 return "\"" + entityValue + "\"" + lang

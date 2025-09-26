@@ -338,6 +338,31 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
 .suggestion-value {
     text-align: left;
     /* background-color: #88c0d0; */
+    /* display: flex; */
+    /* flex-direction: row; */
+    /* column-gap: 3px; */
+    /* overflow-y: hidden; */
+    max-height: inherit;
+}
+
+.suggestion-id {
+    padding: 1%;
+}
+
+.suggestion-id.with-label {
+    color: darkgray;
+}
+
+.suggestion-label {
+    padding: 1%;
+}
+
+.suggestion-description {
+    display: block;
+    max-height: 100px;
+    overflow: hidden;
+    word-wrap: break-word; 
+    text-overflow: ellipsis;
 }
 
 .suggestion-provenance-detail {
@@ -376,8 +401,7 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
 
 .CodeMirror-hint {
     white-space:unset;
-    max-height: 100px;
-    overflow-y: hidden;
+    /* max-height: 100px; */
     padding-bottom: 2%;
 }
 
