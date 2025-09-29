@@ -199,10 +199,10 @@ export const results_processing = {
                 // otherwise it's the URI as is
                 return "<" + entityValue + ">";
             case 'literal':
+                if(entity["xml:lang"]) return "\"" + entityValue + "\"" + `@${entity["xml:lang"]}`;
                 if(entity.datatype) return "\"" + entityValue + "\"" + "^^" + entity.datatype.replace(constants.xsd, "xsd:");
 
-                const lang = entity["xml:lang"] ? `@${entity["xml:lang"]}` : "";
-                return "\"" + entityValue + "\"" + lang;
+                return "\"" + entityValue + "\"";
             default:
                 return "UNKNOWN TYPE : " + entityValue
         }
