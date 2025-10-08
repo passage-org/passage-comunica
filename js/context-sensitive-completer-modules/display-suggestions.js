@@ -158,19 +158,19 @@ export const display_suggestions = {
             // score
             const suggestionScore = document.createElement("span");
             suggestionScore.className = "suggestion-score";
-            suggestionScore.textContent = "Estimated cardinality : " + (score || "");
+            suggestionScore.textContent = "Estimated cardinality: " + (score || "");
             suggestionScore.style.cssFloat = "";
     
             // number of walks
             const suggestionWalks = document.createElement("span");
             suggestionWalks.className = "suggestion-walks";
-            suggestionWalks.textContent = "Random walks : " + (walks || "");
+            suggestionWalks.textContent = "Random walks: " + (walks || "");
             suggestionWalks.style.cssFloat = "";
     
             // number of sources
             const suggestionProvenance = document.createElement("span");
             suggestionProvenance.className = "suggestion-provenance";
-            suggestionProvenance.textContent = finalProvenances && finalProvenances.length !== 0 ? "Sources : " + (finalProvenances.length ?? "") : "";
+            suggestionProvenance.textContent = finalProvenances && finalProvenances.length !== 0 ? "Sources: " + (finalProvenances.length ?? "") : "";
             suggestionProvenance.style.cssFloat = "";
     
             // source list / provenance
