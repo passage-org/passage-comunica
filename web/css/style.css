@@ -387,7 +387,8 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
     display: flex;
     flex-direction: column;
 
-    background-color: var(--frost-2);
+    /* background-color: var(--frost-2); */
+    background-color: var(--header-background-color); 
 }
 
 .suggestion-detail .suggestion-provenance-detail {
