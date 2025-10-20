@@ -174,12 +174,15 @@ export const CSCompleter = {
 
         const getHeaderAndAddToSearchParams = function(header){
             const value = args.find(e => e.name === header);
-            urlsp.set(header, value);
+            console.log(value);
+            if(value) urlsp.set(header, value.value);
         }
 
-        for(header in constants.headers){
+        constants.headers.forEach(header => {
             getHeaderAndAddToSearchParams(header);
-        }
+        });
+
+        console.log(urlsp);
 
         return urlsp;
     },
