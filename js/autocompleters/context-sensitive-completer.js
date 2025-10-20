@@ -174,15 +174,12 @@ export const CSCompleter = {
 
         const getHeaderAndAddToSearchParams = function(header){
             const value = args.find(e => e.name === header);
-            console.log(value);
             if(value) urlsp.set(header, value.value);
         }
 
         constants.headers.forEach(header => {
             getHeaderAndAddToSearchParams(header);
         });
-
-        console.log(urlsp);
 
         return urlsp;
     },
@@ -191,6 +188,8 @@ export const CSCompleter = {
         try {
             const urlsp = this.createURLSearchParams(args, query);
 
+            const start = Date.now();
+
             const response = await fetch(url, {
                 method: "POST",
                 headers: {
@@ -198,6 +197,13 @@ export const CSCompleter = {
                 },
                 body: urlsp
             });
+
+            const end = Date.now();
+
+            const time = end - start;
+            const parsed = this.msToTime(time);
+
+            console.log(`Got a response in ${parsed}`);
 
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}`);
@@ -880,4 +886,22 @@ export const CSCompleter = {
     //     const toAdd = prefixStrings.join("\n");
     //     this.yasqe.setValue(toAdd + "\n" + this.yasqe.getValue())
     // }
+
+    msToTime: function(s) {
+        var ms = s % 1000;
+        s = (s - ms) / 1000;
+        var secs = s % 60;
+        s = (s - secs) / 60;
+        var mins = s % 60;
+        var hrs = (s - mins) / 60;
+
+        var string = "";
+
+        if(hrs != 0) string += hrs + "hours, ";
+        if(mins != 0) string += mins + "mins, ";
+
+        string += secs + '.' + ms + 'sec';
+
+        return string;
+    }
 };
