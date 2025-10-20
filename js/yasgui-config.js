@@ -13,7 +13,15 @@ export const YasguiConfig = {
             {endpoint: "https://10-54-2-226.gcp.glicid.fr/wikidata/passage",
              title: "Wikidata"},
             {endpoint: "https://10-54-2-226.gcp.glicid.fr/watdiv/passage",
-             title: "WatDiv"},]; },
+             title: "WatDiv"},
+            {endpoint: "https://10-54-2-226.gcp.glicid.fr/fraw/fedshop200/sparql",
+             title: "FRAW - Fedshop200"},
+            {endpoint: "https://10-54-2-226.gcp.glicid.fr/fedshop200/sparql",
+             title: "Fedshop200"},
+            {endpoint: "https://10-54-2-226.gcp.glicid.fr/fedshop200/sparql?default-graph-uri=http://www.vendor0.fr/",
+             title: "Fedshop200 - Vendor 0"},
+            {endpoint: "https://10-54-2-226.gcp.glicid.fr/fedshop200/sparql?default-graph-uri=http://www.ratingsite0.fr/",
+             title: "Fedshop200 - Rating Site 0"},]; },
         keys:["Wikidata", "WatDiv"],
         renderItem: (data, source) => {
             const endpointDiv = document.createElement("div");

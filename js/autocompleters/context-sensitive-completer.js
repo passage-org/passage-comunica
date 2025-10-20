@@ -169,12 +169,24 @@ export const CSCompleter = {
         return this.cache[query].bindings;
     },
 
+    createURLSearchParams: function(args, query){
+        const urlsp = new URLSearchParams({ "query" : query });
+
+        const getHeaderAndAddToSearchParams = function(header){
+            const value = args.find(e => e.name === header);
+            urlsp.set(header, value);
+        }
+
+        for(header in constants.headers){
+            getHeaderAndAddToSearchParams(header);
+        }
+
+        return urlsp;
+    },
+
     query: async function(url, args, query) {
         try {
-            const budget = args.find(e => e.name === "budget");
-            const urlsp = new URLSearchParams({ "query" : query })
-
-            if(budget) urlsp.set("budget", budget.value);
+            const urlsp = this.createURLSearchParams(args, query);
 
             const response = await fetch(url, {
                 method: "POST",

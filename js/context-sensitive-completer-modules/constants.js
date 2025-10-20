@@ -12,7 +12,13 @@ export const constants = {
     regexHTTP: new RegExp("^<http://", "i"),
     regexUriStart: new RegExp("^<", "i"),
     colorHash: new ColorHash(), 
-    xsd: "http://www.w3.org/2001/XMLSchema#"
+    xsd: "http://www.w3.org/2001/XMLSchema#",
+    headers: [
+        "attempts",
+        "remote-attempts",
+        "limit",
+        "timeout"
+    ]
 }
 
 export class NotHandledError extends Error {
