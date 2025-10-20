@@ -17,7 +17,8 @@ export const constants = {
         "attempts",
         "remote-attempts",
         "limit",
-        "timeout"
+        "timeout",
+        "budget" // TODO : remove when proper budgetting is added to RAW
     ]
 }
 
