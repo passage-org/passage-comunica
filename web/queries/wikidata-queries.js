@@ -3,22 +3,30 @@
 /// These are slightly modified to remove SERVICE that are
 /// specific to wikidata, i.e., outside of the standard.
 export const WikidataQueries = [
-    { name: "cite",
-      description: "Articles from the journal PLOS One that cite each other.",
+    { name: 'all_stars',
+      description: 'All stars.',
       query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX wd: <http://www.wikidata.org/entity/>
 
-# The query times out on the official Wikidata endpoint since
-# the search space is huge.
-# Using the passage endpoint, it should take at most ~40 minutes.
-# You can check this estimate by inspecting the continuation
-# queries and the progress of offsets during the query execution.
-SELECT ?article1 ?article2 WHERE {
-  ?article1 wdt:P1433 wd:Q564954. # |PLOS One| = 252130
-  ?article1 wdt:P2860 ?article2 . # |cites| = 286193302
-  ?article2 wdt:P2860 ?article1 .
-  FILTER(?article1 != ?article2)
-}`},
+# A first shot at getting the top 10 of stars:
+# Retrieve all 3M stars of the dataset.
+SELECT ?star WHERE {
+  ?star wdt:P31 wd:Q523 # ?star is_a star!
+}
+` },
+    { name: 'all_stars_image_brightness',
+      description: 'All stars with associated images and brightness.',
+      query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+
+# A second step at getting the top 10 of stars:
+# Retrieve all stars with their images and brightness.
+SELECT ?star ?images ?apparent_magnitude WHERE {
+  ?star wdt:P31 wd:Q523; # ?star is_a star!
+        wdt:P1215 ?apparent_magnitude; # the lower the magnitude the higher the brightness
+        wdt:P18 ?images .
+}
+` },    
     { name: 'stars',
       description: 'Top 10 of the brightest stars.',
       query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -36,6 +44,22 @@ SELECT DISTINCT ?star ?images ?apparent_magnitude WHERE {
 ORDER BY (?apparent_magnitude)
 LIMIT 10
 ` },
+    { name: "cite",
+      description: "Articles from the journal PLOS One that cite each other.",
+      query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+
+# The query times out on the official Wikidata endpoint since
+# the search space is huge.
+# Using the passage endpoint, it should take at most ~40 minutes.
+# You can check this estimate by inspecting the continuation
+# queries and the progress of offsets during the query execution.
+SELECT ?article1 ?article2 WHERE {
+  ?article1 wdt:P1433 wd:Q564954. # |PLOS One| = 252130
+  ?article1 wdt:P2860 ?article2 . # |cites| = 286193302
+  ?article2 wdt:P2860 ?article1 .
+  FILTER(?article1 != ?article2)
+}`},
     { name: "cats",
       description: "Retrieves all cats with their name.",
       query: `PREFIX wdt: <http://www.wikidata.org/prop/direct/>
