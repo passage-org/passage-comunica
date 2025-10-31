@@ -416,11 +416,13 @@ table.dataTable tbody tr:nth-child(2n+1) { background-color: var(--background-co
 .source-marker {
     --source-marker-size: 6px;
     --source-marker-max-width: 10px;
+    --source-marker-min-width: 2px;
 
 
     height: auto;
     /* min-width: 5px; */
     max-width: var(--source-marker-max-width);
+    min-width: var(--source-marker-min-width);
     flex: auto;
     margin-bottom: 5px;
 

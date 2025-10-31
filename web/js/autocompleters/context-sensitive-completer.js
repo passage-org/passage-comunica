@@ -169,12 +169,26 @@ export const CSCompleter = {
         return this.cache[query].bindings;
     },
 
+    createURLSearchParams: function(args, query){
+        const urlsp = new URLSearchParams({ "query" : query });
+
+        const getHeaderAndAddToSearchParams = function(header){
+            const value = args.find(e => e.name === header);
+            if(value) urlsp.set(header, value.value);
+        }
+
+        constants.headers.forEach(header => {
+            getHeaderAndAddToSearchParams(header);
+        });
+
+        return urlsp;
+    },
+
     query: async function(url, args, query) {
         try {
-            const budget = args.find(e => e.name === "budget");
-            const urlsp = new URLSearchParams({ "query" : query })
+            const urlsp = this.createURLSearchParams(args, query);
 
-            if(budget) urlsp.set("budget", budget.value);
+            const start = Date.now();
 
             const response = await fetch(url, {
                 method: "POST",
@@ -183,6 +197,13 @@ export const CSCompleter = {
                 },
                 body: urlsp
             });
+
+            const end = Date.now();
+
+            const time = end - start;
+            const parsed = this.msToTime(time);
+
+            console.log(`Got a response in ${parsed}`);
 
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}`);
@@ -865,4 +886,22 @@ export const CSCompleter = {
     //     const toAdd = prefixStrings.join("\n");
     //     this.yasqe.setValue(toAdd + "\n" + this.yasqe.getValue())
     // }
+
+    msToTime: function(s) {
+        var ms = s % 1000;
+        s = (s - ms) / 1000;
+        var secs = s % 60;
+        s = (s - secs) / 60;
+        var mins = s % 60;
+        var hrs = (s - mins) / 60;
+
+        var string = "";
+
+        if(hrs != 0) string += hrs + "hours, ";
+        if(mins != 0) string += mins + "mins, ";
+
+        string += secs + '.' + ms + 'sec';
+
+        return string;
+    }
 };
