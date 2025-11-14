@@ -1,21 +1,20 @@
-import { BindingsFactory } from '@comunica/utils-bindings-factory';
-import type { MediatorHttp } from '@comunica/bus-http';
-import type { MediatorMergeBindingsContext } from '@comunica/bus-merge-bindings-context';
+import {BindingsFactory} from '@comunica/utils-bindings-factory';
+import type {MediatorHttp} from '@comunica/bus-http';
+import type {MediatorMergeBindingsContext} from '@comunica/bus-merge-bindings-context';
 import type {
     IActionQuerySourceIdentifyHypermedia,
+    IActorQuerySourceIdentifyHypermediaArgs,
     IActorQuerySourceIdentifyHypermediaOutput,
-    IActorQuerySourceIdentifyHypermediaTest,
-    IActorQuerySourceIdentifyHypermediaArgs
+    IActorQuerySourceIdentifyHypermediaTest
 } from '@comunica/bus-query-source-identify-hypermedia';
-import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-identify-hypermedia';
-import type { BindMethod } from "@comunica/actor-query-source-identify-hypermedia-sparql";
-import type { MediatorQueryProcess } from "@comunica/bus-query-process";
-import { QuerySourceRaw } from "./QuerySourceRaw";
-import { failTest, passTest } from '@comunica/core';
-import type { TestResult } from '@comunica/core';
-import type { ComunicaDataFactory } from '@comunica/types';
-import { Factory } from 'sparqlalgebrajs';
-import { KeysInitQuery } from '@comunica/context-entries';
+import {ActorQuerySourceIdentifyHypermedia} from '@comunica/bus-query-source-identify-hypermedia';
+import type {BindMethod} from "@comunica/actor-query-source-identify-hypermedia-sparql";
+import {QuerySourceRaw} from "./QuerySourceRaw";
+import type {TestResult} from '@comunica/core';
+import {failTest, passTest} from '@comunica/core';
+import type {ComunicaDataFactory} from '@comunica/types';
+import {Factory} from 'sparqlalgebrajs';
+import {KeysInitQuery} from '@comunica/context-entries';
 
 // Raw is very much alike SPARQL but the endpoint is different
 // Of course, this could be factorized with `ActorQuerySourceIdentifyHypermediaSparql`
@@ -38,7 +37,11 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
         action: IActionQuerySourceIdentifyHypermedia,
     ): Promise<TestResult<IActorQuerySourceIdentifyHypermediaTest>> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
-            !(this.checkUrlSuffix && action.url.endsWith('/raw'))) {
+            !(this.checkUrlSuffix && ( // ends with a RAW-related suffix
+                action.url.endsWith('/raw') ||
+                action.url.endsWith('/cost') ||
+                action.url.endsWith('/agg')
+            ))) {
             return failTest(`Actor ${this.name} could not detect a RAW service description or URL ending on /raw.`);
         }
         return passTest({ filterFactor: 1 });
@@ -66,7 +69,7 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
 
 }
 
-// Tried multiple times to extends arguments from Sparql's actor, couldnot make it…
+// Tried multiple times to extend arguments from Sparql's actor, couldnot make it…
 export interface IActorQuerySourceIdentifyHypermediaRawArgs extends IActorQuerySourceIdentifyHypermediaArgs {
     // /**
     //  * SPARQL queries returns by raw can be parsed again, then executed again.
