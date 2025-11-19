@@ -384,9 +384,10 @@ export const CSCompleter = {
         let predicate = "?default_p";
         let object = "?default_o";
 
-            const currentToken = entities.flat().find(tkn => tkn.isCurrentToken);
-            const idx = entities.findIndex(entity => entity.find(tkn => tkn == currentToken));
-        filter = idx !== -1 ? entities[idx].map(tkn => tkn.string).join("") : "";
+        const currentToken = entities.flat().find(tkn => tkn.isCurrentToken);
+        const idx = entities.findIndex(entity => entity.find(tkn => tkn == currentToken));
+
+        const filter = idx !== -1 ? entities[idx].map(tkn => tkn.string).join("") : "";
 
         if(entities.length === 0) {
             subject = constants.q_sugg_var;
