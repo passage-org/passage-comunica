@@ -23,8 +23,8 @@ export class OperatorsChoser {
             this.operators = new Map(Object.entries(JSON.parse(localStorage.getItem(this.STORAGE_ENTRY))));
         } else {
             this.operators.set("project", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.PROJECT});
-            this.operators.set("distinct", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.DISTINCT});
-            this.operators.set("aggregate (count, min, max…)", {state: BOOLEAN.ALWAYS_FALSE});
+            this.operators.set("distinct", {state: BOOLEAN.TRUE, algebra: Algebra.types.DISTINCT});
+            this.operators.set("aggregate (count, min, max…)", {state: BOOLEAN.TRUE});
             this.operators.set("triple/quad pattern", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.PATTERN});
             this.operators.set("basic graph pattern (BGP)", {state: BOOLEAN.TRUE, algebra: Algebra.types.BGP});
             
@@ -35,8 +35,8 @@ export class OperatorsChoser {
             this.operators.set("union", {state: BOOLEAN.TRUE, algebra: Algebra.types.UNION});
             this.operators.set("filter", {state: BOOLEAN.TRUE, algebra: Algebra.types.FILTER});
             this.operators.set("property path pattern", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.PATH});
-            this.operators.set("group by", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.GROUP});
-            this.operators.set("order by", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.ORDER_BY});
+            this.operators.set("group by", {state: BOOLEAN.TRUE, algebra: Algebra.types.GROUP});
+            this.operators.set("order by", {state: BOOLEAN.TRUE, algebra: Algebra.types.ORDER_BY});
             this.operators.set("limit offset", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.SLICE});
             this.operators.set("service", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.SERVICE});
         };
