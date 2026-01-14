@@ -38,7 +38,7 @@ export class OperatorsChoser {
             this.operators.set("group by", {state: BOOLEAN.TRUE, algebra: Algebra.types.GROUP});
             this.operators.set("order by", {state: BOOLEAN.TRUE, algebra: Algebra.types.ORDER_BY});
             this.operators.set("limit offset", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.SLICE});
-            this.operators.set("service", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.SERVICE});
+            this.operators.set("service", {state: BOOLEAN.TRUE, algebra: Algebra.types.SERVICE});
         };
         
         this.draw();
