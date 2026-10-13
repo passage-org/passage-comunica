@@ -1,6 +1,6 @@
 {
     "name": "@passage/query-passage",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "query-sparql + Passage for continuation queries",
     "license": "MIT",
     "sideEffects": false,
@@ -29,13 +29,13 @@
         "prepare": "comunica-compile-config config/config-default.json > engine-default.js"
     },
     "dependencies": {
-        "@comunica/config-query-sparql": "^4.2.0",
-        "@comunica/query-sparql": "^4.2.0",
-        "@comunica/runner-cli": "^4.2.0",
-        "@comunica/actor-query-operation-distinct-hash": "^4.2.0",
-        "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.3",
-        "@passage/config-query-passage": "^0.0.3",
-        "@passage/actor-query-process-sequential-recursive": "^0.0.3"
+        "@comunica/config-query-sparql": "^5.4.0",
+        "@comunica/query-sparql": "^5.4.0",
+        "@comunica/runner-cli": "^5.4.0",
+        "@comunica/actor-query-operation-distinct-hash": "^5.4.0",
+        "@passage/actor-query-source-identify-hypermedia-passage": "^0.0.4",
+        "@passage/config-query-passage": "^0.0.4",
+        "@passage/actor-query-process-sequential-recursive": "^0.0.4"
     },
     "browser": {
         "./lib/index.js": "./lib/index-browser.js"

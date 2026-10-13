@@ -1,5 +1,5 @@
-import {BindingsFactory} from '@comunica/utils-bindings-factory';
 import type {MediatorHttp} from '@comunica/bus-http';
+import type {MediatorQuerySerialize} from '@comunica/bus-query-serialize';
 import {KeysInitQuery} from '@comunica/context-entries';
 import {ActionContextKey, Actor} from '@comunica/core';
 import {MetadataValidationState} from '@comunica/utils-metadata';
@@ -17,7 +17,10 @@ import type * as RDF from '@rdfjs/types';
 import {AsyncIterator, EmptyIterator, TransformIterator, wrap} from 'asynciterator';
 import {SparqlEndpointFetcher} from 'fetch-sparql-endpoint';
 import {LRUCache} from 'lru-cache';
-import {Algebra, Factory, Util} from 'sparqlalgebrajs';
+// import {Algebra, Factory, Util} from 'sparqlalgebrajs'; // TODO <= remove this when done
+import type {AlgebraFactory} from '@comunica/utils-algebra';
+import {Algebra, algebraUtils, isKnownOperation} from '@comunica/utils-algebra';
+import {BindingsFactory} from '@comunica/utils-bindings-factory';
 import type {BindMethod} from '@comunica/actor-query-source-identify-hypermedia-sparql';
 import {QuerySourceSparql} from '@comunica/actor-query-source-identify-hypermedia-sparql';
 import type {MediatorQueryProcess} from '@comunica/bus-query-process';
@@ -28,7 +31,11 @@ import {Shapes} from './Shapes';
  * all kinds of SPARQL operators.
  */
 export class QuerySourcePassage implements IQuerySource {
-
+    /**
+     * The query format that endpoints advertise via the `Accept-Query` header when they support HTTP QUERY (RFC 10008).
+     */
+    public static readonly MEDIATYPE_SPARQL_QUERY = 'application/sparql-query';
+    
     protected static readonly SELECTOR_SHAPE: FragmentSelectorShape =
         process.env.SHAPE && process.env.SHAPE === 'tpf' ?
         Shapes.TPF : 
@@ -42,6 +49,7 @@ export class QuerySourcePassage implements IQuerySource {
     private readonly url: string;
     private readonly context: IActionContext;
     private readonly mediatorHttp: MediatorHttp;
+    private readonly mediatorQuerySerialize: MediatorQuerySerialize;
     private readonly bindMethod: BindMethod;
     private readonly countTimeout: number;
     private readonly dataFactory: ComunicaDataFactory;
@@ -59,9 +67,10 @@ export class QuerySourcePassage implements IQuerySource {
         url: string,
         context: IActionContext,
         mediatorHttp: MediatorHttp,
+        mediatorQuerySerialize: MediatorQuerySerialize,
         bindMethod: BindMethod,
         dataFactory: ComunicaDataFactory,
-        algebraFactory: Factory,
+        algebraFactory: AlgebraFactory,
         bindingsFactory: BindingsFactory,
         forceHttpGet: boolean,
         cacheSize: number,
@@ -73,18 +82,31 @@ export class QuerySourcePassage implements IQuerySource {
         this.url = url;
         this.context = context;
         this.mediatorHttp = mediatorHttp;
+        this.mediatorQuerySerialize = mediatorQuerySerialize; // TODO: init in config of componentsjs
         this.bindMethod = bindMethod;
         this.dataFactory = dataFactory;
         this.algebraFactory = algebraFactory;
         this.bindingsFactory = bindingsFactory;
+
+        // Endpoints advertise support for the HTTP QUERY method (RFC 10008) via the Accept-Query header,
+        // which lets us send the query in the request body without the side effects of a POST.
+        let method: 'GET' | 'POST' | 'QUERY' = 'POST';
+        if (forceHttpGet) {
+            method = 'GET';
+        } else if (metadata.queryAccepted?.includes(QuerySourceSparql.MEDIATYPE_SPARQL_QUERY)) {
+            method = 'QUERY';
+        }
+        
         this.endpointFetcher = new SparqlEndpointFetcher({
-            method: forceHttpGet ? 'GET' : 'POST',
+            method,
+            prefixVariableQuestionMark: true,
+            dataFactory,
+            forceGetIfUrlLengthBelow: 1024, // TODO: put this as an argument like in comunica
             fetch: (input: Request | string, init?: RequestInit) => this.mediatorHttp.mediate(
                 { input, init, context: this.lastSourceContext! },
             ),
             defaultHeaders: this.context.get(new ActionContextKey('headers')),
-            prefixVariableQuestionMark: true,
-            dataFactory,
+
         });
         this.cache = cacheSize > 0 ?
             new LRUCache<string, RDF.QueryResultCardinality>({ max: cacheSize }) :
@@ -94,6 +116,10 @@ export class QuerySourcePassage implements IQuerySource {
 
     public async getSelectorShape(): Promise<FragmentSelectorShape> {
         return this.context.get(new ActionContextKey("shape")) || QuerySourcePassage.SELECTOR_SHAPE;
+    }
+
+    public async getFilterFactor(): Promise<number> {
+        return 1;
     }
 
     public queryBindings(
@@ -330,7 +356,7 @@ export class QuerySourcePassage implements IQuerySource {
         };
 
         physicalQueryPlanLogger.logOperation(
-            Algebra.types.SERVICE, /* logical operation */
+            Algebra.Types.SERVICE, /* logical operation */
             undefined, /* physical operation */
             operation, /* node */
             context.get(KeysInitQuery.physicalQueryPlanNode), /* parentNode */

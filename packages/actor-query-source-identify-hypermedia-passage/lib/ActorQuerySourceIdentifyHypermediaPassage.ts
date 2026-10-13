@@ -1,6 +1,6 @@
-import { BindingsFactory } from '@comunica/utils-bindings-factory';
 import type { MediatorHttp } from '@comunica/bus-http';
 import type { MediatorMergeBindingsContext } from '@comunica/bus-merge-bindings-context';
+import type { MediatorQuerySerialize } from '@comunica/bus-query-serialize';
 import type {
     IActionQuerySourceIdentifyHypermedia,
     IActorQuerySourceIdentifyHypermediaOutput,
@@ -10,11 +10,13 @@ import type {
 import { ActorQuerySourceIdentifyHypermedia } from '@comunica/bus-query-source-identify-hypermedia';
 import type { BindMethod } from "@comunica/actor-query-source-identify-hypermedia-sparql";
 import type { MediatorQueryProcess } from "@comunica/bus-query-process";
-import { QuerySourcePassage } from "./QuerySourcePassage";
 import { failTest, passTest } from '@comunica/core';
 import type { TestResult } from '@comunica/core';
 import type { ComunicaDataFactory } from '@comunica/types';
-import { Factory } from 'sparqlalgebrajs';
+import { AlgebraFactory } from '@comunica/utils-algebra';
+import { BindingsFactory } from '@comunica/utils-bindings-factory';
+import { QuerySourcePassage } from "./QuerySourcePassage";
+
 import { KeysInitQuery } from '@comunica/context-entries';
 
 // Passage is very much alike SPARQL but the endpoint is different
@@ -23,7 +25,8 @@ import { KeysInitQuery } from '@comunica/context-entries';
 export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceIdentifyHypermedia {
     public readonly mediatorHttp: MediatorHttp;
     public readonly mediatorMergeBindingsContext: MediatorMergeBindingsContext;
-    public readonly mediatorQueryProcess: MediatorQueryProcess;
+    public readonly mediatorQuerySerialize: MediatorQuerySerialize;
+    public readonly mediatorQueryProcess: MediatorQueryProcess; // Added for Passage loop
     public readonly checkUrlSuffix: boolean;
     public readonly forceHttpGet: boolean;
     public readonly cacheSize: number;
@@ -38,8 +41,8 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
         action: IActionQuerySourceIdentifyHypermedia,
     ): Promise<TestResult<IActorQuerySourceIdentifyHypermediaTest>> {
         if (!action.forceSourceType && !action.metadata.sparqlService &&
-            !(this.checkUrlSuffix && action.url.endsWith('/passage'))) {
-            return failTest(`Actor ${this.name} could not detect a passage service description or URL ending on /passage.`);
+            !(this.checkUrlSuffix && (action.url.endsWith('/passage') || action.url.endsWith('/passage/')))) {
+            return failTest(`Actor ${this.name} could not detect a passage service description or URL ending on /passage or /passage/.`);
         }
         return passTest({ filterFactor: 1 });
     }
@@ -47,11 +50,12 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
         this.logInfo(action.context, `Identified ${action.url} as passage source with service URL: ${action.metadata.sparqlService || action.url}`);
         const dataFactory: ComunicaDataFactory = action.context.getSafe(KeysInitQuery.dataFactory);
-        const algebraFactory = new Factory(dataFactory);
+        const algebraFactory = new AlgebraFactory(dataFactory);
         const source = new QuerySourcePassage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
             this.mediatorHttp,
+            this.mediatorQuerySerialize,
             this.bindMethod,
             dataFactory,
             algebraFactory,
@@ -81,6 +85,10 @@ export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQu
      * A mediator for creating binding context merge handlers
      */
     mediatorMergeBindingsContext: MediatorMergeBindingsContext;
+    /**
+     * Mediator for serializing queries.
+     */
+    mediatorQuerySerialize: MediatorQuerySerialize;
     /**
      * If URLs ending with '/sparql' should also be considered SPARQL endpoints.
      * @default {true}

@@ -1,6 +1,6 @@
 {
     "name": "@passage/actor-query-process-sequential-recursive",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "A sequential query-process actor that allows recursive calls",
     "lsd:module": true,
     "license": "MIT",    
@@ -22,6 +22,6 @@
         "build:components": "componentsjs-generator"
     },
     "dependencies": {
-        "@comunica/actor-query-process-sequential": "^4.5.0"
+        "@comunica/actor-query-process-sequential": "^5.4.0"
     }
 }
