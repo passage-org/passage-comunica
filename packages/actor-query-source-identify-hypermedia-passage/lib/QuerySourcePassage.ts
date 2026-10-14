@@ -17,7 +17,6 @@ import type * as RDF from '@rdfjs/types';
 import {AsyncIterator, EmptyIterator, TransformIterator, wrap} from 'asynciterator';
 import {SparqlEndpointFetcher} from 'fetch-sparql-endpoint';
 import {LRUCache} from 'lru-cache';
-// import {Algebra, Factory, Util} from 'sparqlalgebrajs'; // TODO <= remove this when done
 import type {AlgebraFactory} from '@comunica/utils-algebra';
 import {Algebra, algebraUtils, isKnownOperation} from '@comunica/utils-algebra';
 import {BindingsFactory} from '@comunica/utils-bindings-factory';
@@ -53,7 +52,7 @@ export class QuerySourcePassage implements IQuerySource {
     private readonly bindMethod: BindMethod;
     private readonly countTimeout: number;
     private readonly dataFactory: ComunicaDataFactory;
-    private readonly algebraFactory: Factory;
+    private readonly algebraFactory: AlgebraFactory;
     private readonly bindingsFactory: BindingsFactory;
     
     private readonly mediatorQueryProcess: MediatorQueryProcess;
@@ -75,14 +74,15 @@ export class QuerySourcePassage implements IQuerySource {
         forceHttpGet: boolean,
         cacheSize: number,
         countTimeout: number,
-        mediatorQueryProcess: MediatorQueryProcess
+        mediatorQueryProcess: MediatorQueryProcess,
+        metadata: Record<string, any>,
     ) {
         this.mediatorQueryProcess = mediatorQueryProcess;
         this.referenceValue = url;
         this.url = url;
         this.context = context;
         this.mediatorHttp = mediatorHttp;
-        this.mediatorQuerySerialize = mediatorQuerySerialize; // TODO: init in config of componentsjs
+        this.mediatorQuerySerialize = mediatorQuerySerialize;
         this.bindMethod = bindMethod;
         this.dataFactory = dataFactory;
         this.algebraFactory = algebraFactory;
@@ -96,12 +96,12 @@ export class QuerySourcePassage implements IQuerySource {
         } else if (metadata.queryAccepted?.includes(QuerySourceSparql.MEDIATYPE_SPARQL_QUERY)) {
             method = 'QUERY';
         }
-        
+
         this.endpointFetcher = new SparqlEndpointFetcher({
             method,
             prefixVariableQuestionMark: true,
             dataFactory,
-            forceGetIfUrlLengthBelow: 1024, // TODO: put this as an argument like in comunica
+            forceGetIfUrlLengthBelow: 0, // TODO: put this as an argument like in comunica
             fetch: (input: Request | string, init?: RequestInit) => this.mediatorHttp.mediate(
                 { input, init, context: this.lastSourceContext! },
             ),
@@ -122,25 +122,34 @@ export class QuerySourcePassage implements IQuerySource {
         return 1;
     }
 
+    // called twice: once to retrieve metadata; once to actually query
+    // If bindings are passed, modify the operations
     public queryBindings(
         operationIn: Algebra.Operation,
         context: IActionContext,
         options?: IQueryBindingsOptions
     ): BindingsStream {
-        // called twice: once to retrieve metadata; once to actually query
         // If bindings are passed, modify the operations
         let operationPromise: Promise<Algebra.Operation>;
         if (options?.joinBindings) {
-            operationPromise = QuerySourceSparql.addBindingsToOperation(
-                this.algebraFactory, this.bindMethod, operationIn, options.joinBindings);
+          operationPromise = QuerySourceSparql.addBindingsToOperation(
+            this.algebraFactory,
+            this.bindMethod,
+            operationIn,
+            options.joinBindings,
+          );
         } else {
-            operationPromise = Promise.resolve(operationIn);
+          operationPromise = Promise.resolve(operationIn);
         }
 
         const bindings: BindingsStream = new TransformIterator(async() => {
             const operation = await operationPromise;
-            const selectQuery: string = QuerySourcePassage.toSelectQuery(context, operation, this.algebraFactory, options);
-            const variables: RDF.Variable[] = Util.inScopeVariables(operation);
+            const variables: RDF.Variable[] = algebraUtils.inScopeVariables(operation);
+            const queryString = context.get<string>(KeysInitQuery.queryString);
+            const queryFormat: RDF.QueryFormat = context.getSafe(KeysInitQuery.queryFormat);
+            const selectQuery: string = !options?.joinBindings && queryString && queryFormat.language === 'sparql' ?
+                queryString :
+                await this.operationToSelectQuery(this.algebraFactory, operation, variables);
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
 
             Actor.getContextLogger(context)?.info(`Asking for:\n${selectQuery}`);
@@ -148,7 +157,7 @@ export class QuerySourcePassage implements IQuerySource {
             return this.queryBindingsRemote(operation, this.url, selectQuery, variables, context, undefVariables);
         }, { autoStart: false });
 
-        this.attachMetadata(bindings, context, operationPromise, options); // actually important…
+        this.attachMetadata(bindings, context, operationPromise); // actually important…
         
         return bindings;
     }
@@ -162,22 +171,20 @@ export class QuerySourcePassage implements IQuerySource {
         target: AsyncIterator<any>,
         context: IActionContext,
         operationPromise: Promise<Algebra.Operation>,
-        options?: IQueryBindingsOptions,
     ) : void {
         let variablesCount: MetadataVariable[] = [];
-        new Promise<Algebra.Operation>(async(resolve, reject) => {
+      new Promise<[Algebra.Operation, string]>(async(resolve, reject) => {
             const operation = await operationPromise;
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
-            const variablesScoped = Util.inScopeVariables(operation);
+            const variablesScoped = algebraUtils.inScopeVariables(operation);
             variablesCount = variablesScoped.map(variable => ({
                 variable,
                 canBeUndef: undefVariables.some(undefVariable => undefVariable.equals(variable)),
             }));
-            return resolve(operation);
-        }).then((operation) => {
             // ugly, we reprocess the query that is sent.
-            const selectQuery: string = QuerySourcePassage.toSelectQuery(context, operation, this.algebraFactory, options);
-
+            const selectQuery: string = await this.operationToSelectQuery(this.algebraFactory, operation, variablesScoped);
+            return resolve([operation, selectQuery]);
+        }).then(([operation, selectQuery]) => {
             const metadata =  {
                 state: new MetadataValidationState(),
                 cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
@@ -237,7 +244,7 @@ export class QuerySourcePassage implements IQuerySource {
                             Actor.getContextLogger(this.context)
                                 ?.warn(`The endpoint ${endpoint} failed to provide a binding for ${variable.value}.`);
                         }
-                        return <[RDF.Variable, RDF.Term]> [ variable, value ];
+                        return [variable, value] as [RDF.Variable, RDF.Term];
                     }).filter(([ _, v ]) => Boolean(v)))
             });
 
@@ -315,7 +322,7 @@ export class QuerySourcePassage implements IQuerySource {
         throw new Error('queryBoolean is not implemented in QuerySourcePassage.');
     }
 
-    public queryVoid(operation: Algebra.Update, context: IActionContext): Promise<void> {
+    public queryVoid(operation: Algebra.Operation, context: IActionContext): Promise<void> {
         throw new Error('queryVoid is not implemented in QuerySourcePassage.');
     }
     
@@ -323,20 +330,55 @@ export class QuerySourcePassage implements IQuerySource {
         return `QuerySourcePassage(${this.url})`;
     }
 
-    static toSelectQuery(context: IActionContext,
-                         operation: Algebra.Operation,
-                         algebraFactory: Factory,
-                         options?: IQueryBindingsOptions): string {
-        const variables: RDF.Variable[] = Util.inScopeVariables(operation);
-        const queryString = context.get<string>(KeysInitQuery.queryString);
-        const selectQuery: string = !options?.joinBindings && queryString ?
-            queryString :
-            operation.type === Algebra.types.PROJECT || operation.type === Algebra.types.SLICE ?
-                QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
-                QuerySourceSparql.operationToSelectQuery(algebraFactory, operation, variables);
-        return selectQuery;
-    }
+    // static toSelectQuery(context: IActionContext,
+    //                      operation: Algebra.Operation,
+    //                      algebraFactory: AlgebraFactory,
+    //                      options?: IQueryBindingsOptions): string {
+    //     const variables: RDF.Variable[] = algebraUtils.inScopeVariables(operation);
+    //     const queryString = context.get<string>(KeysInitQuery.queryString);
+    //     const selectQuery: string = !options?.joinBindings && queryString ?
+    //         queryString :
+    //         operation.type === Algebra.Types.PROJECT || operation.type === Algebra.Types.SLICE ?
+    //             QuerySourceSparql.operationToQuery(operation): // instead of operationToSelectQuery that would project+++
+    //             QuerySourceSparql.operationToSelectQuery(algebraFactory, operation, variables);
+    //     return selectQuery;
+    // }
 
+    /**
+     * Convert an operation to a select query for this pattern.
+     * @param algebraFactory The algebra factory.
+     * @param {Algebra.Operation} operation A query operation.
+     * @param {RDF.Variable[]} variables The variables in scope for the operation.
+     * @return {string} A select query string.
+     */
+     public operationToSelectQuery(
+       algebraFactory: AlgebraFactory,
+       operation: Algebra.Operation,
+       variables: RDF.Variable[],
+    ): Promise<string> {
+       if (operation.type === Algebra.Types.PROJECT || operation.type === Algebra.Types.SLICE) {
+         return this.operationToQuery(operation);
+       } else {
+         return this.operationToQuery(algebraFactory.createProject(operation, variables));
+       }
+     }
+
+     /**
+      * Convert an operation to a query for this pattern.
+      * @param {Algebra.Operation} operation A query operation.
+      * @return {string} A query string.
+      */
+     public async operationToQuery(operation: Algebra.Operation): Promise<string> {
+       return (await this.mediatorQuerySerialize.mediate({
+         queryFormat: { language: 'sparql', version: '1.2' },
+         operation,
+         newlines: false,
+         indentWidth: 0,
+         context: this.context,
+       })).query;
+     }
+
+  
     /* ********************* METADATA RELATED FUNCTIONS ********************** */
 
     /**
@@ -351,7 +393,7 @@ export class QuerySourcePassage implements IQuerySource {
 
         const metadata =  {
             // cardinality: { type: 'estimate', value: Number.POSITIVE_INFINITY },
-            variables: Util.inScopeVariables(operation).map(v => v.value),
+            variables: algebraUtils.inScopeVariables(operation).map(v => v.value),
             query: query,
         };
 
@@ -373,20 +415,20 @@ export class QuerySourcePassage implements IQuerySource {
     public static updateStartTime(context: IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
             || context.get(new ActionContextKey("physicalQueryPlanLogger"));
-        if (physicalQueryPlanLogger) {
-            operation.startAt = Date.now();
-            physicalQueryPlanLogger.appendMetadata(operation, {startAt: operation.startAt});
+        if (physicalQueryPlanLogger && operation.metadata) {
+            operation.metadata['startAt'] = Date.now();
+            physicalQueryPlanLogger.appendMetadata(operation, {startAt: operation.metadata['startAt']});
         }
     }
 
     public static updateFirstResultTime(context:  IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
             || context.get(new ActionContextKey("physicalQueryPlanLogger"));
-        if (physicalQueryPlanLogger) {
-            operation.firstResultAt = Date.now();
-            operation.timeFirstResult = operation.firstResultAt - operation.startAt;
-            physicalQueryPlanLogger.appendMetadata(operation, {firstResultAt: operation.firstResultAt});
-            physicalQueryPlanLogger.appendMetadata(operation, {timeFirstResult: operation.timeFirstResult})
+        if (physicalQueryPlanLogger && operation.metadata) {
+            operation.metadata['firstResultAt'] = Date.now();
+            operation.metadata['timeFirstResult'] = (operation.metadata['firstResultAt'] as number) - (operation.metadata['startAt'] as number);
+            physicalQueryPlanLogger.appendMetadata(operation, {firstResultAt: operation.metadata['firstResultAt']});
+            physicalQueryPlanLogger.appendMetadata(operation, {timeFirstResult: operation.metadata['timeFirstResult']})
         }
     }
 
@@ -400,11 +442,11 @@ export class QuerySourcePassage implements IQuerySource {
     public static updateDoneTime(context: IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
             || context.get(new ActionContextKey("physicalQueryPlanLogger"));
-        if (physicalQueryPlanLogger) {
-            operation.doneAt = Date.now();
-            operation.timeLife = operation.doneAt - operation.startAt;
-            physicalQueryPlanLogger.appendMetadata(operation, {doneAt: operation.doneAt});
-            physicalQueryPlanLogger.appendMetadata(operation, {timeLife: operation.timeLife})
+        if (physicalQueryPlanLogger && operation.metadata) {
+            operation.metadata['doneAt'] = Date.now();
+            operation.metadata['timeLife'] = (operation.metadata['doneAt'] as number) - (operation.metadata['startAt'] as number);
+            physicalQueryPlanLogger.appendMetadata(operation, {doneAt: operation.metadata['doneAt']});
+            physicalQueryPlanLogger.appendMetadata(operation, {timeLife: operation.metadata['timeLife']})
         }
     }
 
@@ -419,8 +461,8 @@ export class QuerySourcePassage implements IQuerySource {
     public static updateNbResults(context: IActionContext, operation: Algebra.Operation, nbResults: number) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
             || context.get(new ActionContextKey("physicalQueryPlanLogger"));
-        if (physicalQueryPlanLogger) {
-            operation.cardinalityReal = nbResults;
+        if (physicalQueryPlanLogger && operation.metadata) {
+            operation.metadata['cardinalityReal'] = nbResults;
             physicalQueryPlanLogger.appendMetadata(operation, {cardinalityReal: nbResults})
         }
     }

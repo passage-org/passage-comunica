@@ -1,4 +1,4 @@
-import {Algebra} from "sparqlalgebrajs";
+import {Algebra} from "@comunica/utils-algebra";
 
 const BOOLEAN = {
     TRUE: true,
@@ -22,23 +22,23 @@ export class OperatorsChoser {
         if (localStorage && localStorage.getItem(this.STORAGE_ENTRY)) {
             this.operators = new Map(Object.entries(JSON.parse(localStorage.getItem(this.STORAGE_ENTRY))));
         } else {
-            this.operators.set("project", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.PROJECT});
-            this.operators.set("distinct", {state: BOOLEAN.TRUE, algebra: Algebra.types.DISTINCT});
+            this.operators.set("project", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.PROJECT});
+            this.operators.set("distinct", {state: BOOLEAN.TRUE, algebra: Algebra.Types.DISTINCT});
             this.operators.set("aggregate (count, min, max…)", {state: BOOLEAN.TRUE});
-            this.operators.set("triple/quad pattern", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.PATTERN});
-            this.operators.set("basic graph pattern (BGP)", {state: BOOLEAN.TRUE, algebra: Algebra.types.BGP});
+            this.operators.set("triple/quad pattern", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.PATTERN});
+            this.operators.set("basic graph pattern (BGP)", {state: BOOLEAN.TRUE, algebra: Algebra.Types.BGP});
             
-            this.operators.set("bind as", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.EXTEND});
-            this.operators.set("values", {state: BOOLEAN.TRUE, algebra: Algebra.types.VALUES});
-            this.operators.set("join", {state: BOOLEAN.TRUE, algebra: Algebra.types.JOIN});
-            this.operators.set("optional", {state: BOOLEAN.TRUE, algebra: Algebra.types.LEFT_JOIN});
-            this.operators.set("union", {state: BOOLEAN.TRUE, algebra: Algebra.types.UNION});
-            this.operators.set("filter", {state: BOOLEAN.TRUE, algebra: Algebra.types.FILTER});
-            this.operators.set("property path pattern", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.types.PATH});
-            this.operators.set("group by", {state: BOOLEAN.TRUE, algebra: Algebra.types.GROUP});
-            this.operators.set("order by", {state: BOOLEAN.TRUE, algebra: Algebra.types.ORDER_BY});
-            this.operators.set("limit offset", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.types.SLICE});
-            this.operators.set("service", {state: BOOLEAN.TRUE, algebra: Algebra.types.SERVICE});
+            this.operators.set("bind as", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.EXTEND});
+            this.operators.set("values", {state: BOOLEAN.TRUE, algebra: Algebra.Types.VALUES});
+            this.operators.set("join", {state: BOOLEAN.TRUE, algebra: Algebra.Types.JOIN});
+            this.operators.set("optional", {state: BOOLEAN.TRUE, algebra: Algebra.Types.LEFT_JOIN});
+            this.operators.set("union", {state: BOOLEAN.TRUE, algebra: Algebra.Types.UNION});
+            this.operators.set("filter", {state: BOOLEAN.TRUE, algebra: Algebra.Types.FILTER});
+            this.operators.set("property path pattern", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.Types.PATH});
+            this.operators.set("group by", {state: BOOLEAN.TRUE, algebra: Algebra.Types.GROUP});
+            this.operators.set("order by", {state: BOOLEAN.TRUE, algebra: Algebra.Types.ORDER_BY});
+            this.operators.set("limit offset", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.SLICE});
+            this.operators.set("service", {state: BOOLEAN.TRUE, algebra: Algebra.Types.SERVICE});
         };
         
         this.draw();

@@ -30,11 +30,26 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
     public readonly checkUrlSuffix: boolean;
     public readonly forceHttpGet: boolean;
     public readonly cacheSize: number;
+    public readonly forceSourceType: boolean;
     public readonly bindMethod: BindMethod;
     public readonly countTimeout: number;
+    public readonly sparqlServerSoftwarePatterns: RegExp[];
+
 
     public constructor(args: IActorQuerySourceIdentifyHypermediaPassageArgs) {
-        super(args, 'passage');
+      super(args, 'passage');
+      this.mediatorHttp = args.mediatorHttp;
+      this.mediatorMergeBindingsContext = args.mediatorMergeBindingsContext;
+      this.mediatorQuerySerialize = args.mediatorQuerySerialize;
+      this.checkUrlSuffix = args.checkUrlSuffix;
+      this.forceHttpGet = args.forceHttpGet;
+      this.cacheSize = args.cacheSize;
+      this.forceSourceType = Boolean(args.forceSourceType);
+      this.bindMethod = args.bindMethod;
+      this.countTimeout = args.countTimeout;
+      this.sparqlServerSoftwarePatterns = (
+        args.sparqlServerSoftwarePatterns ?? []
+      ).map(pattern => new RegExp(pattern, 'u'));
     }
 
     public async testMetadata(
@@ -51,6 +66,7 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
         this.logInfo(action.context, `Identified ${action.url} as passage source with service URL: ${action.metadata.sparqlService || action.url}`);
         const dataFactory: ComunicaDataFactory = action.context.getSafe(KeysInitQuery.dataFactory);
         const algebraFactory = new AlgebraFactory(dataFactory);
+        const bindingsFactory = await BindingsFactory.create(this.mediatorMergeBindingsContext, action.context, dataFactory);
         const source = new QuerySourcePassage(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
@@ -59,11 +75,12 @@ export class ActorQuerySourceIdentifyHypermediaPassage extends ActorQuerySourceI
             this.bindMethod,
             dataFactory,
             algebraFactory,
-            await BindingsFactory.create(this.mediatorMergeBindingsContext, action.context, dataFactory),
+            bindingsFactory,
             this.forceHttpGet,
             this.cacheSize,
             this.countTimeout,
-            this.mediatorQueryProcess
+            this.mediatorQueryProcess,
+            action.metadata
         );
         return { source };
     }
@@ -90,7 +107,7 @@ export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQu
      */
     mediatorQuerySerialize: MediatorQuerySerialize;
     /**
-     * If URLs ending with '/sparql' should also be considered SPARQL endpoints.
+     * If URLs ending with '/passage' should also be considered Passage endpoints.
      * @default {true}
      */
     checkUrlSuffix: boolean;
@@ -104,7 +121,14 @@ export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQu
      * @range {integer}
      * @default {1024}
      */
-    cacheSize?: number;
+    cacheSize: number;
+
+    /**
+     * If provided, forces the source type of a source.
+     * @default {false}
+     */
+    forceSourceType?: boolean;
+
     /**
      * The query operation for communicating bindings.
      * @default {values}
@@ -116,6 +140,10 @@ export interface IActorQuerySourceIdentifyHypermediaPassageArgs extends IActorQu
      * @default {3000}
      */
     countTimeout: number;
-
+    /**
+     * Regexes to match against the server header to identify SPARQL endpoints.
+     */
+    sparqlServerSoftwarePatterns?: string[]; 
 
 }
+

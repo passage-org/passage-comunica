@@ -2,7 +2,8 @@ import type {IQueryProcessSequentialOutput,} from '@comunica/bus-query-process';
 import {ActionContextKey} from '@comunica/core';
 import type {ComunicaDataFactory, IActionContext, IPhysicalQueryPlanLogger, QueryFormatType,} from '@comunica/types';
 import {ActorQueryProcessSequential, IActorQueryProcessSequentialArgs} from '@comunica/actor-query-process-sequential';
-import {Algebra, Factory} from "sparqlalgebrajs";
+import {AlgebraFactory} from '@comunica/utils-algebra';
+import type {Algebra} from '@comunica/utils-algebra';
 import {KeysInitQuery} from "@comunica/context-entries";
 import {BindingsFactory} from "@comunica/utils-bindings-factory";
 import {materializeOperation} from '@comunica/utils-query-operation';
@@ -54,7 +55,7 @@ export class ActorQueryProcessSequentialRecursive extends ActorQueryProcessSeque
     // Apply initial bindings in context
     if (context.has(KeysInitQuery.initialBindings)) {
       const dataFactory: ComunicaDataFactory = context.getSafe(KeysInitQuery.dataFactory);
-      const algebraFactory = new Factory(dataFactory);
+      const algebraFactory = new AlgebraFactory(dataFactory);
       const bindingsFactory = await BindingsFactory
           .create(this.mediatorMergeBindingsContext, context, dataFactory);
       operation = materializeOperation(

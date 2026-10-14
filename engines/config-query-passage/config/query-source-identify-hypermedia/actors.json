@@ -1,13 +1,12 @@
 {
     "@context": [
-        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/runner/^4.0.0/components/context.jsonld",
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/runner/^5.0.0/components/context.jsonld",
 
-        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-none/^4.0.0/components/context.jsonld",
-        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-qpf/^4.0.0/components/context.jsonld",
-        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-sparql/^4.0.0/components/context.jsonld",
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-none/^5.0.0/components/context.jsonld",
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-qpf/^5.0.0/components/context.jsonld",
+        "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-query-source-identify-hypermedia-sparql/^5.0.0/components/context.jsonld",
 
-        "https://linkedsoftwaredependencies.org/bundles/npm/@passage/actor-query-source-identify-hypermedia-passage/^0.0.0/components/context.jsonld",
-        "https://linkedsoftwaredependencies.org/bundles/npm/@passage/actor-query-source-identify-hypermedia-raw/^0.0.0/components/context.jsonld"
+        "https://linkedsoftwaredependencies.org/bundles/npm/@passage/actor-query-source-identify-hypermedia-passage/^0.0.0/components/context.jsonld"
     ],
     "@id": "urn:comunica:default:Runner",
     "@type": "Runner",
@@ -24,7 +23,9 @@
             "@id": "urn:comunica:default:rdf-resolve-quad-pattern/actors#sparql",
             "@type": "ActorQuerySourceIdentifyHypermediaSparql",
             "mediatorHttp": { "@id": "urn:comunica:default:http/mediators#main" },
-            "mediatorMergeBindingsContext": { "@id": "urn:comunica:default:merge-bindings-context/mediators#main" }
+            "mediatorMergeBindingsContext": { "@id": "urn:comunica:default:merge-bindings-context/mediators#main" },
+            "mediatorQuerySerialize": { "@id": "urn:comunica:default:query-serialize/mediators#main" },
+            "sparqlServerSoftwarePatterns": ["Virtuoso", "Fuseki"]
         },
         {
             "@id": "urn:comunica:default:query-source-identify-hypermedia/actors#none",
@@ -36,13 +37,9 @@
             "@type": "ActorQuerySourceIdentifyHypermediaPassage",
             "mediatorHttp": { "@id": "urn:comunica:default:http/mediators#main" },
             "mediatorMergeBindingsContext": { "@id": "urn:comunica:default:merge-bindings-context/mediators#main" },
-            "mediatorQueryProcess": { "@id": "urn:comunica:default:query-process/mediators#main" }
-        },
-        {
-            "@id": "urn:passage:default:query-source-identify-hypermedia/actors#raw",
-            "@type": "ActorQuerySourceIdentifyHypermediaRaw",
-            "mediatorHttp": { "@id": "urn:comunica:default:http/mediators#main" },
-            "mediatorMergeBindingsContext": { "@id": "urn:comunica:default:merge-bindings-context/mediators#main" }
+            "mediatorQueryProcess": { "@id": "urn:comunica:default:query-process/mediators#main" },
+            "mediatorQuerySerialize": { "@id": "urn:comunica:default:query-serialize/mediators#main" },
+            "sparqlServerSoftwarePatterns": ["Virtuoso", "Fuseki"]
         }
     ]
 }

@@ -80,6 +80,7 @@ export class MonkeyQueryEngine {
 
             const query = this.yasqe.getDoc().getValue();
             const requestConfig = this.yasqe.config.requestConfig(); // headers and all.
+            console.log(requestConfig)
             const shape = this.shaper.toJson();
             
             console.log("Executing the following SPARQL query on " + requestConfig.endpoint + ": \n" + query);

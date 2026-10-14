@@ -31,7 +31,7 @@
         "@babel/core": "^8.0.7",
         "@babel/preset-env": "^8.0.7",
         "babel-loader": "^10.1.1",
-        "componentsjs-generator": "^4.2.0",
+        "componentsjs-generator": "^4.3.0",
         "typescript": "^6.0.0",
         "webpack": "^5.111.1",
         "webpack-cli": "^7.2.3"

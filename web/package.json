@@ -1,6 +1,6 @@
 {
     "name": "passage-comunica-web",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Web interface of Passage x Comunica.",
     "main": "index.js",
     "type": "module",
@@ -13,7 +13,7 @@
     "license": "Apache-2.0",
     "dependencies": {
         "@triply/yasgui": "^4.2.28",
-        "sparqlalgebrajs": "^4.3.1",
+        "@comunica/utils-algebra": "^5.4.0",
         "color-hash": "^2.0.2",
         "sparqljs": "^3.7.3"
     },

@@ -9,7 +9,7 @@ export class AboutGraph {
         ['<client>',           '<software>', '<yasgui>'],
         ['<client>',           '<software>', '<passage-communica>'],
         ['<client>',           '<resources>','<svg>'],
-        ['<comunica>',         '<version>',  '4.2.0'],
+        ['<comunica>',         '<version>',  '5.4.0'],
         ['<comunica>',         '<webpage>',  '<https://comunica.dev/>'],
         ['<passage>',          '<version>',  '0.2.0'],
         ['<passage>',          '<webpage>',  '<https://passage-org.github.io/>'],
