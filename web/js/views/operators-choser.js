@@ -29,16 +29,17 @@ export class OperatorsChoser {
             this.operators.set("basic graph pattern (BGP)", {state: BOOLEAN.TRUE, algebra: Algebra.Types.BGP});
             
             this.operators.set("bind as", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.EXTEND});
-            this.operators.set("values", {state: BOOLEAN.TRUE, algebra: Algebra.Types.VALUES});
-            this.operators.set("join", {state: BOOLEAN.TRUE, algebra: Algebra.Types.JOIN});
+            this.operators.set("values", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.VALUES});
+            // Upgrading to comunica 5.4.x, the join became essential to the performance even in tpf config.
+            this.operators.set("join", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.JOIN});
             this.operators.set("optional", {state: BOOLEAN.TRUE, algebra: Algebra.Types.LEFT_JOIN});
             this.operators.set("union", {state: BOOLEAN.TRUE, algebra: Algebra.Types.UNION});
             this.operators.set("filter", {state: BOOLEAN.TRUE, algebra: Algebra.Types.FILTER});
-            this.operators.set("property path pattern", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.Types.PATH});
-            this.operators.set("group by", {state: BOOLEAN.TRUE, algebra: Algebra.Types.GROUP});
-            this.operators.set("order by", {state: BOOLEAN.TRUE, algebra: Algebra.Types.ORDER_BY});
+            this.operators.set("property path pattern", {state: BOOLEAN.FALSE, algebra: Algebra.Types.PATH});
+            this.operators.set("group by", {state: BOOLEAN.FALSE, algebra: Algebra.Types.GROUP});
+            this.operators.set("order by", {state: BOOLEAN.FALSE, algebra: Algebra.Types.ORDER_BY});
             this.operators.set("limit offset", {state: BOOLEAN.ALWAYS_TRUE, algebra: Algebra.Types.SLICE});
-            this.operators.set("service", {state: BOOLEAN.TRUE, algebra: Algebra.Types.SERVICE});
+            this.operators.set("service", {state: BOOLEAN.ALWAYS_FALSE, algebra: Algebra.Types.SERVICE});
         };
         
         this.draw();
