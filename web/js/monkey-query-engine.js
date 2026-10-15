@@ -80,10 +80,11 @@ export class MonkeyQueryEngine {
 
             const query = this.yasqe.getDoc().getValue();
             const requestConfig = this.yasqe.config.requestConfig(); // headers and all.
-            console.log(requestConfig)
             const shape = this.shaper.toJson();
             
             console.log("Executing the following SPARQL query on " + requestConfig.endpoint + ": \n" + query);
+            console.log("Using the following config: ", requestConfig);
+            console.log("Using the following shape: ", shape);
             // list of available key/value: https://comunica.dev/docs/query/advanced/context/
 
             // TODO conditionally, when workers are not enabled, execute the query old-school with

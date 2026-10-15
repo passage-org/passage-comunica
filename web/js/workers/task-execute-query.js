@@ -12,7 +12,6 @@ self.onmessage = (event) => {
         const headers = new Headers();
         message.config.args.forEach(e => {headers.set(e.name, e.value);});
 
-
         confEngine = {
             sources: [message.config.endpoint], // always only one endpoint
             headers: headers,

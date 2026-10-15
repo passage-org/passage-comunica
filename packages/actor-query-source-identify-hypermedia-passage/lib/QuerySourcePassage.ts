@@ -414,7 +414,8 @@ export class QuerySourcePassage implements IQuerySource {
      */
     public static updateStartTime(context: IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
-            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+           || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (!operation.metadata) { operation.metadata = {} }
         if (physicalQueryPlanLogger && operation.metadata) {
             operation.metadata['startAt'] = Date.now();
             physicalQueryPlanLogger.appendMetadata(operation, {startAt: operation.metadata['startAt']});
@@ -423,7 +424,8 @@ export class QuerySourcePassage implements IQuerySource {
 
     public static updateFirstResultTime(context:  IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
-            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+         || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (!operation.metadata) { operation.metadata = {} }
         if (physicalQueryPlanLogger && operation.metadata) {
             operation.metadata['firstResultAt'] = Date.now();
             operation.metadata['timeFirstResult'] = (operation.metadata['firstResultAt'] as number) - (operation.metadata['startAt'] as number);
@@ -441,7 +443,8 @@ export class QuerySourcePassage implements IQuerySource {
      */
     public static updateDoneTime(context: IActionContext, operation: Algebra.Operation) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
-            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+         || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (!operation.metadata) { operation.metadata = {} }
         if (physicalQueryPlanLogger && operation.metadata) {
             operation.metadata['doneAt'] = Date.now();
             operation.metadata['timeLife'] = (operation.metadata['doneAt'] as number) - (operation.metadata['startAt'] as number);
@@ -460,7 +463,8 @@ export class QuerySourcePassage implements IQuerySource {
      */
     public static updateNbResults(context: IActionContext, operation: Algebra.Operation, nbResults: number) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
-            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+           || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (!operation.metadata) { operation.metadata = {} }
         if (physicalQueryPlanLogger && operation.metadata) {
             operation.metadata['cardinalityReal'] = nbResults;
             physicalQueryPlanLogger.appendMetadata(operation, {cardinalityReal: nbResults})
@@ -469,7 +473,8 @@ export class QuerySourcePassage implements IQuerySource {
 
     public static logError(context: IActionContext, operation: Algebra.Operation, message: string) {
         const physicalQueryPlanLogger: IPhysicalQueryPlanLogger | undefined = context.get(KeysInitQuery.physicalQueryPlanLogger)
-            || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+           || context.get(new ActionContextKey("physicalQueryPlanLogger"));
+        if (!operation.metadata) { operation.metadata = {} }       
         if (physicalQueryPlanLogger) {
             physicalQueryPlanLogger.appendMetadata(operation, {status: 'error', message})
         }
