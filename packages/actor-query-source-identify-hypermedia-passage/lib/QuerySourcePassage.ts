@@ -1,5 +1,5 @@
-import type {MediatorHttp} from '@comunica/bus-http';
 import type {MediatorQuerySerialize} from '@comunica/bus-query-serialize';
+import type {MediatorHttp} from '@comunica/bus-http';
 import {KeysInitQuery} from '@comunica/context-entries';
 import {ActionContextKey, Actor} from '@comunica/core';
 import {MetadataValidationState} from '@comunica/utils-metadata';
@@ -106,8 +106,8 @@ export class QuerySourcePassage implements IQuerySource {
                 { input, init, context: this.lastSourceContext! },
             ),
             defaultHeaders: this.context.get(new ActionContextKey('headers')),
-
         });
+      
         this.cache = cacheSize > 0 ?
             new LRUCache<string, RDF.QueryResultCardinality>({ max: cacheSize }) :
             undefined;
@@ -173,7 +173,7 @@ export class QuerySourcePassage implements IQuerySource {
         operationPromise: Promise<Algebra.Operation>,
     ) : void {
         let variablesCount: MetadataVariable[] = [];
-      new Promise<[Algebra.Operation, string]>(async(resolve, reject) => {
+        new Promise<[Algebra.Operation, string]>(async(resolve, reject) => {
             const operation = await operationPromise;
             const undefVariables = QuerySourceSparql.getOperationUndefs(operation);
             const variablesScoped = algebraUtils.inScopeVariables(operation);

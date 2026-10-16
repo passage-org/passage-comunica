@@ -1,6 +1,7 @@
 import {BindingsFactory} from '@comunica/utils-bindings-factory';
 import type {MediatorHttp} from '@comunica/bus-http';
 import type {MediatorMergeBindingsContext} from '@comunica/bus-merge-bindings-context';
+import type {MediatorQuerySerialize} from '@comunica/bus-query-serialize';
 import type {
     IActionQuerySourceIdentifyHypermedia,
     IActorQuerySourceIdentifyHypermediaArgs,
@@ -13,7 +14,7 @@ import {QuerySourceRaw} from "./QuerySourceRaw";
 import type {TestResult} from '@comunica/core';
 import {failTest, passTest} from '@comunica/core';
 import type {ComunicaDataFactory} from '@comunica/types';
-import {Factory} from 'sparqlalgebrajs';
+import {AlgebraFactory} from '@comunica/utils-algebra';
 import {KeysInitQuery} from '@comunica/context-entries';
 
 // Raw is very much alike SPARQL but the endpoint is different
@@ -23,6 +24,7 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
     public readonly mediatorHttp: MediatorHttp;
     public readonly mediatorMergeBindingsContext: MediatorMergeBindingsContext;
     // public readonly mediatorQueryProcess: MediatorQueryProcess;
+    public readonly mediatorQuerySerialize: MediatorQuerySerialize;
     public readonly checkUrlSuffix: boolean;
     public readonly forceHttpGet: boolean;
     public readonly cacheSize: number;
@@ -30,7 +32,15 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
     public readonly countTimeout: number;
 
     public constructor(args: IActorQuerySourceIdentifyHypermediaRawArgs) {
-        super(args, 'raw');
+      super(args, 'raw');
+      this.mediatorHttp = args.mediatorHttp;
+      this.mediatorMergeBindingsContext = args.mediatorMergeBindingsContext;
+      this.mediatorQuerySerialize = args.mediatorQuerySerialize;
+      this.checkUrlSuffix = args.checkUrlSuffix;
+      this.forceHttpGet = args.forceHttpGet;
+      this.cacheSize = args.cacheSize;
+      this.bindMethod = args.bindMethod;
+      this.countTimeout = args.countTimeout;
     }
 
     public async testMetadata(
@@ -50,11 +60,12 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
     public async run(action: IActionQuerySourceIdentifyHypermedia): Promise<IActorQuerySourceIdentifyHypermediaOutput> {
         this.logInfo(action.context, `Identified ${action.url} as raw source with service URL: ${action.metadata.sparqlService || action.url}`);
         const dataFactory: ComunicaDataFactory = action.context.getSafe(KeysInitQuery.dataFactory);
-        const algebraFactory = new Factory(dataFactory);
+        const algebraFactory = new AlgebraFactory(dataFactory);
         const source = new QuerySourceRaw(
             action.forceSourceType ? action.url : action.metadata.sparqlService || action.url,
             action.context,
             this.mediatorHttp,
+            this.mediatorQuerySerialize,
             this.bindMethod,
             dataFactory,
             algebraFactory,
@@ -63,22 +74,23 @@ export class ActorQuerySourceIdentifyHypermediaRaw extends ActorQuerySourceIdent
             this.cacheSize,
             this.countTimeout,
             // this.mediatorQueryProcess
+            action.metadata
         );
         return { source };
     }
 
 }
 
-// Tried multiple times to extend arguments from Sparql's actor, couldnot make it…
+
 export interface IActorQuerySourceIdentifyHypermediaRawArgs extends IActorQuerySourceIdentifyHypermediaArgs {
-    // /**
-    //  * SPARQL queries returns by raw can be parsed again, then executed again.
-    //  */
-    // mediatorQueryProcess: MediatorQueryProcess;
     /**
      * The HTTP mediator
      */
     mediatorHttp: MediatorHttp;
+    /**
+     * Mediator for serializing queries.
+     */
+    mediatorQuerySerialize: MediatorQuerySerialize;
     /**
      * A mediator for creating binding context merge handlers
      */
@@ -98,7 +110,7 @@ export interface IActorQuerySourceIdentifyHypermediaRawArgs extends IActorQueryS
      * @range {integer}
      * @default {1024}
      */
-    cacheSize?: number;
+    cacheSize: number;
     /**
      * The query operation for communicating bindings.
      * @default {values}
@@ -110,6 +122,4 @@ export interface IActorQuerySourceIdentifyHypermediaRawArgs extends IActorQueryS
      * @default {3000}
      */
     countTimeout: number;
-
-
 }

@@ -42,8 +42,7 @@
         "fetch-sparql-endpoint": "^7.3.0",
         "lru-cache": "^11.2.2",
         
-        "rdf-data-factory": "^1.1.1",
-        "sparqlalgebrajs": "^5.0.2"
+        "rdf-data-factory": "^1.1.1"
     },
     "devDependencies": {
         "@comunica/utils-query-operation": "^5.4.0"
