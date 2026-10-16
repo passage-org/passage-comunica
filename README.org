@@ -3,7 +3,7 @@
 [[https://github.com/comunica/comunica][Comunica]] is a SPARQL query engine with an emphasis on modularity. To
 ensure completeness of query results, it already includes actors such
 as quad pattern fragments (qpf), or brqpf. We provide one for SPARQL
-*continuation* queries [1].
+*continuation* queries [1, 2].
 
 ** Principle
 
@@ -46,9 +46,32 @@ endpoints]], and [[https://github.com/GDD-Nantes/HeFQUIN-FRAW][federations of en
   yarn server
 #+END_SRC
 
+** Configuration
+
+Passage-Comunica includes several configuration options (~-c~) . Among
+others, the timeout (/timeout/) and the number of results returned
+(/limit/) before pausing the query can be configured within the ranges
+defined by the SPARQL endpoint. The interface (/shape/) of the
+endpoint can also be configured.
+
+#+BEGIN_SRC shell :session execution :async
+  # It runs similarly to your good old Comunica:
+  yarn run query-passage \
+       http://localhost:8080/watdiv/passage \
+       -c ./contexts/context-example.json \
+       -q 'SELECT * WHERE {?s ?p ?o FILTER (contains(str(?s),"Product10000")) }' \
+       -t 'text/csv' 2> /dev/null
+#+END_SRC
+
+
 ** References
 
 [1] Thi Hoang Thi Pham, Gabriela Montoya, Brice Nédelec, Hala
 Skaf-Molli, and Pascal Molli. [[https://dl.acm.org/doi/pdf/10.1145/3696410.3714757][Passage: Ensuring Completeness and
 Responsiveness of Public SPARQL Endpoints with SPARQL Continuation
 Queries]]. In Proceedings of the ACM on Web Conference 2025 (WWW'25).
+
+[2] Thi Hoang Thi Pham, Gabriela Montoya, Brice Nédelec, Hala
+Skaf-Molli, and Pascal Molli. [[https://hal.science/hal-05251900v1/document][Continuation Queries: Embracing Timeouts
+on Public SPARQL Endpoints]]. In Proceedings of the ISWC 2025 Companion
+Volume, Nov 2025, Nara, Japan.

@@ -4,121 +4,23 @@
         "limit": "10000"
     },
     "shape":
-{
-  "type": "disjunction",
-  "children": [
     {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "project"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "distinct"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "pattern"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "bgp"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "extend"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "values"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "join"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "leftjoin"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "union"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "filter"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "path"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "group"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "orderby"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "slice"
-      }
-    },
-    {
-      "type": "operation",
-      "operation": {
-        "operationType": "type",
-        "type": "service"
-      }
+        "type": "disjunction",
+        "children": [
+            { "type": "operation", "operation": { "operationType": "type", "type": "project" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "distinct" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "pattern" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "bgp" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "extend" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "values" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "join" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "leftjoin" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "union" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "filter" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "path" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "group" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "orderby" } },
+            { "type": "operation", "operation": { "operationType": "type", "type": "slice" } },
+        ]
     }
-  ]
-}
-
 }
